@@ -76,12 +76,13 @@ export default async function SourcesPage() {
                     </span>
                   </div>
 
-                  {/* Поле кук для Profi */}
+                  {/* Настройки Profi */}
                   {connector.platform === "profi" && (
                     <form
                       action={async (formData: FormData) => {
                         "use server";
-                        const cookies = formData.get("cookies") as string;
+                        const login = formData.get("login") as string;
+                        const password = formData.get("password") as string;
                         const currentSource = await db.source.findUnique({
                           where: { id: existing.id },
                         });
@@ -89,34 +90,48 @@ export default async function SourcesPage() {
                         await db.source.update({
                           where: { id: existing.id },
                           data: {
-                            config: { ...currentConfig, cookies: cookies || "" },
+                            config: { ...currentConfig, login: login || "", password: password || "" },
                           },
                         });
                         revalidatePath("/dashboard/sources");
                       }}
-                      className="mt-4"
+                      className="mt-4 space-y-3"
                     >
-                      <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                        🔑 Куки сессии Profi.ru
-                      </label>
-                      <p className="text-xs text-gray-400 mb-2">
-                        Как получить: откройте profi.ru → F12 → Application → Cookies →
-                        profi.ru → скопируйте все строки (Name=Value) и вставьте сюда
-                      </p>
-                      <textarea
-                        name="cookies"
-                        rows={3}
-                        defaultValue={
-                          ((existing.config as Record<string, unknown>)?.cookies as string) || ""
-                        }
-                        placeholder="session_id=abc123...&#10;auth_token=xyz789..."
-                        className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-xs font-mono bg-gray-50 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none"
-                      />
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          👤 Логин Profi.ru
+                        </label>
+                        <p className="text-xs text-gray-400 mb-1">
+                          Из анкеты: Настройки → Логин (например TimofeyevAG11)
+                        </p>
+                        <input
+                          name="login"
+                          defaultValue={
+                            ((existing.config as Record<string, unknown>)?.login as string) || ""
+                          }
+                          placeholder="TimofeyevAG11"
+                          className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-gray-50 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          🔐 Пароль Profi.ru
+                        </label>
+                        <input
+                          name="password"
+                          type="password"
+                          defaultValue={
+                            ((existing.config as Record<string, unknown>)?.password as string) || ""
+                          }
+                          placeholder="••••••••"
+                          className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-gray-50 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none"
+                        />
+                      </div>
                       <button
                         type="submit"
-                        className="mt-2 rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-200 transition-colors"
+                        className="rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-200 transition-colors"
                       >
-                        💾 Сохранить куки
+                        💾 Сохранить
                       </button>
                     </form>
                   )}
@@ -177,16 +192,15 @@ export default async function SourcesPage() {
         })}
       </div>
 
-      {/* Инструкция по кукам */}
-      <div className="mt-8 rounded-xl bg-amber-50 p-6 ring-1 ring-amber-200">
-        <p className="font-semibold text-amber-900">📖 Как получить куки Profi.ru</p>
-        <ol className="mt-3 space-y-2 text-sm text-amber-800 list-decimal list-inside">
-          <li>Откройте <b>profi.ru</b> и войдите как обычно (телефон + SMS)</li>
-          <li>Нажмите <b>F12</b> → вкладка <b>Application</b> (или «Приложение»)</li>
-          <li>Слева: <b>Cookies</b> → <b>profi.ru</b></li>
-          <li>Скопируйте ВСЕ строки из колонок <b>Name</b> и <b>Value</b></li>
-          <li>Вставьте в поле «Куки сессии» выше и нажмите «Сохранить»</li>
-          <li>Куки живут 1–2 недели, потом нужно обновить</li>
+      {/* Инструкция */}
+      <div className="mt-8 rounded-xl bg-green-50 p-6 ring-1 ring-green-200">
+        <p className="font-semibold text-green-900">📖 Как подключить Profi.ru</p>
+        <ol className="mt-3 space-y-2 text-sm text-green-800 list-decimal list-inside">
+          <li>Войдите в <b>profi.ru</b> → Настройки анкеты</li>
+          <li>Найдите поле <b>«Логин»</b> (формат: TimofeyevAG11)</li>
+          <li>Введите логин и пароль в полях выше</li>
+          <li>Нажмите <b>«Сохранить»</b></li>
+          <li>Worker автоматически авторизуется и начнёт сбор заявок</li>
         </ol>
       </div>
 
