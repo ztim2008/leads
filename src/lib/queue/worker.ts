@@ -99,8 +99,7 @@ export const worker = new Worker(
               rawLead.title,
               rawLead.description,
               {
-                fastModel: "google/gemini-flash-1.5",
-                strongModel: "anthropic/claude-sonnet-4.5",
+                model: "deepseek/deepseek-chat",
                 apiKey,
               }
             );
