@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { auth } from "@/lib/auth/auth";
 import { revalidatePath } from "next/cache";
 import ResetButton from "./reset-button";
+import ToggleSwitch from "@/components/ui/toggle-switch";
 
 export default async function SettingsPage() {
   const session = await auth();
@@ -23,17 +24,13 @@ export default async function SettingsPage() {
 
       <div style={{ display: "flex", flexDirection: "column", gap: 0, border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
 
-        {/* ═══ Глобальное управление ═══ */}
-        <Section title="⚡ Система" hint="Глобальное включение/выключение охотника">
-          <ToggleForm
-            label="Ловец лидов"
-            hint="Выключите чтобы не тратить токены AI и не загружать базу"
-            field="systemEnabled"
-            defaultValue={s.systemEnabled}
-            workspaceId={workspace.id}
-          />
-        </Section>
-
+          <form style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div>
+              <p style={{ fontWeight: 600, fontSize: "var(--text-sm)", color: "var(--ink-heading)" }}>Ловец лидов</p>
+              <p style={{ fontSize: "var(--text-xs)", color: "var(--ink-muted)", marginTop: 2 }}>Выключите чтобы не тратить токены AI и не загружать базу</p>
+            </div>
+            <ToggleSwitch field="systemEnabled" defaultValue={s.systemEnabled} workspaceId={workspace.id} />
+          </form>
         {/* ═══ Расписание ═══ */}
         <Section title="🕐 Расписание работы" hint="В какие дни и часы система собирает заявки">
           <ScheduleForm s={s} workspaceId={workspace.id} />
@@ -131,7 +128,7 @@ function ToggleForm({ label, hint, field, defaultValue, workspaceId }: { label: 
         <p style={{ fontSize: "var(--text-xs)", color: "var(--ink-muted)", marginTop: 2 }}>{hint}</p>
       </div>
       <label style={{ position: "relative", display: "inline-block", width: 48, height: 28, flexShrink: 0 }}>
-        <input name={field} type="checkbox" defaultChecked={defaultValue} onChange={(e) => e.currentTarget.form?.requestSubmit()} style={{ opacity: 0, width: 0, height: 0 }} />
+        <input name={field} type="checkbox" defaultChecked={defaultValue} style={{ opacity: 0, width: 0, height: 0 }} />
         <span style={{ position: "absolute", cursor: "pointer", inset: 0, background: defaultValue ? "var(--green)" : "var(--border)", borderRadius: 28, transition: "0.2s" }} />
         <span style={{ position: "absolute", height: 22, width: 22, left: defaultValue ? 24 : 3, bottom: 3, background: "#fff", borderRadius: "50%", transition: "0.2s" }} />
       </label>
