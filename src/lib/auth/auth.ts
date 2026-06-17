@@ -1,35 +1,17 @@
-// NextAuth v4 — Email/Password + Яндекс ID
 import NextAuth from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import YandexProvider from "next-auth/providers/yandex";
 import { db } from "@/lib/db";
 import { compare } from "bcryptjs";
 import type { NextAuthOptions } from "next-auth";
+import { getServerSession } from "next-auth";
 
 export const authOptions: NextAuthOptions = {
   providers: [
-    {
-      id: "yandex",
-      name: "Yandex",
-      type: "oauth",
+    YandexProvider({
       clientId: "a04c612860784ffb8a21a83a32084263",
       clientSecret: "72de15f92e6a4d3e9bdbee74c4330c0f",
-      authorization: {
-        url: "https://oauth.yandex.ru/authorize",
-        params: { scope: "login:email login:info login:avatar" },
-      },
-      token: "https://oauth.yandex.ru/token",
-      userinfo: "https://login.yandex.ru/info?format=json",
-      profile(profile: any) {
-        return {
-          id: profile.id,
-          email: profile.default_email,
-          name: profile.real_name || profile.display_name || [profile.first_name, profile.last_name].filter(Boolean).join(" "),
-          image: profile.default_avatar_id
-            ? `https://avatars.yandex.net/get-yapic/${profile.default_avatar_id}/islands-200`
-            : null,
-        };
-      },
-    },
+    }),
     CredentialsProvider({
       name: "credentials",
       credentials: {
@@ -53,25 +35,16 @@ export const authOptions: NextAuthOptions = {
       if (account?.provider === "yandex" && user.email) {
         const exists = await db.user.findUnique({ where: { email: user.email } });
         if (!exists) {
-          const newUser = await db.user.create({
-            data: { email: user.email, firstName: user.name || "", passwordHash: "" },
-          });
-          const ws = await db.workspace.create({
-            data: { userId: newUser.id, name: "Моё пространство", slug: `ws-${newUser.id.slice(0, 8)}` },
-          });
+          const newUser = await db.user.create({ data: { email: user.email, firstName: user.name || "", passwordHash: "" } });
+          const ws = await db.workspace.create({ data: { userId: newUser.id, name: "Моё пространство", slug: `ws-${newUser.id.slice(0, 8)}` } });
           await db.settings.create({ data: { workspaceId: ws.id } });
         }
       }
       return true;
     },
-    async jwt({ token, user }) {
-      if (user) token.id = user.id;
-      return token;
-    },
+    async jwt({ token, user }) { if (user) token.id = user.id; return token; },
     async session({ session, token }) {
-      if (session.user) {
-        (session.user as any).id = token.id;
-      }
+      if (session.user) (session.user as any).id = token.id;
       return session;
     },
   },
@@ -80,8 +53,6 @@ export const authOptions: NextAuthOptions = {
 const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };
 
-// Удобная обёртка для серверных компонентов
-import { getServerSession } from "next-auth";
 export async function auth() {
   return getServerSession(authOptions);
 }
