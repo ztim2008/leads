@@ -200,3 +200,19 @@ const btnStyle: React.CSSProperties = {
   border: "none", background: "var(--accent)", color: "#fff",
   fontWeight: 600, fontSize: "var(--text-sm)", cursor: "pointer", marginTop: 2,
 };
+
+function YandexButton() {
+  return (
+    <form action={async () => { "use server"; await signIn("yandex", { redirectTo: "/dashboard" }); }}>
+      <button type="submit" style={{
+        width: "100%", padding: "11px 14px", borderRadius: "var(--radius-sm)",
+        border: "none", background: "#FC3F1D", color: "#fff",
+        fontWeight: 600, fontSize: "var(--text-sm)", cursor: "pointer",
+        display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+      }}>
+        <span style={{ fontSize: 18, fontWeight: 700 }}>Я</span>
+        Войти с Яндекс ID
+      </button>
+    </form>
+  );
+}
