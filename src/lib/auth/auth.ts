@@ -39,7 +39,9 @@ export const authOptions: NextAuthOptions = {
           if (!dbUser) {
             dbUser = await db.user.create({ data: { email: user.email, firstName: user.name || "", passwordHash: "" } });
           }
-          // Проверяем есть ли workspace
+          // Переопределяем user.id на UUID из БД
+          user.id = dbUser.id;
+          // Проверяем workspace
           const ws = await db.workspace.findFirst({ where: { userId: dbUser.id } });
           if (!ws) {
             const newWs = await db.workspace.create({ data: { userId: dbUser.id, name: "Моё пространство", slug: `ws-${dbUser.id.slice(0, 8)}` } });
