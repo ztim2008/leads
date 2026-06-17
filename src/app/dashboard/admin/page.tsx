@@ -161,6 +161,32 @@ export default async function AdminPage() {
         </table>
       </div>
 
+      {/* Документация */}
+      <div style={{ marginTop: 32, border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", overflow: "hidden", background: "var(--bg-surface)", padding: "24px" }}>
+        <h2 style={{ fontSize: "var(--text-lg)", fontWeight: 650, marginBottom: 12 }}>📖 Документация для пользователей</h2>
+        <p style={{ color: "var(--ink-muted)", fontSize: "var(--text-sm)", marginBottom: 16 }}>
+          Полное руководство: <a href="/docs/BEGINNERS.md" style={{ color: "var(--accent)", fontWeight: 600 }}>docs/BEGINNERS.md</a> — как начать, подключить источники, настроить Telegram и AI.
+        </p>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, fontSize: "var(--text-sm)" }}>
+          <div style={{ padding: "12px 16px", borderRadius: "var(--radius-sm)", background: "var(--bg-layer)", border: "1px solid var(--border)" }}>
+            <p style={{ fontWeight: 650, marginBottom: 4 }}>🚀 Быстрый старт</p>
+            <p style={{ color: "var(--ink-muted)", fontSize: "var(--text-xs)" }}>Регистрация → Подключить Profi.ru → Получать заявки каждые 5 мин</p>
+          </div>
+          <div style={{ padding: "12px 16px", borderRadius: "var(--radius-sm)", background: "var(--bg-layer)", border: "1px solid var(--border)" }}>
+            <p style={{ fontWeight: 650, marginBottom: 4 }}>🧠 AI-анализ</p>
+            <p style={{ color: "var(--ink-muted)", fontSize: "var(--text-xs)" }}>DeepSeek оценивает заявки 0-100, определяет робота, генерирует 4 отклика</p>
+          </div>
+          <div style={{ padding: "12px 16px", borderRadius: "var(--radius-sm)", background: "var(--bg-layer)", border: "1px solid var(--border)" }}>
+            <p style={{ fontWeight: 650, marginBottom: 4 }}>📱 Telegram</p>
+            <p style={{ color: "var(--ink-muted)", fontSize: "var(--text-xs)" }}>Создать бота через @BotFather → указать токен и Chat ID в настройках</p>
+          </div>
+          <div style={{ padding: "12px 16px", borderRadius: "var(--radius-sm)", background: "var(--bg-layer)", border: "1px solid var(--border)" }}>
+            <p style={{ fontWeight: 650, marginBottom: 4 }}>💰 Тарифы</p>
+            <p style={{ color: "var(--ink-muted)", fontSize: "var(--text-xs)" }}>Бесплатный: 1 источник. Pro (990₽/мес): всё включено</p>
+          </div>
+        </div>
+      </div>
+
       {/* Монетизация */}
       <div style={{
         marginTop: 32, border: "1px solid var(--border)", borderRadius: "var(--radius-lg)",

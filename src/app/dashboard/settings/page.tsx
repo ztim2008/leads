@@ -58,6 +58,21 @@ export default async function SettingsPage() {
           <TextForm field="openrouterKey" defaultValue={s.openrouterKey || ""} placeholder="sk-or-v1-..." workspaceId={workspace.id} />
         </Section>
       </div>
+      {/* ═══ SEO (только админ) ═══ */}
+      {(session.user as any)?.email === "bilariuss@yandex.ru" && (
+        <>
+          <Section title="📊 Яндекс Метрика" hint="ID счётчика для отслеживания посещаемости">
+            <TextForm field="yandexMetrika" defaultValue={s.yandexMetrika || ""} placeholder="98765432" workspaceId={workspace.id} />
+          </Section>
+          <Section title="🔍 Яндекс Вебмастер" hint="Код подтверждения прав на сайт">
+            <TextForm field="yandexWebmaster" defaultValue={s.yandexWebmaster || ""} placeholder="<meta name=verification>" workspaceId={workspace.id} />
+          </Section>
+          <Section title="📝 Код в body" hint="HTML/JS перед закрывающим body. Счётчики, виджеты." last>
+            <TextForm field="bodyCode" defaultValue={s.bodyCode || ""} placeholder="<script src=...></script>" workspaceId={workspace.id} />
+          </Section>
+        </>
+      )}
+
 
       {/* ═══ Опасная зона ═══ */}
       <div style={{ marginTop: 32, border: "1px solid var(--red)", borderRadius: "var(--radius-lg)", overflow: "hidden", background: "var(--bg-surface)" }}>
