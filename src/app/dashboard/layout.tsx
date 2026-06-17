@@ -3,7 +3,7 @@ import Link from "next/link";
 import { auth, signOut } from "@/lib/auth/auth";
 import {
   LayoutDashboard, Inbox, Plug, Settings, BarChart3,
-  LogOut, Sun, Moon, Sparkles,
+  LogOut, Shield, Sparkles,
 } from "lucide-react";
 import ThemeToggle from "@/components/layout/theme-toggle";
 import StatusIndicator from "@/components/layout/status-indicator";
@@ -13,6 +13,7 @@ const NAV = [
   { href: "/dashboard/leads", label: "Заявки", icon: Inbox },
   { href: "/dashboard/sources", label: "Источники", icon: Plug },
   { href: "/dashboard/settings", label: "Настройки", icon: Settings },
+  { href: "/dashboard/admin", label: "Админ", icon: Shield },
   { href: "/dashboard/analytics", label: "Аналитика", icon: BarChart3 },
 ];
 
