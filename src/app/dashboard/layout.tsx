@@ -6,6 +6,7 @@ import {
   LogOut, Sun, Moon, Sparkles,
 } from "lucide-react";
 import ThemeToggle from "@/components/layout/theme-toggle";
+import StatusIndicator from "@/components/layout/status-indicator";
 
 const NAV = [
   { href: "/dashboard", label: "Обзор", icon: LayoutDashboard },
