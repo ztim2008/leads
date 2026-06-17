@@ -1,4 +1,4 @@
-// Страница настроек
+// Страница настроек — ключевые слова, бюджет, Telegram, OpenRouter
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth/auth";
 import { revalidatePath } from "next/cache";
@@ -13,202 +13,169 @@ export default async function SettingsPage() {
   });
   if (!workspace) return null;
 
-  const settings = workspace.settings;
+  const s = workspace.settings;
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900">Настройки</h1>
-      <p className="mt-1 text-gray-500">
+      <h1 style={{ fontSize: "var(--text-2xl)", fontWeight: 700, marginBottom: 4 }}>Настройки</h1>
+      <p style={{ color: "var(--ink-muted)", fontSize: "var(--text-sm)", marginBottom: 32 }}>
         Фильтры, ключевые слова и интеграции
       </p>
 
-      <div className="mt-8 space-y-6">
+      <div style={{ display: "flex", flexDirection: "column", gap: 0, border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
         {/* Ключевые слова */}
-        <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
-          <h2 className="font-semibold text-gray-900">🎯 Ключевые слова</h2>
-          <p className="mt-1 text-sm text-gray-500">
-            Система будет показывать заявки, содержащие эти слова. Через запятую.
-          </p>
-          <form
-            action={async (formData: FormData) => {
-              "use server";
-              const keywords = formData.get("keywords") as string;
-              await db.settings.upsert({
-                where: { workspaceId: workspace.id },
-                create: { workspaceId: workspace.id, keywords },
-                update: { keywords },
-              });
-              revalidatePath("/dashboard/settings");
-            }}
-            className="mt-4 flex gap-3"
-          >
-            <input
-              name="keywords"
-              defaultValue={settings?.keywords || ""}
-              placeholder="сайт, лендинг, nextjs, react, seo, telegram, ai"
-              className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm"
-            />
-            <button
-              type="submit"
-              className="rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-indigo-500"
-            >
-              Сохранить
-            </button>
-          </form>
-        </div>
+        <SettingsRow title="🎯 Ключевые слова" hint="Система показывает заявки с этими словами. Через запятую.">
+          <SettingsForm
+            field="keywords"
+            defaultValue={s?.keywords || ""}
+            placeholder="сайт, лендинг, инфографика, nextjs, react"
+            workspaceId={workspace.id}
+          />
+        </SettingsRow>
 
         {/* Минус-слова */}
-        <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
-          <h2 className="font-semibold text-gray-900">🚫 Минус-слова</h2>
-          <p className="mt-1 text-sm text-gray-500">
-            Заявки с этими словами будут скрыты.
-          </p>
-          <form
-            action={async (formData: FormData) => {
-              "use server";
-              const minusKeywords = formData.get("minusKeywords") as string;
-              await db.settings.upsert({
-                where: { workspaceId: workspace.id },
-                create: { workspaceId: workspace.id, minusKeywords },
-                update: { minusKeywords },
-              });
-              revalidatePath("/dashboard/settings");
-            }}
-            className="mt-4 flex gap-3"
-          >
-            <input
-              name="minusKeywords"
-              defaultValue={settings?.minusKeywords || ""}
-              placeholder="wordpress, tilda, студент, курсовая"
-              className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm"
-            />
-            <button
-              type="submit"
-              className="rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-indigo-500"
-            >
-              Сохранить
-            </button>
-          </form>
-        </div>
+        <SettingsRow title="🚫 Минус-слова" hint="Заявки с этими словами будут скрыты.">
+          <SettingsForm
+            field="minusKeywords"
+            defaultValue={s?.minusKeywords || ""}
+            placeholder="wordpress, tilda, студент, курсовая"
+            workspaceId={workspace.id}
+          />
+        </SettingsRow>
 
         {/* Бюджет */}
-        <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
-          <h2 className="font-semibold text-gray-900">💰 Диапазон бюджета</h2>
+        <SettingsRow title="💰 Диапазон бюджета" hint="Отсеивать заявки вне этого диапазона.">
           <form
             action={async (formData: FormData) => {
               "use server";
-              const budgetMin = parseInt(formData.get("budgetMin") as string) || 30000;
-              const budgetMax = parseInt(formData.get("budgetMax") as string) || 500000;
+              const min = parseInt(formData.get("budgetMin") as string) || 3000;
+              const max = parseInt(formData.get("budgetMax") as string) || 500000;
               await db.settings.upsert({
                 where: { workspaceId: workspace.id },
-                create: { workspaceId: workspace.id, budgetMin, budgetMax },
-                update: { budgetMin, budgetMax },
+                create: { workspaceId: workspace.id, budgetMin: min, budgetMax: max },
+                update: { budgetMin: min, budgetMax: max },
               });
               revalidatePath("/dashboard/settings");
             }}
-            className="mt-4 flex gap-4"
+            style={{ display: "flex", gap: 12, alignItems: "flex-end" }}
           >
-            <div>
-              <label className="text-sm text-gray-500">От (₽)</label>
-              <input
-                name="budgetMin"
-                type="number"
-                defaultValue={settings?.budgetMin || 30000}
-                className="mt-1 block w-40 rounded-lg border border-gray-300 px-4 py-2.5 text-sm"
-              />
-            </div>
-            <div>
-              <label className="text-sm text-gray-500">До (₽)</label>
-              <input
-                name="budgetMax"
-                type="number"
-                defaultValue={settings?.budgetMax || 500000}
-                className="mt-1 block w-40 rounded-lg border border-gray-300 px-4 py-2.5 text-sm"
-              />
-            </div>
-            <div className="flex items-end">
-              <button
-                type="submit"
-                className="rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-indigo-500"
-              >
-                Сохранить
-              </button>
-            </div>
+            <Field label="От (₽)" name="budgetMin" defaultValue={s?.budgetMin || 3000} type="number" />
+            <Field label="До (₽)" name="budgetMax" defaultValue={s?.budgetMax || 500000} type="number" />
+            <SaveBtn />
           </form>
-        </div>
+        </SettingsRow>
 
-        {/* Telegram */}
-        <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
-          <h2 className="font-semibold text-gray-900">📱 Telegram-уведомления</h2>
-          <p className="mt-1 text-sm text-gray-500">
-            Chat ID вашего аккаунта для получения уведомлений о новых заявках.
-          </p>
-          <form
-            action={async (formData: FormData) => {
-              "use server";
-              const telegramChatId = formData.get("telegramChatId") as string;
-              await db.settings.upsert({
-                where: { workspaceId: workspace.id },
-                create: { workspaceId: workspace.id, telegramChatId },
-                update: { telegramChatId },
-              });
-              revalidatePath("/dashboard/settings");
-            }}
-            className="mt-4 flex gap-3"
-          >
-            <input
-              name="telegramChatId"
-              defaultValue={settings?.telegramChatId || ""}
-              placeholder="123456789"
-              className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm"
-            />
-            <button
-              type="submit"
-              className="rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-indigo-500"
-            >
-              Сохранить
-            </button>
-          </form>
-        </div>
+        {/* Telegram Chat ID */}
+        <SettingsRow title="📱 Telegram Chat ID" hint="Ваш ID в Telegram. Получить у @getmyid_bot.">
+          <SettingsForm
+            field="telegramChatId"
+            defaultValue={s?.telegramChatId || ""}
+            placeholder="778784292"
+            workspaceId={workspace.id}
+          />
+        </SettingsRow>
 
-        {/* OpenRouter ключ */}
-        <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
-          <h2 className="font-semibold text-gray-900">🤖 OpenRouter API ключ</h2>
-          <p className="mt-1 text-sm text-gray-500">
-            Ключ для AI-анализа заявок. Получить на{" "}
-            <a href="https://openrouter.ai/keys" target="_blank" className="text-indigo-600 underline">
-              openrouter.ai/keys
-            </a>
-          </p>
-          <form
-            action={async (formData: FormData) => {
-              "use server";
-              const openrouterKey = formData.get("openrouterKey") as string;
-              await db.settings.upsert({
-                where: { workspaceId: workspace.id },
-                create: { workspaceId: workspace.id, openrouterKey },
-                update: { openrouterKey },
-              });
-              revalidatePath("/dashboard/settings");
-            }}
-            className="mt-4 flex gap-3"
-          >
-            <input
-              name="openrouterKey"
-              defaultValue={settings?.openrouterKey || ""}
-              type="password"
-              placeholder="sk-or-v1-..."
-              className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm"
-            />
-            <button
-              type="submit"
-              className="rounded-lg bg-indigo-600 px-6 py-2.5 text-sm font-medium text-white hover:bg-indigo-500"
-            >
-              Сохранить
-            </button>
-          </form>
-        </div>
+        {/* Telegram Bot Token */}
+        <SettingsRow title="🤖 Telegram Bot Token" hint="Токен от @BotFather. Создайте бота командой /newbot." last>
+          <SettingsForm
+            field="telegramToken"
+            defaultValue={s?.telegramToken || ""}
+            placeholder="123456:ABC-DEF1234ghikl"
+            workspaceId={workspace.id}
+          />
+        </SettingsRow>
+
+        {/* OpenRouter */}
+        <SettingsRow title="🤖 OpenRouter API ключ" hint="Для AI-анализа заявок. Получить на openrouter.ai/keys." last>
+          <SettingsForm
+            field="openrouterKey"
+            defaultValue={s?.openrouterKey || ""}
+            placeholder="sk-or-v1-..."
+            workspaceId={workspace.id}
+          />
+        </SettingsRow>
       </div>
     </div>
+  );
+}
+
+// Вспомогательные компоненты
+function SettingsRow({ title, hint, children, last }: { title: string; hint: string; children: React.ReactNode; last?: boolean }) {
+  return (
+    <div style={{
+      padding: "20px 24px", background: "var(--bg-surface)",
+      borderBottom: last ? "none" : "1px solid var(--border)",
+    }}>
+      <h3 style={{ fontSize: "var(--text-sm)", fontWeight: 650, marginBottom: 4 }}>{title}</h3>
+      <p style={{ fontSize: "var(--text-xs)", color: "var(--ink-muted)", marginBottom: 14 }}>{hint}</p>
+      {children}
+    </div>
+  );
+}
+
+function SettingsForm({ field, defaultValue, placeholder, workspaceId }: {
+  field: string; defaultValue: string; placeholder: string; workspaceId: string;
+}) {
+  return (
+    <form
+      action={async (formData: FormData) => {
+        "use server";
+        const value = formData.get(field) as string;
+        await db.settings.upsert({
+          where: { workspaceId },
+          create: { workspaceId, [field]: value },
+          update: { [field]: value },
+        });
+        revalidatePath("/dashboard/settings");
+      }}
+      style={{ display: "flex", gap: 10 }}
+    >
+      <input
+        name={field}
+        defaultValue={defaultValue}
+        placeholder={placeholder}
+        style={{
+          flex: 1, padding: "10px 14px", borderRadius: "var(--radius-sm)",
+          border: "1px solid var(--border)", background: "var(--bg-root)",
+          color: "var(--ink-body)", fontSize: "var(--text-sm)", outline: "none",
+        }}
+      />
+      <SaveBtn />
+    </form>
+  );
+}
+
+function Field({ label, name, defaultValue, type = "text" }: {
+  label: string; name: string; defaultValue: any; type?: string;
+}) {
+  return (
+    <div>
+      <label style={{ display: "block", fontSize: "var(--text-xs)", color: "var(--ink-muted)", marginBottom: 4 }}>
+        {label}
+      </label>
+      <input
+        name={name}
+        type={type}
+        defaultValue={defaultValue}
+        style={{
+          width: 140, padding: "10px 14px", borderRadius: "var(--radius-sm)",
+          border: "1px solid var(--border)", background: "var(--bg-root)",
+          color: "var(--ink-body)", fontSize: "var(--text-sm)", outline: "none",
+        }}
+      />
+    </div>
+  );
+}
+
+function SaveBtn() {
+  return (
+    <button type="submit" style={{
+      padding: "10px 18px", borderRadius: "var(--radius-sm)",
+      border: "none", background: "var(--accent)", color: "#fff",
+      fontWeight: 600, fontSize: "var(--text-sm)", cursor: "pointer",
+      whiteSpace: "nowrap",
+    }}>
+      Сохранить
+    </button>
   );
 }
