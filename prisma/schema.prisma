@@ -151,6 +151,10 @@ model Settings {
   telegramChatId String?  @map("telegram_chat_id")
   telegramToken  String?  @map("telegram_bot_token")
   openrouterKey  String?  @map("openrouter_api_key")
+  systemEnabled   Boolean  @default(true)  @map("system_enabled")
+  workHoursStart  String?  @map("work_hours_start")
+  workHoursEnd    String?  @map("work_hours_end")
+  workDays        String?  @default("1,2,3,4,5") @map("work_days")
   updatedAt      DateTime @updatedAt @map("updated_at")
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)

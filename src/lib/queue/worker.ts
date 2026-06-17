@@ -157,7 +157,50 @@ async function processSource(sourceId: string) {
   }
 }
 
+// Проверка: можно ли сейчас работать
+async function canWork(): Promise<boolean> {
+  try {
+    const s = await db.settings.findFirst();
+    if (!s) return true;
+
+    // Глобальный выключатель
+    if (!s.systemEnabled) {
+      console.log("[worker] ⏸ Система выключена глобально (systemEnabled=false)");
+      return false;
+    }
+
+    // Проверка расписания
+    if (s.workDays && s.workHoursStart && s.workHoursEnd) {
+      const now = new Date();
+      const dayOfWeek = String(now.getDay()); // 0=Вс, 1=Пн...
+      const workDays = s.workDays.split(",");
+      
+      if (!workDays.includes(dayOfWeek)) {
+        console.log(`[worker] ⏸ Сегодня выходной (день ${dayOfWeek}, рабочие: ${s.workDays})`);
+        return false;
+      }
+
+      const currentTime = now.getHours() * 60 + now.getMinutes();
+      const [startH, startM] = s.workHoursStart.split(":").map(Number);
+      const [endH, endM] = s.workHoursEnd.split(":").map(Number);
+      const startMin = startH * 60 + startM;
+      const endMin = endH * 60 + endM;
+
+      if (currentTime < startMin || currentTime > endMin) {
+        console.log(`[worker] ⏸ Нерабочее время (сейчас ${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}, работа: ${s.workHoursStart}-${s.workHoursEnd})`);
+        return false;
+      }
+    }
+
+    return true;
+  } catch (err) {
+    console.error("[worker] Ошибка проверки расписания:", err);
+    return true; // по умолчанию разрешаем
+  }
+}
+
 async function pollAllSources() {
+  if (!(await canWork())) return;
   if (!isRunning) return;
   const sources = await db.source.findMany({ where: { enabled: true } });
   console.log(`\n[worker] ⏰ Цикл: ${sources.length} источников`);
