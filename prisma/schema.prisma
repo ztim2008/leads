@@ -1,0 +1,191 @@
+// Konversus Leads AI — SaaS multi-tenant schema
+// PostgreSQL 16 + Prisma 5
+// All model/field names in Latin (Prisma requirement), DB tables/columns in Russian via @@map/@map
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  firstName    String?  @map("first_name")
+  lastName     String?  @map("last_name")
+  phone        String?
+  telegram     String?
+  avatar       String?
+  role         String   @default("user")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  workspaces    Workspace[]
+  subscription  Subscription?
+  sessions      Session[]
+
+  @@map("users")
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model Workspace {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  name      String   @default("My Workspace") @map("name")
+  slug      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sources      Source[]
+  leads        Lead[]
+  settings     Settings?
+  subscription Subscription?
+
+  @@map("workspaces")
+}
+
+model Source {
+  id              String    @id @default(uuid())
+  workspaceId     String    @map("workspace_id")
+  platform        String    @map("platform")
+  name            String    @map("name")
+  enabled         Boolean   @default(true)
+  checkInterval   Int       @default(300) @map("check_interval_sec")
+  config          Json      @default("{}")
+  color           String    @default("#6366f1")
+  lastCheckAt     DateTime? @map("last_check_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  leads     Lead[]
+
+  @@map("sources")
+}
+
+model Lead {
+  id          String   @id @default(uuid())
+  workspaceId String   @map("workspace_id")
+  sourceId    String   @map("source_id")
+  externalId  String?  @map("external_id")
+  title       String?
+  description String?
+  budgetMin   Decimal? @map("budget_min")
+  budgetMax   Decimal? @map("budget_max")
+  url         String?
+  city        String?
+  author      String?
+  status      String   @default("new")
+  score       Int?
+  difficulty  String?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  workspace Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  source    Source        @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+  analyses  LeadAnalysis[]
+  responses Response[]
+
+  @@index([workspaceId, status])
+  @@index([sourceId])
+  @@index([externalId])
+  @@map("leads")
+}
+
+model LeadAnalysis {
+  id               String   @id @default(uuid())
+  leadId           String   @map("lead_id")
+  score            Int      @map("score")
+  budgetPrediction String?  @map("budget_prediction")
+  difficulty       String?
+  recommendation   String?
+  reasoning        String?
+  modelUsed        String?  @map("model_used")
+  rawResponse      String?  @map("raw_response")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@map("lead_analyses")
+}
+
+model Response {
+  id         String   @id @default(uuid())
+  leadId     String   @map("lead_id")
+  type       String   @map("type")
+  content    String   @map("content")
+  copyCount  Int      @default(0) @map("copy_count")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  lead Lead @relation(fields: [leadId], references: [id], onDelete: Cascade)
+
+  @@map("responses")
+}
+
+model Settings {
+  id             String   @id @default(uuid())
+  workspaceId    String   @unique @map("workspace_id")
+  keywords       String   @default("")
+  minusKeywords  String   @default("") @map("minus_keywords")
+  budgetMin      Int      @default(30000) @map("budget_min")
+  budgetMax      Int      @default(500000) @map("budget_max")
+  regions        String   @default("Russia")
+  telegramChatId String?  @map("telegram_chat_id")
+  telegramToken  String?  @map("telegram_bot_token")
+  openrouterKey  String?  @map("openrouter_api_key")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@map("settings")
+}
+
+model Subscription {
+  id              String    @id @default(uuid())
+  userId          String?   @unique @map("user_id")
+  workspaceId     String?   @unique @map("workspace_id")
+  plan            String    @default("free")
+  status          String    @default("active")
+  leadsPerDay     Int       @default(50) @map("leads_per_day")
+  sourcesLimit    Int       @default(1) @map("sources_limit")
+  aiAnalysis      Boolean   @default(false) @map("ai_analysis_enabled")
+  aiResponses     Boolean   @default(false) @map("ai_responses_enabled")
+  telegramAlerts  Boolean   @default(true) @map("telegram_alerts")
+  expiresAt       DateTime? @map("expires_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  user      User?      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+
+model ActivityLog {
+  id          String   @id @default(uuid())
+  workspaceId String   @map("workspace_id")
+  type        String   @map("type")
+  description String?
+  metadata    Json     @default("{}")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([workspaceId, createdAt])
+  @@map("activity_log")
+}
