@@ -9,8 +9,8 @@ import { getServerSession } from "next-auth";
 export const authOptions: NextAuthOptions = {
   providers: [
     YandexProvider({
-      clientId: "a04c612860784ffb8a21a83a32084263",
-      clientSecret: "72de15f92e6a4d3e9bdbee74c4330c0f",
+      clientId: process.env.YANDEX_CLIENT_ID || "a04c612860784ffb8a21a83a32084263",
+      clientSecret: process.env.YANDEX_CLIENT_SECRET || "72de15f92e6a4d3e9bdbee74c4330c0f",
       authorization: { params: { scope: "" } },
     }),
     CredentialsProvider({
@@ -53,7 +53,14 @@ export const authOptions: NextAuthOptions = {
       }
       return true;
     },
-    async jwt({ token, user }) { if (user) token.id = user.id; return token; },
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
+        const dbUser = await db.user.findUnique({ where: { email: user.email! } });
+        if (dbUser) token.role = dbUser.role;
+      }
+      return token;
+    },
     async session({ session, token }) {
       if (session.user) (session.user as any).id = token.id;
       return session;
