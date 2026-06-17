@@ -11,6 +11,7 @@ export const authOptions: NextAuthOptions = {
     YandexProvider({
       clientId: "a04c612860784ffb8a21a83a32084263",
       clientSecret: "72de15f92e6a4d3e9bdbee74c4330c0f",
+      authorization: { params: { scope: "" } },
     }),
     CredentialsProvider({
       name: "credentials",
