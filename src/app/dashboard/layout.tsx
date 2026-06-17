@@ -1,32 +1,42 @@
-// Макет панели управления
+// Макет панели управления — плотная сетка 0px, тёмная/светлая тема
 import Link from "next/link";
 import { auth, signOut } from "@/lib/auth/auth";
+import {
+  LayoutDashboard, Inbox, Plug, Settings, BarChart3,
+  LogOut, Sun, Moon, Sparkles,
+} from "lucide-react";
+import ThemeToggle from "@/components/layout/theme-toggle";
 
 const NAV = [
-  { href: "/dashboard", label: "Обзор", icon: "📊" },
-  { href: "/dashboard/leads", label: "Заявки", icon: "📋" },
-  { href: "/dashboard/sources", label: "Источники", icon: "🔌" },
-  { href: "/dashboard/settings", label: "Настройки", icon: "⚙️" },
-  { href: "/dashboard/analytics", label: "Аналитика", icon: "📈" },
+  { href: "/dashboard", label: "Обзор", icon: LayoutDashboard },
+  { href: "/dashboard/leads", label: "Заявки", icon: Inbox },
+  { href: "/dashboard/sources", label: "Источники", icon: Plug },
+  { href: "/dashboard/settings", label: "Настройки", icon: Settings },
+  { href: "/dashboard/analytics", label: "Аналитика", icon: BarChart3 },
 ];
 
-export default async function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
-
   if (!session?.user) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <p className="text-xl font-semibold text-gray-900">Доступ запрещён</p>
-          <p className="mt-2 text-gray-500">Войдите в систему</p>
-          <Link
-            href="/api/auth/signin"
-            className="mt-6 inline-block rounded-xl bg-indigo-600 px-6 py-3 text-white hover:bg-indigo-500"
-          >
+      <div style={{
+        minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
+        background: "var(--bg-root)",
+      }}>
+        <div style={{ textAlign: "center" }}>
+          <Sparkles size={48} style={{ color: "var(--accent)", marginBottom: 24 }} />
+          <h1 style={{ fontSize: "var(--text-2xl)", fontWeight: 700, marginBottom: 8 }}>
+            Доступ запрещён
+          </h1>
+          <p style={{ color: "var(--ink-muted)", marginBottom: 24 }}>
+            Войдите в систему чтобы открыть панель управления
+          </p>
+          <Link href="/auth" style={{
+            display: "inline-flex", alignItems: "center", gap: 8,
+            background: "var(--accent)", color: "#fff",
+            borderRadius: "var(--radius-sm)", padding: "12px 24px",
+            fontWeight: 600, fontSize: "var(--text-sm)",
+          }}>
             Войти
           </Link>
         </div>
@@ -35,43 +45,50 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Верхняя панель */}
-      <header className="sticky top-0 z-50 border-b bg-white">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
-          <Link href="/dashboard" className="flex items-center gap-2 font-bold text-xl">
-            <span className="text-indigo-600">◈</span> Leads AI
+    <div style={{
+      minHeight: "100vh", background: "var(--bg-layer)",
+      display: "flex",
+    }}>
+      {/* ─── Боковая панель ──────────────────────────────── */}
+      <aside style={{
+        width: 240, flexShrink: 0,
+        background: "var(--bg-surface)",
+        borderRight: "1px solid var(--border)",
+        display: "flex", flexDirection: "column",
+        position: "sticky", top: 0, height: "100vh",
+      }}>
+        {/* Лого */}
+        <div style={{ padding: "20px 20px 16px" }}>
+          <Link href="/dashboard" style={{
+            display: "flex", alignItems: "center", gap: 10,
+            fontSize: "var(--text-lg)", fontWeight: 700,
+            color: "var(--ink-heading)", letterSpacing: "-0.02em",
+          }}>
+            <div style={{
+              width: 32, height: 32, borderRadius: "var(--radius-sm)",
+              background: "var(--accent)", color: "#fff",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 16, fontWeight: 800,
+            }}>
+              ◈
+            </div>
+            Leads AI
           </Link>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-gray-500">{session.user.email}</span>
-            <form
-              action={async () => {
-                "use server";
-                await signOut({ redirectTo: "/" });
-              }}
-            >
-              <button
-                type="submit"
-                className="text-sm text-gray-500 hover:text-gray-900 transition-colors"
-              >
-                Выйти
-              </button>
-            </form>
-          </div>
         </div>
-      </header>
 
-      <div className="mx-auto flex max-w-7xl gap-8 px-4 py-8 sm:px-6">
-        {/* Боковая навигация */}
-        <nav className="hidden w-56 shrink-0 lg:block">
-          <ul className="space-y-1 sticky top-24">
+        {/* Навигация */}
+        <nav style={{ flex: 1, padding: "8px 12px" }}>
+          <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 2 }}>
             {NAV.map((item) => (
               <li key={item.href}>
-                <Link
-                  href={item.href}
-                  className="flex items-center gap-3 rounded-lg px-4 py-2.5 text-gray-600 hover:bg-white hover:text-gray-900 transition-colors"
-                >
-                  <span>{item.icon}</span>
+                <Link href={item.href} style={{
+                  display: "flex", alignItems: "center", gap: 12,
+                  padding: "10px 14px", borderRadius: "var(--radius-sm)",
+                  fontSize: "var(--text-sm)", fontWeight: 500,
+                  color: "var(--ink-body)",
+                  transition: "background 0.1s",
+                }}>
+                  <item.icon size={18} strokeWidth={1.75} />
                   {item.label}
                 </Link>
               </li>
@@ -79,9 +96,53 @@ export default async function DashboardLayout({
           </ul>
         </nav>
 
-        {/* Контент */}
-        <main className="flex-1 min-w-0">{children}</main>
-      </div>
+        {/* Низ боковой панели */}
+        <div style={{
+          padding: "12px", borderTop: "1px solid var(--border)",
+          display: "flex", flexDirection: "column", gap: 4,
+        }}>
+          <ThemeToggle />
+          <div style={{
+            display: "flex", alignItems: "center", gap: 12,
+            padding: "8px 12px", borderRadius: "var(--radius-sm)",
+            fontSize: "var(--text-sm)",
+          }}>
+            <div style={{
+              width: 28, height: 28, borderRadius: "var(--radius-sm)",
+              background: "var(--accent-soft)", color: "var(--accent)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 13, fontWeight: 700,
+            }}>
+              {session.user.email?.[0].toUpperCase()}
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--ink-body)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {session.user.email}
+              </p>
+            </div>
+          </div>
+          <form
+            action={async () => { "use server"; await signOut({ redirectTo: "/" }); }}
+          >
+            <button type="submit" style={{
+              display: "flex", alignItems: "center", gap: 10,
+              width: "100%", padding: "8px 14px",
+              borderRadius: "var(--radius-sm)",
+              border: "none", background: "transparent",
+              color: "var(--ink-muted)", fontSize: "var(--text-xs)",
+              cursor: "pointer", fontWeight: 500,
+            }}>
+              <LogOut size={14} />
+              Выйти
+            </button>
+          </form>
+        </div>
+      </aside>
+
+      {/* ─── Контент ──────────────────────────────────────── */}
+      <main style={{ flex: 1, minWidth: 0, padding: "32px 36px" }}>
+        {children}
+      </main>
     </div>
   );
 }

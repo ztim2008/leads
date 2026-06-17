@@ -1,14 +1,15 @@
-// AI-анализатор заявок — одноступенчатый (дешёвая модель)
-// Использует Gemini Flash — быстро и дёшево (~$0.0001 за анализ)
+// AI-анализатор заявок — одноступенчатый (DeepSeek)
+// Добавлено: определение «человек или робот» написал ТЗ
 
 import { callOpenRouter, type ChatMessage } from "@/lib/ai/openrouter";
 
 export interface LeadAnalysisResult {
-  score: number;           // 0–100
+  score: number;
   budgetPrediction: string;
-  difficulty: string;      // Низкая | Средняя | Высокая
-  recommendation: string;  // Откликнуться | Подумать | Пропустить
+  difficulty: string;
+  recommendation: string;
   reasoning: string;
+  botProbability: number;     // 0-100: вероятность что ТЗ написано роботом (0 = точно человек)
 }
 
 const SYSTEM_PROMPT = `Ты — AI-ассистент веб-разработчика и дизайнера. Оцениваешь заявки с фриланс-бирж.
@@ -16,7 +17,7 @@ const SYSTEM_PROMPT = `Ты — AI-ассистент веб-разработч�
 Профиль исполнителя:
 - Веб-разработка и дизайн (Next.js, React, TypeScript, Tailwind)
 - Создание сайтов, лендингов, интернет-магазинов
-- Дизайн: презентации, инфографика, карточки товаров, брендинг
+- Дизайн: презентации, инфографика, карточки товаров, брендинг, полиграфия
 - SEO, AI-интеграции, чат-боты
 - Интересуют заказы от 3 000 ₽
 
@@ -27,8 +28,18 @@ const SYSTEM_PROMPT = `Ты — AI-ассистент веб-разработч�
   "budgetPrediction": "диапазон в рублях текстом",
   "difficulty": "Низкая | Средняя | Высокая",
   "recommendation": "Откликнуться | Подумать | Пропустить",
-  "reasoning": "1-2 предложения обоснования"
+  "reasoning": "1-2 предложения обоснования",
+  "botProbability": число 0-100
 }
+
+Поле botProbability — твоя оценка вероятности что заявку написал робот/шаблон/автоматическая система, а не живой человек:
+- 0-20: точно живой человек (персональные детали, эмоции, уникальные формулировки)
+- 20-50: скорее человек (есть индивидуальность но структурированно)
+- 50-70: подозрительно (слишком идеально структурировано, шаблонные фразы)
+- 70-100: точно робот/шаблон (безличный текст, автоматическая генерация, повторяющиеся паттерны)
+
+Признаки робота: идеальная структура, отсутствие эмоций, шаблонные фразы типа "Требуется специалист для выполнения задачи", перечисление через запятую без контекста.
+Признаки человека: разговорный стиль, эмоции, конкретные детали проекта, ошибки или неидеальная пунктуация.
 
 Критерии оценки:
 - 85-100: идеальный заказ (твой стек, хороший бюджет, чёткое ТЗ)
@@ -37,7 +48,7 @@ const SYSTEM_PROMPT = `Ты — AI-ассистент веб-разработч�
 - 0-39: плохой (не твой стек, мизерный бюджет, мутное ТЗ)
 
 МИНУС-баллы за: WordPress, Joomla, Tilda, студенческие работы, курсовая, диплом, "срочно", "нужен новичок".
-ПЛЮС-баллы за: Next.js, React, TypeScript, дизайн, инфографика, карточки товаров, чёткий бюджет.`;
+ПЛЮС-баллы за: Next.js, React, TypeScript, дизайн, инфографика, карточки товаров, чёткий бюджет, авито, озон, валбериз.`;
 
 export async function analyzeLead(
   title: string,
@@ -59,19 +70,26 @@ export async function analyzeLead(
     {
       model: options.model || "deepseek/deepseek-chat",
       temperature: 0.2,
-      maxTokens: 600,
+      maxTokens: 700,
       timeout: 30_000,
     },
     options.apiKey
   );
 
   try {
-    return JSON.parse(result) as LeadAnalysisResult;
+    const parsed = JSON.parse(result);
+    return {
+      ...parsed,
+      botProbability: typeof parsed.botProbability === "number" ? parsed.botProbability : 50,
+    };
   } catch {
-    // Пробуем извлечь JSON из текста
     const jsonMatch = result.match(/\{[\s\S]*\}/);
     if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
+      const parsed = JSON.parse(jsonMatch[0]);
+      return {
+        ...parsed,
+        botProbability: typeof parsed.botProbability === "number" ? parsed.botProbability : 50,
+      };
     }
     throw new Error("Невалидный JSON от AI");
   }

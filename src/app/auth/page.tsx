@@ -1,19 +1,40 @@
 // Страница входа
 import { signIn } from "@/lib/auth/auth";
 import Link from "next/link";
+import { Sparkles } from "lucide-react";
 
 export default function AuthPage() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-2 font-bold text-2xl">
-            <span className="text-indigo-600">◈</span> Leads AI
+    <div style={{
+      minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
+      background: "var(--bg-layer)", padding: 24,
+    }}>
+      <div style={{ width: "100%", maxWidth: 400 }}>
+        <div style={{ textAlign: "center", marginBottom: 32 }}>
+          <Link href="/" style={{
+            display: "inline-flex", alignItems: "center", gap: 10,
+            fontSize: "var(--text-xl)", fontWeight: 700,
+            color: "var(--ink-heading)", letterSpacing: "-0.02em",
+          }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: "var(--radius-sm)",
+              background: "var(--accent)", color: "#fff",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 18, fontWeight: 800,
+            }}>
+              ◈
+            </div>
+            Leads AI
           </Link>
-          <p className="mt-2 text-gray-500">Войдите в панель управления</p>
+          <p style={{ color: "var(--ink-muted)", marginTop: 8, fontSize: "var(--text-sm)" }}>
+            Войдите в панель управления
+          </p>
         </div>
 
-        <div className="rounded-2xl bg-white p-8 shadow-sm ring-1 ring-gray-200">
+        <div style={{
+          background: "var(--bg-surface)", border: "1px solid var(--border)",
+          borderRadius: "var(--radius-lg)", padding: "32px 28px",
+        }}>
           <form
             action={async (formData: FormData) => {
               "use server";
@@ -23,48 +44,69 @@ export default function AuthPage() {
                 redirectTo: "/dashboard",
               });
             }}
-            className="space-y-5"
+            style={{ display: "flex", flexDirection: "column", gap: 16 }}
           >
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label style={{
+                display: "block", fontSize: "var(--text-xs)", fontWeight: 600,
+                color: "var(--ink-body)", marginBottom: 6,
+              }}>
                 Email
               </label>
               <input
-                id="email"
-                name="email"
-                type="email"
-                required
+                name="email" type="email" required
                 placeholder="ваш@email.ru"
-                className="block w-full rounded-xl border border-gray-300 px-4 py-3 text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all"
+                style={{
+                  width: "100%", padding: "12px 14px",
+                  borderRadius: "var(--radius-sm)",
+                  border: "1px solid var(--border)",
+                  background: "var(--bg-root)",
+                  color: "var(--ink-body)",
+                  fontSize: "var(--text-sm)",
+                  outline: "none", boxSizing: "border-box",
+                }}
               />
             </div>
-
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1.5">
+              <label style={{
+                display: "block", fontSize: "var(--text-xs)", fontWeight: 600,
+                color: "var(--ink-body)", marginBottom: 6,
+              }}>
                 Пароль
               </label>
               <input
-                id="password"
-                name="password"
-                type="password"
-                required
+                name="password" type="password" required
                 placeholder="••••••••"
-                className="block w-full rounded-xl border border-gray-300 px-4 py-3 text-gray-900 placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-all"
+                style={{
+                  width: "100%", padding: "12px 14px",
+                  borderRadius: "var(--radius-sm)",
+                  border: "1px solid var(--border)",
+                  background: "var(--bg-root)",
+                  color: "var(--ink-body)",
+                  fontSize: "var(--text-sm)",
+                  outline: "none", boxSizing: "border-box",
+                }}
               />
             </div>
-
-            <button
-              type="submit"
-              className="w-full rounded-xl bg-indigo-600 px-4 py-3 text-white font-semibold hover:bg-indigo-500 transition-colors shadow-sm"
-            >
+            <button type="submit" style={{
+              width: "100%", padding: "12px 14px",
+              borderRadius: "var(--radius-sm)",
+              border: "none", background: "var(--accent)",
+              color: "#fff", fontWeight: 600,
+              fontSize: "var(--text-sm)", cursor: "pointer",
+              marginTop: 4,
+            }}>
               Войти
             </button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-gray-500">
-            Первый вход? Напишите{" "}
-            <a href="https://t.me/bilarius" target="_blank" rel="noopener" className="text-indigo-600 hover:underline">
-              в Telegram
+          <p style={{
+            textAlign: "center", marginTop: 20,
+            fontSize: "var(--text-xs)", color: "var(--ink-muted)",
+          }}>
+            Нет аккаунта?{" "}
+            <a href="https://t.me/bilarius" target="_blank" rel="noopener" style={{ color: "var(--accent)", fontWeight: 600 }}>
+              Напишите в Telegram
             </a>
           </p>
         </div>

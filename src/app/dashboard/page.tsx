@@ -2,216 +2,260 @@
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth/auth";
 import Link from "next/link";
+import { Inbox, Brain, Plug, TrendingUp, Plus, ExternalLink } from "lucide-react";
 
 export default async function DashboardPage() {
   const session = await auth();
   if (!session?.user) return null;
 
-  // Получаем или создаём пространство
-  let workspace = await db.workspace.findFirst({
-    where: { userId: session.user.id },
-  });
+  let workspace = await db.workspace.findFirst({ where: { userId: session.user.id } });
   if (!workspace) {
     workspace = await db.workspace.create({
-      data: {
-        userId: session.user.id,
-        name: "Моё пространство",
-        slug: `ws-${session.user.id.slice(0, 8)}`,
-      },
+      data: { userId: session.user.id, name: "Моё пространство", slug: `ws-${session.user.id.slice(0, 8)}` },
     });
   }
 
-  // Настройки
-  const settings = await db.settings.findUnique({
-    where: { workspaceId: workspace.id },
-  });
-  if (!settings) {
-    await db.settings.create({ data: { workspaceId: workspace.id } });
-  }
+  const settings = await db.settings.findUnique({ where: { workspaceId: workspace.id } });
+  if (!settings) await db.settings.create({ data: { workspaceId: workspace.id } });
 
-  // Статистика
-  const [totalLeads, activeSources, todayLeads, recentLeads, sources] =
-    await Promise.all([
-      db.lead.count({ where: { workspaceId: workspace.id } }),
-      db.source.count({ where: { workspaceId: workspace.id, enabled: true } }),
-      db.lead.count({
-        where: {
-          workspaceId: workspace.id,
-          createdAt: { gte: new Date(new Date().setHours(0, 0, 0, 0)) },
-        },
-      }),
-      db.lead.findMany({
-        where: { workspaceId: workspace.id },
-        include: {
-          source: { select: { platform: true, name: true, color: true } },
-          analyses: { orderBy: { createdAt: "desc" }, take: 1 },
-          responses: { take: 1 },
-        },
-        orderBy: { createdAt: "desc" },
-        take: 10,
-      }),
-      db.source.findMany({
-        where: { workspaceId: workspace.id },
-        select: { id: true, platform: true, name: true, enabled: true, lastCheckAt: true, color: true },
-      }),
-    ]);
-
-  // Считаем оценённые заявки
-  const analyzedCount = await db.leadAnalysis.count({
-    where: { lead: { workspaceId: workspace.id } },
-  });
+  const [totalLeads, analyzedCount, activeSources, todayLeads, recentLeads, sources] = await Promise.all([
+    db.lead.count({ where: { workspaceId: workspace.id } }),
+    db.leadAnalysis.count({ where: { lead: { workspaceId: workspace.id } } }),
+    db.source.count({ where: { workspaceId: workspace.id, enabled: true } }),
+    db.lead.count({ where: { workspaceId: workspace.id, createdAt: { gte: new Date(new Date().setHours(0, 0, 0, 0)) } } }),
+    db.lead.findMany({
+      where: { workspaceId: workspace.id },
+      include: {
+        source: { select: { platform: true, name: true, color: true } },
+        analyses: { orderBy: { createdAt: "desc" }, take: 1 },
+        responses: { take: 1 },
+      },
+      orderBy: { createdAt: "desc" }, take: 10,
+    }),
+    db.source.findMany({ where: { workspaceId: workspace.id } }),
+  ]);
 
   const stats = [
-    { label: "Всего заявок", value: totalLeads, icon: "📋" },
-    { label: "Сегодня", value: todayLeads, icon: "🆕" },
-    { label: "С AI-оценкой", value: analyzedCount, icon: "🧠" },
-    { label: "Источников", value: activeSources, icon: "🔌" },
+    { label: "Всего заявок", value: totalLeads, icon: Inbox, color: "var(--accent)" },
+    { label: "С AI-оценкой", value: analyzedCount, icon: Brain, color: "var(--purple)" },
+    { label: "Сегодня", value: todayLeads, icon: TrendingUp, color: "var(--green)" },
+    { label: "Источников", value: activeSources, icon: Plug, color: "var(--blue)" },
   ];
 
   return (
     <div>
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Обзор</h1>
-          <p className="mt-1 text-gray-500">{workspace.name} — сводка</p>
+      {/* Заголовок */}
+      <div style={{ marginBottom: 36 }}>
+        <h1 style={{ fontSize: "var(--text-2xl)", fontWeight: 700, marginBottom: 4 }}>
+          Обзор
+        </h1>
+        <p style={{ color: "var(--ink-muted)", fontSize: "var(--text-sm)" }}>
+          {workspace.name}
+        </p>
+      </div>
+
+      {/* Статистика — сетка 0px */}
+      <div style={{
+        display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+        border: "1px solid var(--border)", borderRadius: "var(--radius-lg)",
+        overflow: "hidden", marginBottom: 32,
+      }}>
+        {stats.map((s, i) => (
+          <div key={s.label} style={{
+            padding: "24px 28px", background: "var(--bg-surface)",
+            borderRight: i < 3 ? "1px solid var(--border)" : "none",
+            display: "flex", gap: 16, alignItems: "flex-start",
+          }}>
+            <div style={{
+              width: 40, height: 40, borderRadius: "var(--radius-sm)",
+              background: "var(--accent-soft)", color: s.color,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              flexShrink: 0,
+            }}>
+              <s.icon size={20} strokeWidth={1.75} />
+            </div>
+            <div>
+              <p style={{ fontSize: "var(--text-2xl)", fontWeight: 800, color: "var(--ink-heading)", lineHeight: 1 }}>
+                {s.value}
+              </p>
+              <p style={{ fontSize: "var(--text-xs)", color: "var(--ink-muted)", marginTop: 4 }}>
+                {s.label}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Источники */}
+      <div style={{
+        border: "1px solid var(--border)", borderRadius: "var(--radius-lg)",
+        overflow: "hidden", marginBottom: 32,
+      }}>
+        <div style={{
+          padding: "16px 24px", background: "var(--bg-surface)",
+          borderBottom: "1px solid var(--border)",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+        }}>
+          <h2 style={{ fontSize: "var(--text-base)", fontWeight: 650 }}>
+            Источники
+          </h2>
+          <Link href="/dashboard/sources" style={{
+            fontSize: "var(--text-xs)", color: "var(--accent)", fontWeight: 600,
+            display: "flex", alignItems: "center", gap: 4,
+          }}>
+            Настроить <ExternalLink size={12} />
+          </Link>
         </div>
-      </div>
-
-      {/* Статистика */}
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {stats.map((s) => (
-          <div key={s.label} className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
-            <div className="text-2xl">{s.icon}</div>
-            <p className="mt-3 text-3xl font-bold text-gray-900">{s.value}</p>
-            <p className="mt-1 text-sm text-gray-500">{s.label}</p>
-          </div>
-        ))}
-      </div>
-
-      {/* Статус источников */}
-      <div className="mt-8 grid gap-4 sm:grid-cols-2">
-        {sources.map((source) => (
-          <div key={source.id} className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <span
-                  className="inline-block h-3 w-3 rounded-full"
-                  style={{ backgroundColor: (source.color as string) || "#6366f1" }}
-                />
-                <span className="font-medium text-gray-900">{source.name}</span>
+        <div style={{
+          display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
+        }}>
+          {sources.map((s) => (
+            <div key={s.id} style={{
+              padding: "20px 24px", background: "var(--bg-surface)",
+              borderRight: "1px solid var(--border)",
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                <span style={{
+                  width: 10, height: 10, borderRadius: "50%",
+                  background: (s.color as string) || "var(--accent)",
+                }} />
+                <span style={{ fontWeight: 600, fontSize: "var(--text-sm)" }}>
+                  {s.name}
+                </span>
+                <span style={{
+                  marginLeft: "auto", fontSize: "var(--text-xs)", fontWeight: 600,
+                  padding: "3px 10px", borderRadius: 100,
+                  background: s.enabled ? "var(--green-soft)" : "var(--bg-hover)",
+                  color: s.enabled ? "var(--green)" : "var(--ink-muted)",
+                }}>
+                  {s.enabled ? "Активен" : "Пауза"}
+                </span>
               </div>
-              <span
-                className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                  source.enabled ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600"
-                }`}
-              >
-                {source.enabled ? "Активен" : "На паузе"}
-              </span>
-            </div>
-            <div className="mt-3 flex items-center justify-between text-sm text-gray-500">
-              <span>
-                Проверен:{" "}
-                {source.lastCheckAt
-                  ? new Date(source.lastCheckAt).toLocaleString("ru", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })
+              <p style={{ fontSize: "var(--text-xs)", color: "var(--ink-muted)" }}>
+                Проверен: {s.lastCheckAt
+                  ? new Date(s.lastCheckAt).toLocaleString("ru", { hour: "2-digit", minute: "2-digit" })
                   : "—"}
-              </span>
-              <span>Каждые 5 мин</span>
+                {" · "}Каждые 5 мин
+              </p>
             </div>
-          </div>
-        ))}
-        {sources.length === 0 && (
-          <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200 col-span-2 text-center">
-            <p className="text-gray-500">Нет подключённых источников</p>
-            <Link href="/dashboard/sources" className="mt-2 inline-block text-indigo-600 hover:underline text-sm">
-              Подключить источник →
-            </Link>
-          </div>
-        )}
+          ))}
+          {sources.length === 0 && (
+            <div style={{ padding: "32px 24px", textAlign: "center", gridColumn: "1/-1" }}>
+              <p style={{ color: "var(--ink-muted)", marginBottom: 12 }}>
+                Нет источников
+              </p>
+              <Link href="/dashboard/sources" style={{
+                display: "inline-flex", alignItems: "center", gap: 6,
+                color: "var(--accent)", fontWeight: 600, fontSize: "var(--text-sm)",
+              }}>
+                <Plus size={16} /> Подключить
+              </Link>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Последние заявки */}
-      <div className="mt-8">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">Последние заявки</h2>
-          <Link href="/dashboard/leads" className="text-sm text-indigo-600 hover:text-indigo-500">
+      <div style={{
+        border: "1px solid var(--border)", borderRadius: "var(--radius-lg)",
+        overflow: "hidden",
+      }}>
+        <div style={{
+          padding: "16px 24px", background: "var(--bg-surface)",
+          borderBottom: "1px solid var(--border)",
+          display: "flex", alignItems: "center", justifyContent: "space-between",
+        }}>
+          <h2 style={{ fontSize: "var(--text-base)", fontWeight: 650 }}>
+            Последние заявки
+          </h2>
+          <Link href="/dashboard/leads" style={{
+            fontSize: "var(--text-xs)", color: "var(--accent)", fontWeight: 600,
+          }}>
             Все заявки →
           </Link>
         </div>
-        <div className="mt-4 rounded-xl bg-white shadow-sm ring-1 ring-gray-200 overflow-hidden">
-          {recentLeads.length === 0 ? (
-            <div className="p-12 text-center text-gray-500">
-              <p className="text-4xl mb-4">📭</p>
-              <p className="text-lg font-medium">Заявок пока нет</p>
-              <Link href="/dashboard/sources" className="mt-4 inline-block rounded-lg bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-500">
-                Подключить источник
-              </Link>
-            </div>
-          ) : (
-            <table className="w-full">
-              <thead>
-                <tr className="border-b bg-gray-50 text-left text-sm text-gray-500">
-                  <th className="px-6 py-3 font-medium">Заявка</th>
-                  <th className="px-6 py-3 font-medium">Бюджет</th>
-                  <th className="px-6 py-3 font-medium">AI</th>
-                  <th className="px-6 py-3 font-medium">Статус</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {recentLeads.map((lead) => {
-                  const analysis = lead.analyses[0];
-                  return (
-                    <tr key={lead.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-3">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className="inline-block h-2 w-2 rounded-full shrink-0"
-                            style={{ backgroundColor: (lead.source.color as string) || "#6366f1" }}
-                          />
-                          <div>
-                            <p className="font-medium text-gray-900 text-sm">{lead.title || "Без названия"}</p>
-                            <p className="text-xs text-gray-500 line-clamp-1">{lead.description}</p>
-                          </div>
+
+        {recentLeads.length === 0 ? (
+          <div style={{ padding: "48px 24px", textAlign: "center", background: "var(--bg-surface)" }}>
+            <Inbox size={40} style={{ color: "var(--ink-muted)", marginBottom: 16, opacity: 0.4 }} />
+            <p style={{ fontWeight: 600, color: "var(--ink-heading)", marginBottom: 4 }}>
+              Заявок пока нет
+            </p>
+            <p style={{ color: "var(--ink-muted)", fontSize: "var(--text-sm)" }}>
+              Подключите источник и дождитесь первого сбора
+            </p>
+          </div>
+        ) : (
+          <table style={{ width: "100%", borderCollapse: "collapse", background: "var(--bg-surface)" }}>
+            <thead>
+              <tr style={{ borderBottom: "1px solid var(--border)" }}>
+                <th style={{ padding: "12px 24px", textAlign: "left", fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--ink-muted)" }}>
+                  Заявка
+                </th>
+                <th style={{ padding: "12px 16px", textAlign: "left", fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--ink-muted)" }}>
+                  Бюджет
+                </th>
+                <th style={{ padding: "12px 16px", textAlign: "center", fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--ink-muted)" }}>
+                  AI
+                </th>
+                <th style={{ padding: "12px 16px", textAlign: "center", fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--ink-muted)" }}>
+                  Отклики
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentLeads.map((lead) => {
+                const a = lead.analyses[0];
+                return (
+                  <tr key={lead.id} style={{ borderBottom: "1px solid var(--border-light)" }}>
+                    <td style={{ padding: "14px 24px" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <span style={{
+                          width: 8, height: 8, borderRadius: "50%", flexShrink: 0,
+                          background: (lead.source.color as string) || "var(--accent)",
+                        }} />
+                        <div>
+                          <p style={{ fontWeight: 600, fontSize: "var(--text-sm)", color: "var(--ink-heading)" }}>
+                            {lead.title || "Без названия"}
+                          </p>
+                          <p style={{ fontSize: "var(--text-xs)", color: "var(--ink-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 300 }}>
+                            {lead.description?.slice(0, 100)}
+                          </p>
                         </div>
-                      </td>
-                      <td className="px-6 py-3 text-sm">
-                        {lead.budgetMin ? `${String(lead.budgetMin)} ₽` : "—"}
-                      </td>
-                      <td className="px-6 py-3">
-                        {analysis?.score != null ? (
-                          <span
-                            className={`inline-flex rounded-full px-2.5 py-1 text-xs font-bold ${
-                              analysis.score >= 85
-                                ? "bg-green-100 text-green-800"
-                                : analysis.score >= 70
-                                  ? "bg-blue-100 text-blue-800"
-                                  : analysis.score >= 40
-                                    ? "bg-yellow-100 text-yellow-800"
-                                    : "bg-red-100 text-red-800"
-                            }`}
-                          >
-                            {analysis.score}
-                          </span>
-                        ) : (
-                          <span className="text-gray-400 text-xs">—</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-3 text-sm">
-                        {lead.responses.length > 0 ? (
-                          <span className="text-green-600 text-xs">📝 отклики</span>
-                        ) : (
-                          <span className="text-gray-400 text-xs">—</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          )}
-        </div>
+                      </div>
+                    </td>
+                    <td style={{ padding: "14px 16px", fontSize: "var(--text-sm)", fontWeight: 500 }}>
+                      {lead.budgetMin ? `${String(lead.budgetMin)} ₽` : "—"}
+                    </td>
+                    <td style={{ padding: "14px 16px", textAlign: "center" }}>
+                      {a?.score != null ? (
+                        <span style={{
+                          display: "inline-flex", padding: "4px 10px", borderRadius: 100,
+                          fontSize: "var(--text-xs)", fontWeight: 700,
+                          background: a.score >= 85 ? "var(--green-soft)" : a.score >= 70 ? "var(--blue-soft)" : a.score >= 40 ? "var(--amber-soft)" : "var(--red-soft)",
+                          color: a.score >= 85 ? "var(--green)" : a.score >= 70 ? "var(--blue)" : a.score >= 40 ? "var(--amber)" : "var(--red)",
+                        }}>
+                          {a.score}
+                        </span>
+                      ) : (
+                        <span style={{ color: "var(--ink-muted)", fontSize: "var(--text-xs)" }}>—</span>
+                      )}
+                    </td>
+                    <td style={{ padding: "14px 16px", textAlign: "center" }}>
+                      {lead.responses.length > 0 ? (
+                        <span style={{ fontSize: "var(--text-xs)", color: "var(--green)", fontWeight: 600 }}>
+                          {lead.responses.length} шт.
+                        </span>
+                      ) : (
+                        <span style={{ color: "var(--ink-muted)", fontSize: "var(--text-xs)" }}>—</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );

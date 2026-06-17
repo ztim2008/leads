@@ -117,6 +117,7 @@ model LeadAnalysis {
   recommendation   String?
   reasoning        String?
   modelUsed        String?  @map("model_used")
+  botProbability  Int?     @map("bot_probability")
   rawResponse      String?  @map("raw_response")
   createdAt        DateTime @default(now()) @map("created_at")
 
