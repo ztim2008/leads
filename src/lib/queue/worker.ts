@@ -1,13 +1,11 @@
-// Планировщик + обработчик заявок (автономный)
-// Запускается как отдельный PM2 процесс
-// Каждые 5 минут опрашивает все включённые источники
-// Раз в час — автоочистка старых заявок
+// Планировщик + обработчик — скорость + расписание
+// Приоритет: мгновенные уведомления в Telegram
+// Проверка расписания ПЕРЕД каждым действием
 
 import { db } from "@/lib/db";
 import { getConnector } from "@/lib/connectors/types";
 import { analyzeLead, generateResponses } from "@/lib/ai/lead-analyzer";
 import { sendLeadNotification } from "@/lib/telegram/notifications";
-import type { NormalizedLead } from "@/lib/connectors/types";
 
 import "@/lib/connectors/profi";
 
@@ -31,54 +29,110 @@ export function getWorkerStatus() {
   };
 }
 
+// ─── Проверка расписания (жёсткая) ───────────────────────────────────────
+
+function canWorkNow(): boolean {
+  try {
+    // Проверяем глобально и через БД
+    if (!isRunning) return false;
+    
+    // Синхронная проверка времени (без БД) — быстрый фильтр
+    const now = new Date();
+    const dayOfWeek = String(now.getDay());
+    const currentTime = now.getHours() * 60 + now.getMinutes();
+    
+    // Дефолтное расписание если настройки недоступны
+    const defaultStart = 9 * 60;  // 09:00
+    const defaultEnd = 21 * 60;   // 21:00
+    const defaultDays = ["1", "2", "3", "4", "5"]; // Пн-Пт
+    
+    if (!defaultDays.includes(dayOfWeek)) return false;
+    if (currentTime < defaultStart || currentTime > defaultEnd) return false;
+    
+    return true;
+  } catch {
+    return true; // по умолчанию разрешаем
+  }
+}
+
 // ─── Автоочистка ──────────────────────────────────────────────────────────
 
 async function autoCleanup() {
   try {
     const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-
-    // Удаляем заявки с рейтингом <20 старше 3 дней
-    const deleted = await db.lead.deleteMany({
-      where: { score: { lt: 20 }, createdAt: { lt: threeDaysAgo } },
-    });
-
-    // Удаляем непроанализированные старше 7 дней
-    const oldDeleted = await db.lead.deleteMany({
-      where: { score: null, createdAt: { lt: sevenDaysAgo } },
-    });
-
+    const deleted = await db.lead.deleteMany({ where: { score: { lt: 20 }, createdAt: { lt: threeDaysAgo } } });
+    const oldDeleted = await db.lead.deleteMany({ where: { score: null, createdAt: { lt: sevenDaysAgo } } });
     const total = deleted.count + oldDeleted.count;
-    if (total > 0) {
-      console.log(`[worker] 🧹 Автоочистка: удалено ${total} заявок (рейтинг<20/3д: ${deleted.count}, без рейтинга/7д: ${oldDeleted.count})`);
-    }
-  } catch (err) {
-    console.error("[worker] Ошибка автоочистки:", err);
-  }
+    if (total > 0) console.log(`[worker] 🧹 Автоочистка: ${total} заявок`);
+  } catch (err) { console.error("[worker] Ошибка очистки:", err); }
 }
 
-// ─── Обработка источника ──────────────────────────────────────────────────
+// ─── Быстрая отправка в Telegram (до AI) ─────────────────────────────────
+
+async function notifyFast(lead: { id: string; title: string; url: string; budgetMin: any }, platform: string, platformColor: string) {
+  try {
+    const settings = await db.settings.findFirst();
+    if (!settings?.telegramChatId || !settings?.telegramToken) return;
+    
+    const budget = lead.budgetMin ? `${lead.budgetMin} ₽` : "бюджет не указан";
+    
+    // Шлём БЫСТРОЕ уведомление — новая заявка, без AI
+    await sendLeadNotification(settings.telegramChatId, {
+      platform,
+      platformColor,
+      score: 0, // без оценки пока
+      title: lead.title,
+      budget,
+      url: lead.url,
+      reasoning: "⚡ Новая заявка! AI-анализ выполняется...",
+    }, settings.telegramToken);
+  } catch (e) { /* игнорируем ошибки Telegram */ }
+}
+
+// ─── Основной цикл ────────────────────────────────────────────────────────
 
 async function processSource(sourceId: string) {
+  if (!canWorkNow()) return;
+
   const source = await db.source.findUnique({
     where: { id: sourceId },
     include: { workspace: { include: { settings: true } } },
   });
-
   if (!source || !source.enabled) return;
+
+  // Жёсткая проверка из БД
+  const s = source.workspace.settings;
+  if (s && !s.systemEnabled) {
+    console.log("[worker] ⏸ systemEnabled=false — пропускаем");
+    return;
+  }
+  if (s?.workDays && s?.workHoursStart && s?.workHoursEnd) {
+    const now = new Date();
+    const dow = String(now.getDay());
+    if (!s.workDays.split(",").includes(dow)) {
+      console.log(`[worker] ⏸ Сегодня выходной (${dow})`);
+      return;
+    }
+    const mins = now.getHours() * 60 + now.getMinutes();
+    const [sh, sm] = s.workHoursStart.split(":").map(Number);
+    const [eh, em] = s.workHoursEnd.split(":").map(Number);
+    if (mins < sh * 60 + sm || mins > eh * 60 + em) {
+      console.log(`[worker] ⏸ Нерабочее время (${s.workHoursStart}-${s.workHoursEnd})`);
+      return;
+    }
+  }
 
   const connector = getConnector(source.platform);
   if (!connector) return;
 
-  currentSource = `${source.platform}: ${source.name}`;
-  const settings = source.workspace.settings;
-  const apiKey = settings?.openrouterKey || "";
+  currentSource = `${source.platform}`;
+  const apiKey = s?.openrouterKey || "";
+  const config = (source.config as Record<string, unknown>) || {};
+  config.keywords = s?.keywords || "";
 
   try {
     console.log(`[worker] 📥 ${source.platform}: сбор...`);
-    const config = (source.config as Record<string, unknown>) || {};
-    config.keywords = settings?.keywords || "";
-
     const leads = await connector.fetchLeads(config);
 
     const existingIds = new Set(
@@ -92,11 +146,13 @@ async function processSource(sourceId: string) {
     if (newLeads.length > 0) console.log(`[worker]    новых: ${newLeads.length}`);
 
     for (const rawLead of newLeads) {
-      const minusWords = (settings?.minusKeywords || "").toLowerCase().split(",").map(w => w.trim()).filter(Boolean);
+      // Фильтр минус-слов
+      const minusWords = (s?.minusKeywords || "").toLowerCase().split(",").map(w => w.trim()).filter(Boolean);
       const text = `${rawLead.title} ${rawLead.description}`.toLowerCase();
       if (minusWords.some(w => text.includes(w))) continue;
-      if (settings?.budgetMin && rawLead.budgetMin && rawLead.budgetMin < settings.budgetMin) continue;
+      if (s?.budgetMin && rawLead.budgetMin && rawLead.budgetMin < s.budgetMin) continue;
 
+      // Сохраняем
       const lead = await db.lead.create({
         data: {
           workspaceId: source.workspaceId, sourceId: source.id,
@@ -107,42 +163,58 @@ async function processSource(sourceId: string) {
         },
       });
 
-      console.log(`[worker]    ✅ ${rawLead.title?.slice(0, 60)}`);
+      // ⚡ МГНОВЕННОЕ уведомление в Telegram (до AI!)
+      if (s?.telegramChatId && s?.telegramToken) {
+        notifyFast(
+          { id: lead.id, title: rawLead.title, url: rawLead.url, budgetMin: rawLead.budgetMin },
+          source.platform,
+          (source.color as string) || "#22c55e"
+        );
+      }
 
+      console.log(`[worker]    ✅ ${rawLead.title?.slice(0, 50)}`);
+
+      // AI-анализ (асинхронно, не блокирует следующие заявки)
       if (apiKey) {
-        try {
-          const analysis = await analyzeLead(rawLead.title, rawLead.description, { apiKey });
-          await db.leadAnalysis.create({
-            data: { leadId: lead.id, score: analysis.score, budgetPrediction: analysis.budgetPrediction,
-              difficulty: analysis.difficulty, recommendation: analysis.recommendation,
-              reasoning: analysis.reasoning, modelUsed: "deepseek-chat",
-              botProbability: analysis.botProbability,
-            },
-          });
-          await db.lead.update({ where: { id: lead.id }, data: { score: analysis.score, difficulty: analysis.difficulty } });
-          console.log(`[worker]    🧠 ${analysis.score}/100 ${analysis.recommendation}`);
+        analyzeLead(rawLead.title, rawLead.description, { apiKey })
+          .then(async (analysis) => {
+            await db.leadAnalysis.create({
+              data: {
+                leadId: lead.id, score: analysis.score, budgetPrediction: analysis.budgetPrediction,
+                difficulty: analysis.difficulty, recommendation: analysis.recommendation,
+                reasoning: analysis.reasoning, modelUsed: "deepseek-chat",
+                botProbability: analysis.botProbability,
+              },
+            });
+            await db.lead.update({ where: { id: lead.id }, data: { score: analysis.score, difficulty: analysis.difficulty } });
 
-          if (analysis.score >= 40 && analysis.recommendation !== "Пропустить") {
-            const responses = await generateResponses(rawLead.title, rawLead.description, apiKey);
-            if (responses) {
-              for (const r of [
-                { type: "Краткий", content: responses.short }, { type: "Продающий", content: responses.sales },
-                { type: "Экспертный", content: responses.expert }, { type: "Технический", content: responses.technical },
-              ]) {
-                await db.response.create({ data: { leadId: lead.id, type: r.type, content: r.content } });
+            // Отклики для хороших
+            if (analysis.score >= 40 && analysis.recommendation !== "Пропустить") {
+              const responses = await generateResponses(rawLead.title, rawLead.description, apiKey);
+              if (responses) {
+                for (const r of [
+                  { type: "Краткий", content: responses.short }, { type: "Продающий", content: responses.sales },
+                  { type: "Экспертный", content: responses.expert }, { type: "Технический", content: responses.technical },
+                ]) {
+                  await db.response.create({ data: { leadId: lead.id, type: r.type, content: r.content } });
+                }
               }
             }
-          }
 
-          if (analysis.score >= 70 && settings?.telegramChatId) {
-            await sendLeadNotification(settings.telegramChatId, {
-              platform: source.platform, platformColor: (source.color as string) || "#22c55e",
-              score: analysis.score, title: rawLead.title, budget: analysis.budgetPrediction,
-              url: rawLead.url, reasoning: analysis.reasoning,
-            });
-          }
-          await new Promise(r => setTimeout(r, 1000));
-        } catch (aiErr) { console.error("[worker] AI:", aiErr); }
+            // Повторное уведомление с AI-оценкой для高分 заявок
+            if (analysis.score >= 70 && s?.telegramChatId && s?.telegramToken) {
+              await sendLeadNotification(s.telegramChatId, {
+                platform: source.platform,
+                platformColor: (source.color as string) || "#22c55e",
+                score: analysis.score,
+                title: rawLead.title,
+                budget: analysis.budgetPrediction,
+                url: rawLead.url,
+                reasoning: analysis.reasoning,
+              }, s.telegramToken);
+            }
+          })
+          .catch((aiErr) => console.error("[worker] AI:", aiErr));
       }
     }
 
@@ -157,74 +229,38 @@ async function processSource(sourceId: string) {
   }
 }
 
-// Проверка: можно ли сейчас работать
-async function canWork(): Promise<boolean> {
-  try {
-    const s = await db.settings.findFirst();
-    if (!s) return true;
-
-    // Глобальный выключатель
-    if (!s.systemEnabled) {
-      console.log("[worker] ⏸ Система выключена глобально (systemEnabled=false)");
-      return false;
-    }
-
-    // Проверка расписания
-    if (s.workDays && s.workHoursStart && s.workHoursEnd) {
-      const now = new Date();
-      const dayOfWeek = String(now.getDay()); // 0=Вс, 1=Пн...
-      const workDays = s.workDays.split(",");
-      
-      if (!workDays.includes(dayOfWeek)) {
-        console.log(`[worker] ⏸ Сегодня выходной (день ${dayOfWeek}, рабочие: ${s.workDays})`);
-        return false;
-      }
-
-      const currentTime = now.getHours() * 60 + now.getMinutes();
-      const [startH, startM] = s.workHoursStart.split(":").map(Number);
-      const [endH, endM] = s.workHoursEnd.split(":").map(Number);
-      const startMin = startH * 60 + startM;
-      const endMin = endH * 60 + endM;
-
-      if (currentTime < startMin || currentTime > endMin) {
-        console.log(`[worker] ⏸ Нерабочее время (сейчас ${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}, работа: ${s.workHoursStart}-${s.workHoursEnd})`);
-        return false;
-      }
-    }
-
-    return true;
-  } catch (err) {
-    console.error("[worker] Ошибка проверки расписания:", err);
-    return true; // по умолчанию разрешаем
-  }
-}
-
 async function pollAllSources() {
-  if (!(await canWork())) return;
-  if (!isRunning) return;
+  if (!canWorkNow()) {
+    console.log("[worker] ⏸ Нерабочее время — пропускаем цикл");
+    return;
+  }
+
   const sources = await db.source.findMany({ where: { enabled: true } });
+  if (sources.length === 0) return;
+
   console.log(`\n[worker] ⏰ Цикл: ${sources.length} источников`);
   for (const source of sources) {
-    if (!isRunning) break;
+    if (!isRunning || !canWorkNow()) break;
     await processSource(source.id);
   }
   console.log("[worker] ✅ Цикл завершён\n");
 }
 
-// ─── Запуск / остановка ───────────────────────────────────────────────────
+// ─── Запуск ───────────────────────────────────────────────────────────────
 
-export function startScheduler(intervalMs = 5 * 60 * 1000) {
+export function startScheduler(intervalMs = 3 * 60 * 1000) {
   if (isRunning) return;
   isRunning = true;
   lastError = null;
   startupTime = startupTime || new Date();
 
-  console.log(`🚀 Worker запущен (опрос: ${intervalMs / 1000}с, очистка: раз в час)`);
+  console.log(`🚀 Worker запущен (опрос: каждые ${intervalMs / 1000}с)`);
+  console.log(`🕐 Расписание: проверка перед каждым циклом`);
+  console.log(`📱 Telegram: мгновенные уведомления о новых заявках`);
 
-  setTimeout(() => pollAllSources(), 5000);
+  setTimeout(() => pollAllSources(), 3000);
   intervalId = setInterval(() => pollAllSources(), intervalMs);
 
-  // Автоочистка при старте и каждый час
   autoCleanup();
   cleanupIntervalId = setInterval(autoCleanup, 60 * 60 * 1000);
 }
@@ -236,6 +272,7 @@ export function stopScheduler() {
   console.log("⏸ Worker остановлен");
 }
 
-startScheduler();
+startScheduler(3 * 60 * 1000); // каждые 3 минуты (быстрее!)
+
 process.on("SIGINT", () => { stopScheduler(); process.exit(0); });
 process.on("SIGTERM", () => { stopScheduler(); process.exit(0); });
