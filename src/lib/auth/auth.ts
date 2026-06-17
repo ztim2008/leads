@@ -34,11 +34,19 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async signIn({ user, account }) {
       if (account?.provider === "yandex" && user.email) {
-        const exists = await db.user.findUnique({ where: { email: user.email } });
-        if (!exists) {
-          const newUser = await db.user.create({ data: { email: user.email, firstName: user.name || "", passwordHash: "" } });
-          const ws = await db.workspace.create({ data: { userId: newUser.id, name: "Моё пространство", slug: `ws-${newUser.id.slice(0, 8)}` } });
-          await db.settings.create({ data: { workspaceId: ws.id } });
+        try {
+          let dbUser = await db.user.findUnique({ where: { email: user.email } });
+          if (!dbUser) {
+            dbUser = await db.user.create({ data: { email: user.email, firstName: user.name || "", passwordHash: "" } });
+          }
+          // Проверяем есть ли workspace
+          const ws = await db.workspace.findFirst({ where: { userId: dbUser.id } });
+          if (!ws) {
+            const newWs = await db.workspace.create({ data: { userId: dbUser.id, name: "Моё пространство", slug: `ws-${dbUser.id.slice(0, 8)}` } });
+            await db.settings.create({ data: { workspaceId: newWs.id } });
+          }
+        } catch (e) {
+          console.error("[auth] signIn error:", e);
         }
       }
       return true;
