@@ -87,8 +87,8 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
             </p>
           </div>
         ) : (
-          leads.map((lead) => (
-            <LeadDetail key={lead.id} lead={{
+          leads.map((lead, i) => (
+            <LeadDetail key={lead.id} lead={{ index: leads.length - i, createdAt: lead.createdAt.toISOString(),
               id: lead.id,
               title: lead.title,
               description: lead.description,
