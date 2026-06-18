@@ -31,6 +31,26 @@ export default async function SettingsPage() {
             </div>
             <ToggleSwitch field="systemEnabled" defaultValue={s.systemEnabled} workspaceId={workspace.id} />
           </form>
+
+        {/* Интервал опроса */}
+        <Section title="⏱ Интервал опроса" hint="Как часто проверять новые заявки">
+          <form action={async (fd: FormData) => {
+            "use server";
+            const val = parseInt(fd.get("checkInterval") as string) || 3;
+            await db.settings.upsert({ where: { workspaceId: workspace.id }, create: { workspaceId: workspace.id, checkInterval: val }, update: { checkInterval: val } });
+            revalidatePath("/dashboard/settings");
+          }} style={{ display: "flex", gap: 10, alignItems: "flex-end" }}>
+            <select name="checkInterval" defaultValue={s.checkInterval || 3} style={{ padding: "10px 14px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--bg-root)", color: "var(--ink-body)", fontSize: "var(--text-sm)", outline: "none" }}>
+              <option value={1}>1 минута</option>
+              <option value={2}>2 минуты</option>
+              <option value={3}>3 минуты</option>
+              <option value={5}>5 минут</option>
+              <option value={10}>10 минут</option>
+              <option value={15}>15 минут</option>
+            </select>
+            <SaveBtn />
+          </form>
+        </Section>
         {/* ═══ Расписание ═══ */}
         <Section title="🕐 Расписание работы" hint="В какие дни и часы система собирает заявки">
           <ScheduleForm s={s} workspaceId={workspace.id} />

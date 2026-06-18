@@ -23,11 +23,12 @@ export default async function AdminPage() {
   }
 
   // Статистика
-  const [totalUsers, totalWorkspaces, totalLeads, totalSources] = await Promise.all([
+  const [totalUsers, totalWorkspaces, totalLeads, totalSources, recentActivity] = await Promise.all([
     db.user.count(),
     db.workspace.count(),
     db.lead.count(),
     db.source.count(),
+    db.activityLog.findMany({ orderBy: { createdAt: "desc" }, take: 20 }),
   ]);
 
   // Пользователи с деталями
@@ -191,6 +192,29 @@ export default async function AdminPage() {
             <p style={{ fontWeight: 650, marginBottom: 4 }}>💰 Тарифы</p>
             <p style={{ color: "var(--ink-muted)", fontSize: "var(--text-xs)" }}><b>Бесплатный</b>: 1 источник, 50 заявок/день<br/><b>Pro</b> (990₽/мес): все источники, AI, отклики</p>
           </div>
+        </div>
+      </div>
+
+      
+      {/* Активность */}
+      <div style={{ marginTop: 32, border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", overflow: "hidden", background: "var(--bg-surface)" }}>
+        <div style={{ padding: "14px 20px", borderBottom: "1px solid var(--border)", fontWeight: 650, fontSize: "var(--text-sm)" }}>
+          📋 Последние события
+        </div>
+        <div style={{ maxHeight: 400, overflowY: "auto" }}>
+          {recentActivity.length === 0 ? (
+            <p style={{ padding: "20px", color: "var(--ink-muted)", fontSize: "var(--text-sm)", textAlign: "center" }}>Событий пока нет</p>
+          ) : (
+            recentActivity.map((a: any) => (
+              <div key={a.id} style={{ padding: "8px 20px", borderBottom: "1px solid var(--border-light)", display: "flex", gap: 12, alignItems: "center", fontSize: "var(--text-xs)" }}>
+                <span style={{ color: a.type.includes("error") ? "var(--red)" : a.type.includes("start") ? "var(--green)" : a.type.includes("stop") ? "var(--amber)" : "var(--ink-muted)", fontWeight: 600, minWidth: 80 }}>
+                  {new Date(a.createdAt).toLocaleTimeString("ru", { hour: "2-digit", minute: "2-digit" })}
+                </span>
+                <span style={{ color: "var(--ink-muted)", fontSize: "0.65rem", minWidth: 70, textTransform: "uppercase" }}>{a.type}</span>
+                <span style={{ color: "var(--ink-body)" }}>{a.description}</span>
+              </div>
+            ))
+          )}
         </div>
       </div>
 

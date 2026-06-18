@@ -151,6 +151,7 @@ model Settings {
   telegramChatId String?  @map("telegram_chat_id")
   telegramToken  String?  @map("telegram_bot_token")
   openrouterKey  String?  @map("openrouter_api_key")
+  checkInterval   Int      @default(3)  @map("check_interval")
   yandexMetrika   String?  @map("yandex_metrika")
   yandexWebmaster String?  @map("yandex_webmaster")
   bodyCode        String?  @map("body_code")
