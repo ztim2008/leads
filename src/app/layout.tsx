@@ -24,14 +24,17 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="ru" suppressHydrationWarning>
+    <html lang="ru" suppressHydrationWarning className="dark">
       <head>
         <script
           dangerouslySetInnerHTML={{
             __html: `
               try {
-                const theme = localStorage.getItem('theme') || 'light';
-                document.documentElement.classList.toggle('dark', theme === 'dark');
+                const theme = localStorage.getItem('theme');
+                // По умолчанию тёмная тема, если не выбрана светлая явно
+                const isDark = theme !== 'light';
+                document.documentElement.classList.toggle('dark', isDark);
+                if (!theme) localStorage.setItem('theme', 'dark');
               } catch(e) {}
             `,
           }}

@@ -20,33 +20,82 @@ const STEPS = [
   { num: "03", title: "Откликайтесь первым", desc: "Готовый отклик ждёт вас. Копируйте и отправляйте. Вы быстрее конкурентов." },
 ];
 
+function Navbar() {
+  return (
+    <nav style={{
+      position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
+      background: "var(--bg-surface)", borderBottom: "1px solid var(--border)",
+      backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
+    }}>
+      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 56 }}>
+        {/* Логотип — всегда видимый */}
+        <a href="/" style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 700, fontSize: "1.1rem", color: "#fafafa", textDecoration: "none", letterSpacing: "-0.02em" }}>
+          <div style={{
+            width: 30, height: 30, borderRadius: 6,
+            background: "var(--accent)", color: "#fff",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 16, fontWeight: 800, flexShrink: 0,
+          }}>◈</div>
+          <span className="nav-logo-text" style={{ display: "inline" }}>Leads AI</span>
+        </a>
+
+        {/* Десктопное меню */}
+        <div className="nav-desktop" style={{ display: "flex", alignItems: "center", gap: 16 }}>
+          <a href="#how" style={{ padding: "6px 10px", borderRadius: 6, fontSize: "0.85rem", color: "var(--ink-muted)", textDecoration: "none", fontWeight: 500 }}>Как работает</a>
+          <a href="/docs" style={{ padding: "6px 10px", borderRadius: 6, fontSize: "0.85rem", color: "var(--ink-muted)", textDecoration: "none", fontWeight: 500 }}>Документация</a>
+          <a href="https://konversus.ru" style={{ fontSize: "0.8rem", color: "var(--ink-muted)", textDecoration: "none", fontWeight: 500, display: "flex", alignItems: "center", gap: 4 }}>
+            <ArrowUpRight size={12} /> konversus.ru
+          </a>
+          <a href="/auth" style={{ padding: "8px 16px", borderRadius: 6, background: "var(--accent)", color: "#fff", fontWeight: 600, fontSize: "0.85rem", textDecoration: "none" }}>Войти</a>
+        </div>
+
+
+      </div>
+
+      {/* Мобильное меню (скрыто по умолчанию) */}
+      <input type="checkbox" id="mobile-menu-toggle" style={{ display: "none" }} />
+      <label htmlFor="mobile-menu-toggle" className="nav-mobile-btn" style={{
+        display: "none", background: "none", border: "1px solid var(--border)",
+        borderRadius: 6, padding: "6px 10px", color: "var(--ink-body)", cursor: "pointer",
+        fontSize: "1.3rem", position: "absolute", right: 20, top: 12,
+      }}>☰</label>
+      <div id="mobile-menu" style={{
+        display: "none", flexDirection: "column", gap: 4,
+        padding: "12px 20px 16px", background: "var(--bg-surface)",
+        borderTop: "1px solid var(--border)",
+      }}>
+        <a href="#how" style={mobileLinkStyle}>Как работает</a>
+        <a href="/docs" style={mobileLinkStyle}>Документация</a>
+        <a href="https://konversus.ru" style={mobileLinkStyle}>← konversus.ru</a>
+        <a href="/auth" style={{ ...mobileLinkStyle, color: "var(--accent)", fontWeight: 600 }}>Войти</a>
+      </div>
+
+      {/* Медиа-запросы для мобильной версии */}
+      <style>{`
+        @media (max-width: 768px) {
+          .nav-desktop { display: none !important; }
+          .nav-mobile-btn { display: flex !important; align-items: center; justify-content: center; }
+        }
+        #mobile-menu-toggle:checked ~ #mobile-menu { display: flex !important; }
+        @media (min-width: 769px) {
+          #mobile-menu, .nav-mobile-btn { display: none !important; }
+        }
+      `}</style>
+    </nav>
+  );
+}
+
+const mobileLinkStyle: React.CSSProperties = {
+  padding: "10px 14px", borderRadius: 6,
+  fontSize: "0.9rem", color: "var(--ink-body)",
+  textDecoration: "none", fontWeight: 500,
+};
+
 export default function LandingPage() {
   return (
     <div style={{ background: "var(--bg-root)", color: "var(--ink-body)" }}>
       {/* ─── Навбар ──────────────────────────────────────────── */}
-      <nav style={{
-        position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
-        background: "rgba(255,255,255,0.92)", borderBottom: "1px solid var(--border)",
-        backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
-      }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 56 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 32 }}>
-            <a href="/" style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 700, fontSize: "var(--text-base)", color: "var(--ink-heading)", textDecoration: "none" }}>
-              <span style={{ color: "var(--accent)", fontSize: 20 }}>◈</span> Leads AI
-            </a>
-            <div style={{ display: "flex", gap: 4 }}>
-              <a href="#how" style={{ padding: "6px 12px", borderRadius: "var(--radius-sm)", fontSize: "var(--text-sm)", color: "var(--ink-muted)", textDecoration: "none", fontWeight: 500 }}>Как работает</a>
-              <a href="/docs" style={{ padding: "6px 12px", borderRadius: "var(--radius-sm)", fontSize: "var(--text-sm)", color: "var(--ink-muted)", textDecoration: "none", fontWeight: 500 }}>Документация</a>
-            </div>
-          </div>
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <a href="https://konversus.ru" style={{ fontSize: "var(--text-xs)", color: "var(--ink-muted)", textDecoration: "none", fontWeight: 500, display: "flex", alignItems: "center", gap: 4 }}>
-              <ArrowUpRight size={12} /> konversus.ru
-            </a>
-            <a href="/auth" style={{ padding: "8px 18px", borderRadius: "var(--radius-sm)", background: "var(--accent)", color: "#fff", fontWeight: 600, fontSize: "var(--text-sm)", textDecoration: "none" }}>Войти</a>
-          </div>
-        </div>
-      </nav>
+      <Navbar />
 
       {/* ─── Hero ──────────────────────────────────────────── */}
       <header style={{
