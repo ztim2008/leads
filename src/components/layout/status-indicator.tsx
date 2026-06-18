@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Activity, CheckCircle, AlertTriangle, XCircle, Clock, Pause } from "lucide-react";
+import { Activity, CheckCircle, AlertTriangle, XCircle, Clock, Pause, Zap } from "lucide-react";
 
 interface WorkerStatus {
   running: boolean;
@@ -17,6 +17,7 @@ interface WorkerStatus {
 
 export default function StatusIndicator() {
   const [status, setStatus] = useState<WorkerStatus | null>(null);
+  const [expanded, setExpanded] = useState(false);
 
   useEffect(() => {
     async function fetchStatus() {
@@ -26,68 +27,129 @@ export default function StatusIndicator() {
       } catch {}
     }
     fetchStatus();
-    const id = setInterval(fetchStatus, 15000);
+    const id = setInterval(fetchStatus, 10000);
     return () => clearInterval(id);
   }, []);
 
   if (!status) {
-    return <Badge icon={<XCircle size={14} />} color="var(--red)" bg="var(--red-soft)" text="Нет связи с воркером" />;
+    return <Badge icon={<XCircle size={14} />} color="#fff" bg="var(--red)" text="Нет связи с воркером" />;
   }
 
   const reason = status.statusReason || "";
   const isPaused = reason.includes("расписани") || reason.includes("Выходной") || reason.includes("Выключена");
-  const isWorking = status.currentSource || reason.includes("Активна") || reason.includes("24/7") || reason.includes("Сбор");
-  const isStopped = !status.running;
+  const isCollecting = reason.includes("Сбор") || !!status.currentSource;
+  const isError = reason.includes("Ошибка") || !!status.lastError;
+  const isActive = !isPaused && !isError && status.running;
 
-  if (isStopped) {
-    return <Badge icon={<Pause size={14} />} color="var(--amber)" bg="var(--amber-soft)" text="Остановлен" />;
-  }
+  // Форматирование времени
+  const timeAgo = status.lastCheckAt
+    ? Math.floor((Date.now() - new Date(status.lastCheckAt).getTime()) / 1000)
+    : null;
+  const agoText = timeAgo
+    ? timeAgo < 60 ? "только что" : `${Math.floor(timeAgo / 60)} мин назад`
+    : "";
 
-  if (isPaused) {
-    return <Badge icon={<Clock size={14} />} color="var(--amber)" bg="var(--amber-soft)" text={reason} />;
-  }
+  // Статистика внизу
+  const statsLine = [
+    status.totalCycles != null && `Циклов: ${status.totalCycles}`,
+    status.totalLeadsCollected != null && `Заявок: ${status.totalLeadsCollected}`,
+    (status.totalErrors || 0) > 0 && `Ошибок: ${status.totalErrors}`,
+  ].filter(Boolean).join(" · ");
 
-  if (isWorking) {
-    const timeAgo = status.lastCheckAt
-      ? Math.floor((Date.now() - new Date(status.lastCheckAt).getTime()) / 1000)
-      : null;
-    const agoText = timeAgo
-      ? timeAgo < 60 ? "только что" : `${Math.floor(timeAgo / 60)} мин назад`
-      : "";
+  return (
+    <div style={{ position: "relative" }}>
+      {/* Основной индикатор */}
+      <div
+        onClick={() => setExpanded(!expanded)}
+        style={{ cursor: "pointer" }}
+      >
+        {isError && (
+          <Badge
+            icon={<AlertTriangle size={14} />}
+            color="#fff"
+            bg="var(--red)"
+            text={status.lastError?.slice(0, 50) || "Ошибка"}
+          />
+        )}
+        
+        {isPaused && (
+          <Badge
+            icon={<Clock size={14} />}
+            color="var(--amber)"
+            bg="var(--amber-soft)"
+            text={reason}
+          />
+        )}
 
-    return (
-      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-        <Badge
-          icon={<CheckCircle size={14} />}
-          color="var(--green)"
-          bg="var(--green-soft)"
-          text={`${status.currentSource || reason} · ${agoText}`}
-        />
-        {status.totalCycles != null && (
-          <div style={{ fontSize: "0.6rem", color: "var(--ink-muted)", display: "flex", gap: 12, justifyContent: "flex-end" }}>
-            <span>Циклов: {status.totalCycles}</span>
-            <span>Заявок: {status.totalLeadsCollected || 0}</span>
-            {(status.totalErrors || 0) > 0 && <span style={{ color: "var(--red)" }}>Ошибок: {status.totalErrors}</span>}
-          </div>
+        {isCollecting && (
+          <Badge
+            icon={<Zap size={14} />}
+            color="#fff"
+            bg="var(--accent)"
+            text={`${status.currentSource || reason} · ${agoText}`}
+          />
+        )}
+
+        {isActive && !isCollecting && (
+          <Badge
+            icon={<CheckCircle size={14} />}
+            color="var(--green)"
+            bg="var(--green-soft)"
+            text={`${reason} · ${agoText}`}
+          />
+        )}
+
+        {!status.running && (
+          <Badge
+            icon={<Pause size={14} />}
+            color="var(--amber)"
+            bg="var(--amber-soft)"
+            text="Остановлен"
+          />
         )}
       </div>
-    );
-  }
 
-  if (status.lastError) {
-    return <Badge icon={<AlertTriangle size={14} />} color="var(--red)" bg="var(--red-soft)" text={status.lastError.slice(0, 60)} />;
-  }
+      {/* Строка статистики */}
+      {statsLine && (
+        <div style={{
+          fontSize: "0.6rem", color: "var(--ink-muted)",
+          textAlign: "right", marginTop: 3,
+        }}>
+          {statsLine}
+        </div>
+      )}
 
-  return <Badge icon={<Activity size={14} />} color="var(--blue)" bg="var(--blue-soft)" text={reason || "Ожидание..."} />;
+      {/* Разворот с деталями ошибки */}
+      {expanded && status.lastError && (
+        <div style={{
+          position: "absolute", top: "100%", right: 0, marginTop: 8,
+          width: 360, background: "var(--bg-surface)",
+          border: "1px solid var(--red)", borderRadius: "var(--radius-md)",
+          padding: 16, zIndex: 200, boxShadow: "var(--shadow-lg)",
+        }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+            <span style={{ fontWeight: 650, color: "var(--red)", fontSize: "var(--text-sm)" }}>⚠️ Последняя ошибка</span>
+            <button onClick={() => setExpanded(false)} style={{ background: "none", border: "none", color: "var(--ink-muted)", cursor: "pointer", fontSize: 16 }}>×</button>
+          </div>
+          <p style={{ fontSize: "var(--text-xs)", color: "var(--ink-body)", lineHeight: 1.5, wordBreak: "break-all" }}>
+            {status.lastError}
+          </p>
+          <p style={{ fontSize: "0.6rem", color: "var(--ink-muted)", marginTop: 8 }}>
+            Всего ошибок: {status.totalErrors || 0} · Циклов: {status.totalCycles || 0}
+          </p>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function Badge({ icon, color, bg, text }: { icon: React.ReactNode; color: string; bg: string; text: string }) {
   return (
     <div style={{
       display: "flex", alignItems: "center", gap: 8,
-      padding: "8px 14px", borderRadius: "var(--radius-sm)",
+      padding: "7px 14px", borderRadius: "var(--radius-sm)",
       background: bg, color: color,
-      fontSize: "var(--text-xs)", fontWeight: 600,
+      fontSize: "var(--text-xs)", fontWeight: 600, whiteSpace: "nowrap",
     }}>
       {icon}
       {text}
