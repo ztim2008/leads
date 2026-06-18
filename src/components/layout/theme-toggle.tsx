@@ -8,7 +8,8 @@ export default function ThemeToggle() {
 
   useEffect(() => {
     const stored = localStorage.getItem("theme");
-    setIsDark(stored === "dark");
+    // По умолчанию тёмная, только явный "light" переключает
+    setIsDark(stored !== "light");
   }, []);
 
   function toggle() {
