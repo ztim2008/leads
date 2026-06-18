@@ -19,11 +19,24 @@ let cleanupIntervalId: ReturnType<typeof setInterval> | null = null;
 let currentSource: string | null = null;
 let lastCheckAt: Date | null = null;
 let lastError: string | null = null;
-let statusReason = "Активна";
+let statusReason = "Активна (МСК)";
 let startupTime: Date | null = null;
 let totalCycles = 0;
 let totalErrors = 0;
 let totalLeadsCollected = 0;
+
+import { writeFileSync } from "fs";
+import { join } from "path";
+
+function saveStatusToFile() {
+  try {
+    const status = getWorkerStatus();
+    writeFileSync(
+      join(process.cwd(), ".worker-status.json"),
+      JSON.stringify({ ...status, updatedAt: new Date().toISOString() })
+    );
+  } catch {}
+}
 
 export function getWorkerStatus() {
   return {
@@ -63,8 +76,14 @@ async function notifyAdminError(message: string) {
 
 // ─── Проверка расписания (ТОЛЬКО из БД, без жёстких дефолтов) ────────────
 
+
+// Московское время (UTC+3)
+function moscowNow(): Date {
+  return new Date(Date.now() + 3 * 60 * 60 * 1000);
+}
+
 async function canWorkNow(): Promise<boolean> {
-  if (!isRunning) return false;
+  if (!isRunning) { saveStatusToFile(); return false; }
 
   try {
     const s = await db.settings.findFirst();
@@ -72,22 +91,22 @@ async function canWorkNow(): Promise<boolean> {
 
     // Глобальный выключатель
     if (!s.systemEnabled) {
-      statusReason = "Выключена глобально"; console.log("[worker] ⏸ systemEnabled=false");
+      statusReason = "Выключена глобально"; saveStatusToFile(); console.log("[worker] ⏸ systemEnabled=false");
       return false;
     }
 
     // Если расписание НЕ настроено — работаем 24/7
     if (!s.workDays || !s.workHoursStart || !s.workHoursEnd) {
-      statusReason = "Активна (24/7)";
+      statusReason = "Активна (24/7 МСК)";
       return true;
     }
 
     // Проверка дня недели
-    const now = new Date();
+    const now = moscowNow();
     const dow = String(now.getDay());
     const workDays = s.workDays.split(",");
     if (!workDays.includes(dow)) {
-      statusReason = `Выходной (день ${dow})`; console.log(`[worker] ⏸ Сегодня выходной (день ${dow})`);
+      statusReason = `Выходной (день ${dow})`; saveStatusToFile(); console.log(`[worker] ⏸ Сегодня выходной (день ${dow})`);
       return false;
     }
 
@@ -96,14 +115,14 @@ async function canWorkNow(): Promise<boolean> {
     const [sh, sm] = s.workHoursStart.split(":").map(Number);
     const [eh, em] = s.workHoursEnd.split(":").map(Number);
     if (mins < sh * 60 + sm || mins > eh * 60 + em) {
-      statusReason = `По расписанию (${s.workHoursStart}-${s.workHoursEnd})`; console.log(`[worker] ⏸ Нерабочее время`);
+      statusReason = `По расписанию (до ${s.workHoursEnd} МСК)`; saveStatusToFile(); console.log(`[worker] ⏸ Нерабочее время`);
       return false;
     }
 
     return true;
   } catch (err) {
     console.error("[worker] Ошибка проверки расписания:", err);
-    statusReason = "Активна";
+    statusReason = "Активна (МСК)";
     return true;
   }
 }
@@ -168,7 +187,7 @@ async function processSource(sourceId: string) {
 
   // Проверка расписания из БД
   if (s?.workDays && s?.workHoursStart && s?.workHoursEnd) {
-    const now = new Date();
+    const now = moscowNow();
     const dow = String(now.getDay());
     if (!s.workDays.split(",").includes(dow)) return;
     const mins = now.getHours() * 60 + now.getMinutes();
@@ -259,7 +278,7 @@ async function processSource(sourceId: string) {
     await db.source.update({ where: { id: source.id }, data: { lastCheckAt: new Date() } });
     lastCheckAt = new Date();
     lastError = null;
-    statusReason = "Активна";
+    statusReason = "Активна (МСК)";
     currentSource = null;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
@@ -302,6 +321,7 @@ async function pollAllSources() {
   if (sources.length === 0) return;
 
   totalCycles++;
+  saveStatusToFile();
   console.log(`\n[worker] ⏰ Цикл #${totalCycles}: ${sources.length} источников`);
   await logActivity("cycle_start", `Цикл #${totalCycles}: ${sources.length} источников`);
 
@@ -310,6 +330,7 @@ async function pollAllSources() {
     await processSource(source.id);
   }
 
+  saveStatusToFile();
   console.log(`[worker] ✅ Цикл #${totalCycles} завершён (собрано: ${totalLeadsCollected})\n`);
 }
 
@@ -352,12 +373,8 @@ export async function restartScheduler() {
   startScheduler(intervalMin * 60 * 1000);
 }
 
-// Старт с интервалом из БД
-(async () => {
-  const s = await db.settings.findFirst();
-  const intervalMin = s?.checkInterval || 3;
-  startScheduler(intervalMin * 60 * 1000);
-})();
+// СТАРТ ТОЛЬКО ЧЕРЕЗ worker-run.ts (PM2 процесс)
+// Не запускаем здесь — иначе web-процесс создаст второй воркер
 
 process.on("SIGINT", () => { stopScheduler(); process.exit(0); });
 process.on("SIGTERM", () => { stopScheduler(); process.exit(0); });
