@@ -2,7 +2,7 @@
 import Link from "next/link";
 import {
   Search, Brain, FileText, MessageSquare, BarChart3, Filter,
-  ArrowRight, Zap, Globe, Shield, ChevronRight, Moon, Sun
+  ArrowRight, Zap, Globe, Shield, ChevronRight, Moon, Sun, ArrowUpRight
 } from "lucide-react";
 
 const FEATURES = [
@@ -23,6 +23,31 @@ const STEPS = [
 export default function LandingPage() {
   return (
     <div style={{ background: "var(--bg-root)", color: "var(--ink-body)" }}>
+      {/* ─── Навбар ──────────────────────────────────────────── */}
+      <nav style={{
+        position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
+        background: "rgba(255,255,255,0.92)", borderBottom: "1px solid var(--border)",
+        backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
+      }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 56 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 32 }}>
+            <a href="/" style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 700, fontSize: "var(--text-base)", color: "var(--ink-heading)", textDecoration: "none" }}>
+              <span style={{ color: "var(--accent)", fontSize: 20 }}>◈</span> Leads AI
+            </a>
+            <div style={{ display: "flex", gap: 4 }}>
+              <a href="#how" style={{ padding: "6px 12px", borderRadius: "var(--radius-sm)", fontSize: "var(--text-sm)", color: "var(--ink-muted)", textDecoration: "none", fontWeight: 500 }}>Как работает</a>
+              <a href="/docs" style={{ padding: "6px 12px", borderRadius: "var(--radius-sm)", fontSize: "var(--text-sm)", color: "var(--ink-muted)", textDecoration: "none", fontWeight: 500 }}>Документация</a>
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <a href="https://konversus.ru" style={{ fontSize: "var(--text-xs)", color: "var(--ink-muted)", textDecoration: "none", fontWeight: 500, display: "flex", alignItems: "center", gap: 4 }}>
+              <ArrowUpRight size={12} /> konversus.ru
+            </a>
+            <a href="/auth" style={{ padding: "8px 18px", borderRadius: "var(--radius-sm)", background: "var(--accent)", color: "#fff", fontWeight: 600, fontSize: "var(--text-sm)", textDecoration: "none" }}>Войти</a>
+          </div>
+        </div>
+      </nav>
+
       {/* ─── Hero ──────────────────────────────────────────── */}
       <header style={{
         background: "var(--bg-layer)",
