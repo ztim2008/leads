@@ -19,6 +19,7 @@ let cleanupIntervalId: ReturnType<typeof setInterval> | null = null;
 let currentSource: string | null = null;
 let lastCheckAt: Date | null = null;
 let lastError: string | null = null;
+let statusReason = "Активна";
 let startupTime: Date | null = null;
 let totalCycles = 0;
 let totalErrors = 0;
@@ -34,6 +35,7 @@ export function getWorkerStatus() {
     totalCycles,
     totalErrors,
     totalLeadsCollected,
+    statusReason,
   };
 }
 
@@ -70,13 +72,14 @@ async function canWorkNow(): Promise<boolean> {
 
     // Глобальный выключатель
     if (!s.systemEnabled) {
-      console.log("[worker] ⏸ systemEnabled=false");
+      statusReason = "Выключена глобально"; console.log("[worker] ⏸ systemEnabled=false");
       return false;
     }
 
     // Если расписание НЕ настроено — работаем 24/7
     if (!s.workDays || !s.workHoursStart || !s.workHoursEnd) {
-      return true; // нет расписания = всегда работаем
+      statusReason = "Активна (24/7)";
+      return true;
     }
 
     // Проверка дня недели
@@ -84,7 +87,7 @@ async function canWorkNow(): Promise<boolean> {
     const dow = String(now.getDay());
     const workDays = s.workDays.split(",");
     if (!workDays.includes(dow)) {
-      console.log(`[worker] ⏸ Сегодня выходной (день ${dow})`);
+      statusReason = `Выходной (день ${dow})`; console.log(`[worker] ⏸ Сегодня выходной (день ${dow})`);
       return false;
     }
 
@@ -93,14 +96,15 @@ async function canWorkNow(): Promise<boolean> {
     const [sh, sm] = s.workHoursStart.split(":").map(Number);
     const [eh, em] = s.workHoursEnd.split(":").map(Number);
     if (mins < sh * 60 + sm || mins > eh * 60 + em) {
-      console.log(`[worker] ⏸ Нерабочее время (${s.workHoursStart}-${s.workHoursEnd})`);
+      statusReason = `По расписанию (${s.workHoursStart}-${s.workHoursEnd})`; console.log(`[worker] ⏸ Нерабочее время`);
       return false;
     }
 
     return true;
   } catch (err) {
     console.error("[worker] Ошибка проверки расписания:", err);
-    return true; // при ошибке — разрешаем
+    statusReason = "Активна";
+    return true;
   }
 }
 
@@ -180,6 +184,7 @@ async function processSource(sourceId: string) {
   }
 
   currentSource = `${source.platform}`;
+  statusReason = `Сбор: ${source.platform}`;
   const apiKey = s?.openrouterKey || "";
   const config = (source.config as Record<string, unknown>) || {};
   config.keywords = s?.keywords || "";
@@ -254,10 +259,12 @@ async function processSource(sourceId: string) {
     await db.source.update({ where: { id: source.id }, data: { lastCheckAt: new Date() } });
     lastCheckAt = new Date();
     lastError = null;
+    statusReason = "Ожидание...";
     currentSource = null;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     lastError = msg;
+    statusReason = `Ошибка: ${msg.slice(0, 40)}`;
     totalErrors++;
     console.error(`[worker] ❌ ${source.platform}: ${msg}`);
     await logActivity("fetch_error", `${source.platform}: ${msg.slice(0, 200)}`);

@@ -31,7 +31,7 @@ export const config = {
     "/dashboard/:path*",
     "/api/settings",
     "/api/admin/:path*",
-    "/api/worker",
+    // "/api/worker", // GET is public
     "/api/leads",
   ],
 };
