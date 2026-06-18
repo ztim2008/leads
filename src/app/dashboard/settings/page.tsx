@@ -37,7 +37,7 @@ export default async function SettingsPage() {
           <form action={async (fd: FormData) => {
             "use server";
             const val = parseInt(fd.get("checkInterval") as string) || 3;
-            await db.settings.upsert({ where: { workspaceId: workspace.id }, create: { workspaceId: workspace.id, checkInterval: val }, update: { checkInterval: val } });
+            await db.settings.update({ where: { workspaceId: workspace.id }, data: { checkInterval: val } });
             revalidatePath("/dashboard/settings");
           }} style={{ display: "flex", gap: 10, alignItems: "flex-end" }}>
             <select name="checkInterval" defaultValue={s.checkInterval || 3} style={{ padding: "10px 14px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--bg-root)", color: "var(--ink-body)", fontSize: "var(--text-sm)", outline: "none" }}>
@@ -127,7 +127,7 @@ function TextForm({ field, defaultValue, placeholder, workspaceId }: { field: st
   return (
     <form action={async (fd: FormData) => {
       "use server";
-      await db.settings.upsert({ where: { workspaceId }, create: { workspaceId, [field]: fd.get(field) }, update: { [field]: fd.get(field) } });
+      await db.settings.update({ where: { workspaceId }, data: { [field]: fd.get(field) || "" } });
       revalidatePath("/dashboard/settings");
     }} style={{ display: "flex", gap: 10 }}>
       <input name={field} defaultValue={defaultValue} placeholder={placeholder} style={{ flex: 1, padding: "10px 14px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--bg-root)", color: "var(--ink-body)", fontSize: "var(--text-sm)", outline: "none" }} />
@@ -140,7 +140,7 @@ function BudgetForm({ s, workspaceId }: { s: any; workspaceId: string }) {
   return (
     <form action={async (fd: FormData) => {
       "use server";
-      await db.settings.upsert({ where: { workspaceId }, create: { workspaceId, budgetMin: parseInt(fd.get("budgetMin") as string) || 3000, budgetMax: parseInt(fd.get("budgetMax") as string) || 500000 }, update: { budgetMin: parseInt(fd.get("budgetMin") as string) || 3000, budgetMax: parseInt(fd.get("budgetMax") as string) || 500000 } });
+      await db.settings.update({ where: { workspaceId }, data: { budgetMin: parseInt(fd.get("budgetMin") as string) || 3000, budgetMax: parseInt(fd.get("budgetMax") as string) || 500000 } });
       revalidatePath("/dashboard/settings");
     }} style={{ display: "flex", gap: 12, alignItems: "flex-end" }}>
       <div><label style={{ display: "block", fontSize: "var(--text-xs)", color: "var(--ink-muted)", marginBottom: 4 }}>От (₽)</label><input name="budgetMin" type="number" defaultValue={s.budgetMin || 3000} style={{ width: 140, padding: "10px 14px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--bg-root)", color: "var(--ink-body)", fontSize: "var(--text-sm)", outline: "none" }} /></div>
@@ -155,7 +155,7 @@ function ToggleForm({ label, hint, field, defaultValue, workspaceId }: { label: 
     <form action={async (fd: FormData) => {
       "use server";
       const val = fd.get(field) === "on";
-      await db.settings.upsert({ where: { workspaceId }, create: { workspaceId, [field]: val }, update: { [field]: val } });
+      await db.settings.update({ where: { workspaceId }, data: { [field]: val } });
       revalidatePath("/dashboard/settings");
     }} style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
       <div>
@@ -184,7 +184,7 @@ function ScheduleForm({ s, workspaceId }: { s: any; workspaceId: string }) {
       const days = DAYS.filter(d => fd.get(`day_${d.key}`) === "on").map(d => d.key).join(",") || "1,2,3,4,5";
       const start = fd.get("workHoursStart") as string || "09:00";
       const end = fd.get("workHoursEnd") as string || "21:00";
-      await db.settings.upsert({ where: { workspaceId }, create: { workspaceId, workDays: days, workHoursStart: start, workHoursEnd: end }, update: { workDays: days, workHoursStart: start, workHoursEnd: end } });
+      await db.settings.update({ where: { workspaceId }, data: { workDays: days, workHoursStart: start, workHoursEnd: end } });
       revalidatePath("/dashboard/settings");
     }} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
       {/* Дни недели */}

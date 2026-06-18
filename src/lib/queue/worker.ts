@@ -282,7 +282,20 @@ async function processSource(sourceId: string) {
 
 // ─── Основной цикл ────────────────────────────────────────────────────────
 
+let lastKnownInterval = 0;
+
 async function pollAllSources() {
+  // Динамическая проверка интервала
+  try {
+    const s = await db.settings.findFirst();
+    const newInterval = (s?.checkInterval || 3) * 60 * 1000;
+    if (newInterval !== lastKnownInterval && lastKnownInterval > 0) {
+      console.log(`[worker] 🔄 Интервал изменён: ${lastKnownInterval/60000}→${newInterval/60000} мин`);
+      if (intervalId) clearInterval(intervalId);
+      intervalId = setInterval(() => pollAllSources(), newInterval);
+    }
+    lastKnownInterval = newInterval;
+  } catch {}
   if (!(await canWorkNow())) return;
 
   const sources = await db.source.findMany({ where: { enabled: true } });
