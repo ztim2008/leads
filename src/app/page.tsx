@@ -27,7 +27,7 @@ export default function LandingPage() {
       <header style={{
         background: "var(--bg-layer)",
         borderBottom: "1px solid var(--border)",
-        padding: "120px 0 100px",
+        padding: "176px 0 100px",
       }}>
         <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px" }}>
           <div style={{ maxWidth: 720 }}>
