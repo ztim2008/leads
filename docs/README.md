@@ -104,6 +104,24 @@ AUTH_TRUST_HOST=true
 OPENROUTER_API_KEY=sk-or-v1-...
 ```
 
+
+## Обновления (день 6)
+
+### Managed партнёры
+- Админ создаёт аккаунты клиентов через форму в `/dashboard/admin`
+- 4 блока: Основное, Profi.ru, Фильтры, Telegram
+- Кнопка «🔑 Войти как» — имперсонация под партнёра
+- API: POST /api/admin/partners, GET /api/admin/partners
+
+### Оптимизация скорости
+- Интервал опроса: 15/30 сек (в настройках)
+- План: тёплый браузер Playwright → экономия 12-15 сек
+- Цель: 3-20 секунд от публикации до Telegram
+
+### Документация
+- docs/MANAGED-CLIENTS.md — план managed onboarding
+- docs/SPEED-OPTIMIZATION.md — оптимизация скорости
+
 ## Команды
 
 ```bash
