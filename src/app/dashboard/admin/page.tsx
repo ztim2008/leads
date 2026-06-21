@@ -4,7 +4,9 @@ import { db } from "@/lib/db";
 import { auth } from "@/lib/auth/auth";
 import Link from "next/link";
 import { revalidatePath } from "next/cache";
-import { Shield, Users, CreditCard, Activity } from "lucide-react";
+import { Shield, Users, CreditCard, Activity, UserPlus } from "lucide-react";
+import AddPartnerButton from "@/components/admin/add-partner-button";
+import PartnersList from "@/components/admin/partners-list";
 
 export default async function AdminPage() {
   const session = await auth();
@@ -161,6 +163,17 @@ export default async function AdminPage() {
           </tbody>
         </table>
       </div>
+
+      
+      {/* Партнёры */}
+      <div style={{ marginTop: 32, border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", overflow: "hidden", background: "var(--bg-surface)" }}>
+        <div style={{ padding: "14px 20px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <span style={{ fontWeight: 650, fontSize: "var(--text-sm)", display: "flex", alignItems: "center", gap: 8 }}><UserPlus size={16} /> Партнёры</span>
+          <AddPartnerButton />
+        </div>
+        <PartnersList />
+      </div>
+
 
       {/* Документация */}
       <div style={{ marginTop: 32, border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", overflow: "hidden", background: "var(--bg-surface)", padding: "24px" }}>
