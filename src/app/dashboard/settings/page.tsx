@@ -41,6 +41,8 @@ export default async function SettingsPage() {
             revalidatePath("/dashboard/settings");
           }} style={{ display: "flex", gap: 10, alignItems: "flex-end" }}>
             <select name="checkInterval" defaultValue={s.checkInterval || 3} style={{ padding: "10px 14px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--bg-root)", color: "var(--ink-body)", fontSize: "var(--text-sm)", outline: "none" }}>
+              <option value={0.25}>15 секунд (макс. скорость)</option>
+              <option value={0.5}>30 секунд</option>
               <option value={1}>1 минута</option>
               <option value={2}>2 минуты</option>
               <option value={3}>3 минуты</option>
