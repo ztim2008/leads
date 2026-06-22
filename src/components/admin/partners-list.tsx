@@ -121,7 +121,7 @@ export default function PartnersList() {
             return (
               <tr key={p.id} style={{borderBottom:"1px solid var(--border-light)"}}>
                 <td style={td}>
-                  <a href={`/dashboard/admin/partners/${p.id}`} style={{fontWeight:650,fontSize:"var(--text-sm)",color:"var(--accent)",textDecoration:"none"}}>{p.name||p.email}</a>
+                  <span style={{fontWeight:650,fontSize:"var(--text-sm)"}}>{p.name||p.email}</span>
                   <br/><span style={{fontSize:"var(--text-xs)",color:"var(--ink-muted)"}}>{p.email}</span>
                 </td>
                 <td style={td}>
