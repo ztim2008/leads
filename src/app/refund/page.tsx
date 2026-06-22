@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { LegalNav, LegalFooter } from "@/components/legal-layout";
+import CookieBanner from "@/components/cookie-banner";
 
 export const metadata: Metadata = { title: "Правила возврата — Konversus Leads AI" };
 
@@ -12,6 +13,7 @@ export default function Page() {
         
         <Section title="1. Услуги надлежащего качества"><p>Возврат за тариф Pro возможен в течение 24 часов с момента платежа, если услуги не были использованы (система не собирала заявки).</p></Section><Section title="2. Порядок"><p>Обратитесь по email bilariuss@yandex.ru или Telegram @bilarius. Укажите: email регистрации, дату и сумму платежа, причину. Возврат — в течение 10 рабочих дней тем же способом.</p></Section><Section title="3. Когда возврат не производится"><ul><li>Прошло более 24 часов с оплаты</li><li>Система успешно собирала заявки в оплаченный период</li></ul></Section><Section title="4. Контакты"><p>Тимофеев Алексей Геннадьевич<br/>Email: bilariuss@yandex.ru<br/>Telegram: @bilarius</p></Section>
       </div>
+      <CookieBanner />
       <LegalFooter />
     </div>
   );

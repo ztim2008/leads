@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { LegalNav, LegalFooter } from "@/components/legal-layout";
+import CookieBanner from "@/components/cookie-banner";
 
 export const metadata: Metadata = { title: "Политика конфиденциальности — Konversus Leads AI" };
 
@@ -12,6 +13,7 @@ export default function Page() {
         <p style={{ color: "var(--ink-muted, #71717a)", marginBottom: 28 }}>Последнее обновление: 22 июня 2026 г.</p>
         <Section title="1. Какие данные мы собираем"><ul><li>Email — для входа в аккаунт</li><li>Имя — персонализация</li><li>Логин и пароль Profi.ru — подключение источника заявок (хранятся зашифрованно)</li><li>Telegram Chat ID и Bot Token — уведомления</li><li>Файлы cookie — сессия авторизации</li></ul></Section><Section title="2. Как используем"><p>Только для: доступа к сервису, сбора заявок, уведомлений в Telegram, улучшения качества. Не передаём третьим лицам.</p></Section><Section title="3. Хранение"><p>Данные на сервере в зашифрованном виде. Доступ только у Исполнителя.</p></Section><Section title="4. Права пользователя"><p>Запросите удаление данных: bilariuss@yandex.ru или Telegram @bilarius.</p></Section><Section title="5. Контакты"><p>Тимофеев Алексей Геннадьевич<br/>Email: bilariuss@yandex.ru<br/>Telegram: @bilarius</p></Section>
       </div>
+      <CookieBanner />
       <LegalFooter />
     </div>
   );

@@ -1,6 +1,7 @@
 // Главная — Konversus Leads AI
 import Link from "next/link";
 import { LegalFooter } from "@/components/legal-layout";
+import CookieBanner from "@/components/cookie-banner";
 import {
   Search, Brain, FileText, MessageSquare, BarChart3, Filter,
   ArrowRight, Zap, Globe, Shield, ChevronRight, Moon, Sun, ArrowUpRight
@@ -351,7 +352,8 @@ export default function LandingPage() {
         </div>
       </section>
 
-<LegalFooter />
+<CookieBanner />
+      <LegalFooter />
     </div>
   );
 }

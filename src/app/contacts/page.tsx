@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { LegalNav, LegalFooter } from "@/components/legal-layout";
+import CookieBanner from "@/components/cookie-banner";
 
 export const metadata: Metadata = { title: "Контакты — Konversus Leads AI" };
 
@@ -12,6 +13,7 @@ export default function Page() {
         
         <Section title="Исполнитель"><div style={{display:"flex",flexDirection:"column",gap:6}}><ContactRow label="ФИО" value="Тимофеев Алексей Геннадьевич" /><ContactRow label="Статус" value="Самозанятый" /><ContactRow label="ИНН" value="532002912418" /><ContactRow label="Email" value="bilariuss@yandex.ru" /><ContactRow label="Telegram" value="@bilarius" /><ContactRow label="Сайт" value="leads.konversus.ru" /></div></Section><Section title="Поддержка"><p>По вопросам работы: Telegram @bilarius или bilariuss@yandex.ru.</p></Section>
       </div>
+      <CookieBanner />
       <LegalFooter />
     </div>
   );
