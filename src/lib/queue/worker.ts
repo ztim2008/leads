@@ -446,11 +446,11 @@ async function processSource(sourceId: string) {
                 reviewCount: details.reviewCount || null,
                 description: details.fullDescription || rawLead.description,
                 city: details.city || rawLead.city,
+                clientRating: details.clientRating || null,
                 metadata: {
                   rating: details.rating,
                   lastOnline: details.lastOnline,
                   budgetRaw: details.budgetRaw,
-                  clientRating: details.clientRating,
                 },
               },
             });
