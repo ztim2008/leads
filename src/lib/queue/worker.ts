@@ -432,7 +432,8 @@ async function processSource(sourceId: string) {
       });
 
       if (s?.telegramChatId && s?.telegramToken && s?.telegramAlerts !== false) {
-        notifyFast({ id: lead.id, title: rawLead.title, url: rawLead.url, budgetMin: rawLead.budgetMin, description: rawLead.description }, source.platform, (source.color as string) || "#22c55e", s.telegramChatId, s.telegramToken);
+        const descPreview = (rawLead.description || "").slice(0, 150).replace(/\n/g, " ");
+            notifyFast({ id: lead.id, title: rawLead.title, url: rawLead.url, budgetMin: rawLead.budgetMin, description: descPreview || rawLead.title }, source.platform, (source.color as string) || "#22c55e", s.telegramChatId, s.telegramToken);
       }
 
       // Глубокий просмотр для Pro
@@ -487,7 +488,8 @@ async function processSource(sourceId: string) {
                 title: rawLead.title,
                 budget: rawLead.budgetMin ? `${rawLead.budgetMin} ₽` : "бюджет не указан",
                 url: rawLead.url,
-                reasoning: [stars, authorInfo, reviewInfo, "🔄 Полное ТЗ"].filter(Boolean).join(" · "),
+                const deepDesc = (details.fullDescription || rawLead.description || "").slice(0, 200).replace(/\n/g, " ");
+              reasoning: [stars, authorInfo, reviewInfo, deepDesc].filter(Boolean).join("\n"),
               }, s.telegramToken);
             }
           } catch (e) {
