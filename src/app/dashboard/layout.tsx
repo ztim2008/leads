@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { auth } from "@/lib/auth/auth";
 import { db } from "@/lib/db";
-import { LayoutDashboard, Inbox, Plug, Settings, BarChart3, LogOut, Shield, Sparkles } from "lucide-react";
+import { LayoutDashboard, Inbox, Plug, Settings, BarChart3, LogOut, Shield, Sparkles, CreditCard } from "lucide-react";
 import ThemeToggle from "@/components/layout/theme-toggle";
 import StatusIndicator from "@/components/layout/status-indicator";
 import SignOutButton from "@/components/layout/signout-button";
@@ -34,6 +34,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     { href: "/dashboard", label: "Обзор", icon: LayoutDashboard },
     { href: "/dashboard/leads", label: "Заявки", icon: Inbox },
     { href: "/dashboard/sources", label: "Источники", icon: Plug },
+    { href: "/dashboard/billing", label: "Тарифы", icon: CreditCard },
     { href: "/dashboard/settings", label: "Настройки", icon: Settings },
     ...(isAdmin ? [{ href: "/dashboard/admin", label: "Админ", icon: Shield }] : []),
     { href: "/dashboard/analytics", label: "Аналитика", icon: BarChart3 },

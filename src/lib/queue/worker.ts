@@ -82,6 +82,106 @@ function moscowNow(): Date {
   return new Date(Date.now() + 3 * 60 * 60 * 1000);
 }
 
+
+// ─── Проверка подписок и уведомления ──────────────────────────────────────
+
+async function checkSubscriptions() {
+  try {
+    const now = new Date();
+    const threeDaysFromNow = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+
+    // Найти истекающие Pro-подписки (через 1-3 дня)
+    const expiringSoon = await db.subscription.findMany({
+      where: {
+        plan: "pro",
+        status: "active",
+        expiresAt: { lte: threeDaysFromNow, gt: now },
+      },
+      include: { workspace: { include: { settings: true } } },
+    });
+
+    for (const sub of expiringSoon) {
+      const daysLeft = Math.ceil((new Date(sub.expiresAt!).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+      const ws = sub.workspace;
+      const email = (await db.user.findUnique({ where: { id: sub.userId! } }))?.email;
+      const tgChatId = ws?.settings?.telegramChatId;
+      const tgToken = ws?.settings?.telegramToken;
+
+      console.log(`[billing] ⚠️ Подписка истекает через ${daysLeft} дн: ${email}`);
+
+      // Telegram уведомление
+      if (tgChatId && tgToken) {
+        try {
+          await fetch(`https://api.telegram.org/bot${tgToken}/sendMessage`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              chat_id: tgChatId,
+              text: `⚠️ *Ваша Pro-подписка истекает через ${daysLeft} дн.*\n\nПродлите подписку чтобы сохранить доступ ко всем функциям:\n\n👉 https://leads.konversus.ru/dashboard/billing`,
+              parse_mode: "Markdown",
+            }),
+            signal: AbortSignal.timeout(8000),
+          });
+        } catch {}
+      }
+
+      // Email уведомление
+      if (email) {
+        try {
+          const nodemailer = require("nodemailer");
+          const transporter = nodemailer.createTransport({
+            host: "smtp.yandex.ru", port: 465, secure: true,
+            auth: { user: process.env.SMTP_USER || "bilariuss@yandex.ru", pass: process.env.SMTP_PASS || "" },
+          });
+          await transporter.sendMail({
+            from: '"Konversus Leads AI" <bilariuss@yandex.ru>',
+            to: email,
+            subject: `Подписка истекает через ${daysLeft} дн.`,
+            html: `<h2>⚠️ Подписка истекает</h2><p>Ваша Pro-подписка на Konversus Leads AI истекает через <b>${daysLeft} дн.</b></p><p>Продлите подписку чтобы сохранить доступ ко всем функциям:</p><p><a href="https://leads.konversus.ru/dashboard/billing">Продлить →</a></p>`,
+          });
+        } catch {}
+      }
+    }
+
+    // Авто-отключение истёкших
+    const expired = await db.subscription.findMany({
+      where: {
+        plan: "pro",
+        status: "active",
+        expiresAt: { lte: now },
+      },
+    });
+
+    for (const sub of expired) {
+      console.log(`[billing] 🔴 Подписка истекла: ${sub.id}`);
+
+      await db.subscription.update({
+        where: { id: sub.id },
+        data: { status: "expired", leadsPerDay: 50, sourcesLimit: 1, aiAnalysis: false, aiResponses: false },
+      });
+
+      // Telegram — отключение
+      const ws = await db.workspace.findUnique({ where: { id: sub.workspaceId! }, include: { settings: true } });
+      if (ws?.settings?.telegramChatId && ws?.settings?.telegramToken) {
+        try {
+          await fetch(`https://api.telegram.org/bot${ws.settings.telegramToken}/sendMessage`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              chat_id: ws.settings.telegramChatId,
+              text: `🔴 *Подписка отключена*\n\nСрок действия Pro-подписки истёк. Функции ограничены бесплатным планом.\n\nОплатите чтобы продолжить:\n👉 https://leads.konversus.ru/dashboard/billing`,
+              parse_mode: "Markdown",
+            }),
+            signal: AbortSignal.timeout(8000),
+          });
+        } catch {}
+      }
+    }
+  } catch (err) {
+    console.error("[billing] check error:", err);
+  }
+}
+
 async function canWorkNow(): Promise<boolean> {
   if (!isRunning) { saveStatusToFile(); return false; }
 
@@ -336,7 +436,10 @@ async function pollAllSources() {
 
 // ─── Запуск ───────────────────────────────────────────────────────────────
 
-export function startScheduler(intervalMs?: number) {
+// Проверка подписок каждый час
+  setInterval(checkSubscriptions, 60 * 60 * 1000);
+
+  export function startScheduler(intervalMs?: number) {
   if (isRunning) return;
   isRunning = true;
   startupTime = startupTime || new Date();
@@ -354,6 +457,7 @@ export function startScheduler(intervalMs?: number) {
   intervalId = setInterval(() => pollAllSources(), ms);
 
   autoCleanup();
+  checkSubscriptions();
   cleanupIntervalId = setInterval(autoCleanup, 60 * 60 * 1000);
 }
 
