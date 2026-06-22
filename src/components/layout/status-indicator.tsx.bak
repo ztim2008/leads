@@ -20,32 +20,17 @@ interface WorkerStatus {
 export default function StatusIndicator() {
   const [status, setStatus] = useState<WorkerStatus | null>(null);
   const [expanded, setExpanded] = useState(false);
-  const [countdown, setCountdown] = useState<number | null>(null);
 
   useEffect(() => {
     async function fetchStatus() {
       try {
         const res = await fetch("/api/worker");
-        if (res.ok) {
-          const data = await res.json();
-          setStatus(data);
-          if (data.lastCheckAt && data.checkIntervalMin) {
-            const nextCheck = new Date(data.lastCheckAt).getTime() + data.checkIntervalMin * 60 * 1000;
-            const remaining = Math.max(0, Math.ceil((nextCheck - Date.now()) / 1000));
-            setCountdown(remaining);
-          }
-        }
+        if (res.ok) setStatus(await res.json());
       } catch {}
     }
     fetchStatus();
     const id = setInterval(fetchStatus, 10000);
-    const ticker = setInterval(() => {
-      setCountdown(prev => {
-        if (prev === null || prev <= 0) return null;
-        return prev - 1;
-      });
-    }, 1000);
-    return () => { clearInterval(id); clearInterval(ticker); };
+    return () => clearInterval(id);
   }, []);
 
   if (!status) {
@@ -125,7 +110,7 @@ export default function StatusIndicator() {
             icon={<CheckCircle size={14} />}
             color="var(--green)"
             bg="var(--green-soft)"
-            text={countdown != null && countdown > 0 ? `${reason} · сбор через ${countdown} сек` : `${reason} · ${agoText}`}
+            text={`${reason} · ${agoText}`}
           />
         )}
 
