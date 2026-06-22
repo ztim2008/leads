@@ -21,6 +21,7 @@ export default async function BillingPage() {
     : 0;
 
   return (
+
     <div>
       <h1 style={{ fontSize: "var(--text-2xl)", fontWeight: 700, marginBottom: 4 }}>Тарифы</h1>
       <p style={{ color: "var(--ink-muted)", fontSize: "var(--text-sm)", marginBottom: 32 }}>
@@ -64,6 +65,12 @@ export default async function BillingPage() {
           )}
         </div>
       </div>
+<footer style={{borderTop:"1px solid var(--border)",padding:"24px 0",marginTop:40,display:"flex",flexWrap:"wrap",gap:16}}>
+        <a href="/contacts" style={{color:"var(--ink-muted)",fontSize:"var(--text-xs)"}}>Контакты</a>
+        <a href="/oferta" style={{color:"var(--ink-muted)",fontSize:"var(--text-xs)"}}>Оферта</a>
+        <a href="/privacy" style={{color:"var(--ink-muted)",fontSize:"var(--text-xs)"}}>Политика конфиденциальности</a>
+        <a href="/refund" style={{color:"var(--ink-muted)",fontSize:"var(--text-xs)"}}>Правила возврата</a>
+      </footer>
     </div>
   );
 }
