@@ -149,6 +149,7 @@ model Settings {
   minusKeywords  String   @default("") @map("minus_keywords")
   budgetMin      Int      @default(30000) @map("budget_min")
   budgetMax      Int      @default(500000) @map("budget_max")
+  showNoBudget   Boolean  @default(true) @map("show_no_budget")
   regions        String   @default("Russia")
   telegramChatId String?  @map("telegram_chat_id")
   telegramToken  String?  @map("telegram_bot_token")

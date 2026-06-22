@@ -67,6 +67,18 @@ export default async function SettingsPage() {
         </Section>
         <Section title="💰 Бюджет">
           <BudgetForm s={s} workspaceId={workspace.id} />
+          <form action={async (fd: FormData) => {
+            "use server";
+            const val = fd.get("showNoBudget") === "on";
+            await db.settings.update({ where: { workspaceId: workspace.id }, data: { showNoBudget: val } });
+            revalidatePath("/dashboard/settings");
+          }} style={{ marginTop: 14, display: "flex", alignItems: "center", gap: 12 }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: "var(--text-sm)", color: "var(--ink-body)" }}>
+              <input name="showNoBudget" type="checkbox" defaultChecked={s.showNoBudget !== false} style={{ width: 16, height: 16, accentColor: "var(--accent)" }} />
+              Показывать заявки без бюджета
+            </label>
+            <SaveBtn />
+          </form>
         </Section>
 
         {/* ═══ Интеграции ═══ */}

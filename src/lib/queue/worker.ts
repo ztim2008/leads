@@ -379,7 +379,14 @@ async function processSource(sourceId: string) {
       const minusWords = (s?.minusKeywords || "").toLowerCase().split(",").map(w => w.trim()).filter(Boolean);
       const text = `${rawLead.title} ${rawLead.description}`.toLowerCase();
       if (minusWords.some(w => text.includes(w))) continue;
-      if (s?.budgetMin && rawLead.budgetMin && rawLead.budgetMin < s.budgetMin) continue;
+      // Бюджетный фильтр
+      if (rawLead.budgetMin) {
+        if (s?.budgetMin && rawLead.budgetMin < s.budgetMin) continue;
+        if (s?.budgetMax && rawLead.budgetMin > s.budgetMax) continue;
+      } else {
+        // Нет бюджета — показываем только если showNoBudget
+        if (s && !s.showNoBudget) continue;
+      }
 
       const lead = await db.lead.create({
         data: {
