@@ -62,10 +62,13 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Успех!
+    // Успех! Активируем источник если был pending
+    if (sourceId) {
+      await db.source.update({ where: { id: sourceId }, data: { status: "active", enabled: true, lastError: null } }).catch(() => {});
+    }
     return NextResponse.json({
       ok: true,
-      message: "Подключение установлено! Логин и пароль верны.",
+      message: "Подключение установлено! Логин и пароль верны. Источник активирован.",
       status: "connected",
     });
   } catch (err: any) {

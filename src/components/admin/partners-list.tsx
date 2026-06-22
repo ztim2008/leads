@@ -6,11 +6,13 @@ function HealthDot({ status, lastError, lastCheckAt }: { status: string; lastErr
     active: "var(--green)",
     error: "var(--red)",
     warning: "var(--amber)",
+    pending: "var(--amber)",
   };
   const labels: Record<string, string> = {
     active: "Работает",
     error: "Ошибка",
     warning: "Внимание",
+    pending: "Ожидает проверки",
   };
   const color = colors[status] || "var(--ink-muted)";
   const label = labels[status] || status;
@@ -111,7 +113,7 @@ export default function PartnersList() {
           {partners.map((p:any) => {
             const ws = p.workspace;
             const source = ws?.sources?.[0];
-            const sourceStatus = source?.status || "active";
+            const sourceStatus = source?.status || (source?.enabled ? "active" : "pending");
             const sourceError = source?.lastError;
             const lastCheck = source?.lastCheckAt;
             const hasTg = ws?.settings?.telegramChatId && ws?.settings?.telegramToken;
@@ -119,7 +121,7 @@ export default function PartnersList() {
             return (
               <tr key={p.id} style={{borderBottom:"1px solid var(--border-light)"}}>
                 <td style={td}>
-                  <span style={{fontWeight:650,fontSize:"var(--text-sm)"}}>{p.name||p.email}</span>
+                  <a href={`/dashboard/admin/partners/${encodeURIComponent(p.email)}`} style={{fontWeight:650,fontSize:"var(--text-sm)",color:"var(--accent)",textDecoration:"none"}}>{p.name||p.email}</a>
                   <br/><span style={{fontSize:"var(--text-xs)",color:"var(--ink-muted)"}}>{p.email}</span>
                 </td>
                 <td style={td}>

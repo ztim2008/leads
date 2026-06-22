@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
       data: {
         workspaceId: ws.id,
         platform: "profi", name: "Profi.ru",
-        enabled: true, color: "#22c55e",
+        enabled: false, color: "#22c55e", status: "pending",
         config: { login: profiLogin, password: profiPassword },
       },
     });

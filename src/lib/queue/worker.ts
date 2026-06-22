@@ -182,6 +182,52 @@ async function checkSubscriptions() {
   }
 }
 
+
+// ─── Счётчик ошибок авторизации (для авто-сброса) ──────────────────────────
+
+const authErrorCount = new Map<string, number>();
+
+async function handleAuthError(sourceId: string, platform: string, errorMsg: string, workspaceSettings: any) {
+  const count = (authErrorCount.get(sourceId) || 0) + 1;
+  authErrorCount.set(sourceId, count);
+
+  console.log(`[worker] 🔐 Ошибка авторизации #${count} для ${platform}`);
+
+  if (count >= 3) {
+    console.log(`[worker] 🚨 3 ошибки подряд — уведомление!`);
+
+    // Уведомление админу
+    await notifyAdminError(
+      `🔴 *3 ошибки авторизации подряд*\n\n` +
+      `Источник: ${platform}\n` +
+      `Ошибка: ${errorMsg.slice(0, 100)}\n\n` +
+      `Проверьте логин/пароль в настройках источника.`
+    );
+
+    // Уведомление партнёру в его Telegram
+    const tgChatId = workspaceSettings?.telegramChatId;
+    const tgToken = workspaceSettings?.telegramToken;
+    if (tgChatId && tgToken) {
+      try {
+        await fetch(`https://api.telegram.org/bot${tgToken}/sendMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chat_id: tgChatId,
+            text: `⚠️ Проблема с подключением к Profi.ru\n\nСистема не может войти 3 раза подряд.\nПроверьте логин и пароль в разделе «Источники».\n\nОшибка: ${errorMsg.slice(0, 80)}`,
+            parse_mode: undefined,
+          }),
+          signal: AbortSignal.timeout(8000),
+        });
+      } catch {}
+    }
+
+    // Сбрасываем счётчик
+    authErrorCount.set(sourceId, 0);
+  }
+}
+
+
 async function canWorkNow(): Promise<boolean> {
   if (!isRunning) { saveStatusToFile(); return false; }
 
@@ -409,6 +455,7 @@ async function processSource(sourceId: string) {
     await db.source.update({ where: { id: source.id }, data: { lastCheckAt: new Date(), status: "active", lastError: null } });
     lastCheckAt = new Date();
     lastError = null;
+    authErrorCount.set(source.id, 0);  // сброс счётчика ошибок
     statusReason = "Активна (МСК)";
     currentSource = null;
   } catch (err) {
@@ -420,7 +467,16 @@ async function processSource(sourceId: string) {
     await db.source.update({ where: { id: source.id }, data: { status: "error", lastError: msg.slice(0, 500) } });
     await logActivity("fetch_error", `${source.platform}: ${msg.slice(0, 200)}`, source.workspaceId);
 
-    // Telegram-уведомление о критической ошибке
+    // Сброс счётчика при успехе (выше)
+    // При ошибке авторизации — инкремент
+    if (msg.includes("логин") || msg.includes("парол") || msg.includes("вход") || msg.includes("login") || msg.includes("auth") || msg.includes("неверный")) {
+      await handleAuthError(source.id, source.platform, msg, s);
+    } else {
+      // Не авторизация — сбрасываем счётчик
+      authErrorCount.set(source.id, 0);
+    }
+
+    // Telegram-уведомление о критической ошибке админу (каждую)
     if (msg.includes("логин") || msg.includes("парол") || msg.includes("вход") || msg.includes("login") || msg.includes("auth")) {
       await notifyAdminError(`🔴 *Ошибка авторизации* ${source.platform}\n\n${msg}\n\nПроверьте логин/пароль в настройках источника.`);
     } else if (totalErrors % 5 === 0) { // каждую 5-ю ошибку
@@ -454,7 +510,7 @@ async function pollAllSources() {
   } catch {}
   if (!(await canWorkNow())) return;
 
-  const sources = await db.source.findMany({ where: { enabled: true } });
+  const sources = await db.source.findMany({ where: { enabled: true, status: { not: "pending" } } });
   if (sources.length === 0) return;
 
   totalCycles++;
