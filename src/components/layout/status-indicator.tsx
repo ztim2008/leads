@@ -14,6 +14,7 @@ interface WorkerStatus {
   totalErrors?: number;
   totalLeadsCollected?: number;
   checkIntervalMin?: number;
+  workspace?: { totalLeads: number; priorityLeads: number; humanLeads: number } | null;
 }
 
 export default function StatusIndicator() {
@@ -57,10 +58,16 @@ export default function StatusIndicator() {
       : `⏱ ${status.checkIntervalMin} мин`
     : null;
 
+  // Статистика workspace (если есть) или глобальная
+  const wsLeads = status.workspace?.totalLeads;
+  const wsPriority = status.workspace?.priorityLeads;
+  const wsHuman = status.workspace?.humanLeads;
+
   const statsLine = [
     intervalText,
-    status.totalCycles != null && `Циклов: ${status.totalCycles}`,
-    status.totalLeadsCollected != null && `Заявок: ${status.totalLeadsCollected}`,
+    wsLeads != null ? `Заявок: ${wsLeads}` : (status.totalLeadsCollected != null ? `Заявок: ${status.totalLeadsCollected}` : null),
+    wsPriority != null && wsPriority > 0 ? `⭐ ${wsPriority}` : null,
+    wsHuman != null && wsHuman > 0 ? `👤 ${wsHuman}` : null,
     (status.totalErrors || 0) > 0 && `Ошибок: ${status.totalErrors}`,
   ].filter(Boolean).join(" · ");
 
