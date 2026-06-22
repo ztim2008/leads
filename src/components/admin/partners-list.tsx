@@ -48,6 +48,14 @@ export default function PartnersList() {
 
   useEffect(() => { load(); }, []);
 
+  async function deletePartner(email: string) {
+    if (!confirm(`Удалить партнёра ${email}?\n\nБудут удалены: все заявки, настройки, источники.\nДействие необратимо.`)) return;
+    const res = await fetch("/api/admin/delete-partner", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) });
+    const d = await res.json();
+    if (d.ok) { alert("✅ Удалён"); load(); }
+    else alert("❌ " + (d.error || "Ошибка"));
+  }
+
   async function loginAs(email: string) {
     const res = await fetch("/api/admin/login-as", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) });
     const d = await res.json();
@@ -140,6 +148,7 @@ export default function PartnersList() {
                   <div style={{display:"flex",gap:4}}>
                     <button onClick={()=>loginAs(p.email)} style={btn("var(--accent-soft)","var(--accent)")}>🔑 Войти</button>
                     <button onClick={()=>markPaid(p.email)} style={btn("var(--green-soft)","var(--green)")}>💰</button>
+                    <button onClick={()=>deletePartner(p.email)} style={btn("var(--red-soft)","var(--red)")}>🗑</button>
                   </div>
                 </td>
               </tr>

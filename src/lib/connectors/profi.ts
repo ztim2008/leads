@@ -64,14 +64,14 @@ async function ensureLoggedIn(sourceId: string, login: string, password: string)
       console.error(`[profi] ❌ Неверный логин/пароль для ${login}`);
       await page.close();
       await browser.close().catch(() => {});
-      return null;
+      throw new Error(`Profi.ru: неверный логин или пароль для ${login}`);
     }
 
     if (url.includes("login") || url.includes("auth")) {
       console.error(`[profi] ❌ Не удалось войти: ${login}`);
       await page.close();
       await browser.close().catch(() => {});
-      return null;
+      throw new Error(`Profi.ru: не удалось войти (возможно SMS или капча) для ${login}`);
     }
 
     console.log(`[profi] ✅ Вход выполнен: ${login} → ${url}`);
