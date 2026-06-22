@@ -1,8 +1,8 @@
 // Коннектор Profi.ru — Playwright (авторизация + парсинг HTML)
-// Входит через backoffice, парсит карточки заказов со страницы
-// Надёжнее чем GraphQL — не требует API-доступа
+// v2: Изолированные браузеры на каждый source (партнёра)
+// Каждый партнёр = свой контекст, свои куки, своя сессия
 
-import { chromium, type BrowserContext } from "playwright";
+import { chromium, type BrowserContext, type Page } from "playwright";
 import type { Connector, ConnectorConfig, NormalizedLead } from "./types";
 import { registerConnector } from "./types";
 
@@ -14,31 +14,36 @@ interface ProfiConfig extends ConnectorConfig {
 
 const LOGIN_URL = "https://profi.ru/backoffice/n.php";
 
-let cachedPage: import("playwright").Page | null = null;
-let cachedBrowser: import("playwright").Browser | null = null;
+// Кеш на каждый sourceId (а не глобальный!)
+const sessionCache = new Map<string, { browser: import("playwright").Browser; page: Page; login: string }>();
 
-async function ensureLoggedIn(login: string, password: string): Promise<import("playwright").Page | null> {
-  if (cachedPage) {
+async function ensureLoggedIn(sourceId: string, login: string, password: string): Promise<Page | null> {
+  // Проверяем — есть ли сессия для ЭТОГО sourceId с ЭТИМ логином
+  const cached = sessionCache.get(sourceId);
+  if (cached && cached.login === login) {
     try {
-      // Проверяем что страница жива
-      await cachedPage.url();
-      return cachedPage;
+      await cached.page.url(); // проверка что жива
+      return cached.page;
     } catch {
-      cachedPage = null;
+      // Умерла — удаляем и пересоздаём
+      await cached.browser.close().catch(() => {});
+      sessionCache.delete(sourceId);
     }
   }
 
-  console.log("[profi] 🔑 Вход через Playwright...");
-
-  if (cachedBrowser) {
-    await cachedBrowser.close().catch(() => {});
-    cachedBrowser = null;
+  // Если есть старая сессия с ДРУГИМ логином — закрываем
+  if (cached && cached.login !== login) {
+    console.log(`[profi] 🔄 Смена логина для source ${sourceId}: ${cached.login} → ${login}`);
+    await cached.browser.close().catch(() => {});
+    sessionCache.delete(sourceId);
   }
 
+  console.log(`[profi] 🔑 Вход: ${login} (source: ${sourceId})...`);
+
   const browser = await chromium.launch({ headless: true });
-  cachedBrowser = browser;
   const context = await browser.newContext({
     viewport: { width: 1920, height: 1080 },
+    userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
   });
 
   const page = await context.newPage();
@@ -50,30 +55,32 @@ async function ensureLoggedIn(login: string, password: string): Promise<import("
     await page.locator('input[type="password"]').first().fill(password);
     await page.click('[data-testid="enter_with_sms_btn"]');
 
-    // Ждём загрузки кабинета
     await page.waitForTimeout(6000);
 
     const url = page.url();
     const bodyText = await page.locator("body").innerText();
 
     if (bodyText.includes("Некорректный логин") || bodyText.includes("Некорректный пароль")) {
-      console.error("[profi] ❌ Неверный логин или пароль");
+      console.error(`[profi] ❌ Неверный логин/пароль для ${login}`);
       await page.close();
+      await browser.close().catch(() => {});
       return null;
     }
 
     if (url.includes("login") || url.includes("auth")) {
-      console.error("[profi] ❌ Не удалось войти");
+      console.error(`[profi] ❌ Не удалось войти: ${login}`);
       await page.close();
+      await browser.close().catch(() => {});
       return null;
     }
 
-    console.log("[profi] ✅ Вход выполнен:", url);
-    cachedPage = page;
+    console.log(`[profi] ✅ Вход выполнен: ${login} → ${url}`);
+    sessionCache.set(sourceId, { browser, page, login });
     return page;
   } catch (err) {
-    console.error("[profi] ❌ Ошибка входа:", err);
+    console.error(`[profi] ❌ Ошибка входа для ${login}:`, err);
     await page.close().catch(() => {});
+    await browser.close().catch(() => {});
     return null;
   }
 }
@@ -119,17 +126,22 @@ export const profiConnector: Connector = {
       return [];
     }
 
-    const page = await ensureLoggedIn(c.login, c.password);
+    // sourceId обязателен для изоляции сессий
+    const sourceId = (config as any).sourceId as string;
+    if (!sourceId) {
+      console.error("[profi] ❌ sourceId не передан — невозможно изолировать сессию");
+      return [];
+    }
+
+    const page = await ensureLoggedIn(sourceId, c.login, c.password);
     if (!page) return [];
 
     try {
-      console.log("[profi] 📊 Парсинг заказов...");
+      console.log(`[profi] 📊 Парсинг заказов для ${c.login}...`);
 
-      // Парсим карточки заказов со страницы
       const leads: NormalizedLead[] = [];
       const seen = new Set<string>();
 
-      // Ищем ссылки на заказы (формат: ?o=<id>)
       const orderLinks = await page.locator('a[href*="?o="]').evaluateAll(
         (els) =>
           els.map((el) => ({
@@ -138,7 +150,7 @@ export const profiConnector: Connector = {
           }))
       );
 
-      console.log(`[profi] 🔗 Найдено ${orderLinks.length} ссылок на заказы`);
+      console.log(`[profi] 🔗 Найдено ${orderLinks.length} ссылок для ${c.login}`);
 
       for (const link of orderLinks) {
         if (!link.text || seen.has(link.href)) continue;
@@ -159,7 +171,6 @@ export const profiConnector: Connector = {
         });
       }
 
-      // Если ссылок нет — пробуем другие селекторы
       if (leads.length === 0) {
         const snippets = await page.locator('[class*="snippet"], [class*="order"], [data-testid$="snippet"]').evaluateAll(
           (els) =>
@@ -187,12 +198,11 @@ export const profiConnector: Connector = {
         }
       }
 
-      console.log(`[profi] ✅ Собрано ${leads.length} заявок`);
+      console.log(`[profi] ✅ ${c.login}: собрано ${leads.length} заявок`);
       return leads;
     } catch (err) {
-      console.error("[profi] ❌ Ошибка парсинга:", err);
-      // Сбрасываем кеш страницы при ошибке
-      cachedPage = null;
+      console.error(`[profi] ❌ Ошибка парсинга для ${c.login}:`, err);
+      sessionCache.delete(sourceId);
       return [];
     }
   },
@@ -200,8 +210,10 @@ export const profiConnector: Connector = {
 
 registerConnector(profiConnector);
 
+// При выходе — закрываем все браузеры
 process.on("exit", () => {
-  if (cachedBrowser) cachedBrowser.close().catch(() => {});
-  cachedBrowser = null;
-  cachedPage = null;
+  for (const [, session] of sessionCache) {
+    session.browser.close().catch(() => {});
+  }
+  sessionCache.clear();
 });

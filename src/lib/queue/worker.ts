@@ -340,6 +340,7 @@ async function processSource(sourceId: string) {
   const apiKey = s?.openrouterKey || "";
   const config = (source.config as Record<string, unknown>) || {};
   config.keywords = s?.keywords || "";
+  config.sourceId = source.id;  // изоляция браузеров на каждый источник
 
   try {
     console.log(`[worker] 📥 ${source.platform}: сбор...`);
