@@ -65,8 +65,8 @@ async function notifyAdminError(message: string) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         chat_id: adminChatId,
-        text: `⚠️ *Leads AI — ошибка*\n\n${message}`,
-        parse_mode: "Markdown",
+        text: `⚠️ Leads AI — ошибка\n\n${message.replace(/[*_`[\]]/g, "")}`,
+        parse_mode: undefined,
         disable_web_page_preview: true,
       }),
       signal: AbortSignal.timeout(8000),
@@ -117,8 +117,8 @@ async function checkSubscriptions() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               chat_id: tgChatId,
-              text: `⚠️ *Ваша Pro-подписка истекает через ${daysLeft} дн.*\n\nПродлите подписку чтобы сохранить доступ ко всем функциям:\n\n👉 https://leads.konversus.ru/dashboard/billing`,
-              parse_mode: "Markdown",
+              text: `⚠️ Ваша Pro-подписка истекает через ${daysLeft} дн.\n\nПродлите подписку чтобы сохранить доступ ко всем функциям:\n\n👉 https://leads.konversus.ru/dashboard/billing`,
+              parse_mode: undefined,
             }),
             signal: AbortSignal.timeout(8000),
           });
@@ -169,8 +169,8 @@ async function checkSubscriptions() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               chat_id: ws.settings.telegramChatId,
-              text: `🔴 *Подписка отключена*\n\nСрок действия Pro-подписки истёк. Функции ограничены бесплатным планом.\n\nОплатите чтобы продолжить:\n👉 https://leads.konversus.ru/dashboard/billing`,
-              parse_mode: "Markdown",
+              text: `🔴 Подписка отключена\n\nСрок действия Pro-подписки истёк. Функции ограничены бесплатным планом.\n\nОплатите чтобы продолжить:\n👉 https://leads.konversus.ru/dashboard/billing`,
+              parse_mode: undefined,
             }),
             signal: AbortSignal.timeout(8000),
           });
