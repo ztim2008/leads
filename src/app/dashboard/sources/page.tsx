@@ -3,8 +3,8 @@ import { db } from "@/lib/db";
 import { auth } from "@/lib/auth/auth";
 import { listConnectors } from "@/lib/connectors/types";
 import { revalidatePath } from "next/cache";
+import ProfiTestButton from "@/components/profi-test-button";
 
-// Импорт коннекторов для регистрации
 import "@/lib/connectors/profi";
 
 const PLATFORM_COLORS: Record<string, string> = {
@@ -28,191 +28,180 @@ export default async function SourcesPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900">Источники заявок</h1>
-      <p className="mt-1 text-gray-500">
+      <h1 style={{ fontSize: "var(--text-2xl)", fontWeight: 700, marginBottom: 4 }}>Источники заявок</h1>
+      <p style={{ color: "var(--ink-muted)", fontSize: "var(--text-sm)", marginBottom: 28 }}>
         Подключите площадки для автоматического сбора заказов
       </p>
 
-      {/* Доступные коннекторы */}
-      <div className="mt-8 grid gap-6 sm:grid-cols-2">
+      {/* Карточки коннекторов */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))", gap: 0, border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", overflow: "hidden" }}>
         {availableConnectors.map((connector) => {
-          const existing = workspace.sources.find(
-            (s) => s.platform === connector.platform
-          );
+          const existing = workspace.sources.find((s) => s.platform === connector.platform);
           const color = PLATFORM_COLORS[connector.platform] || "#6366f1";
+          const config = (existing?.config as Record<string, unknown>) || {};
+          const hasLogin = !!(config.login && config.password);
 
           return (
-            <div
-              key={connector.platform}
-              className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200"
-            >
-              <div className="flex items-center gap-3">
-                <div
-                  className="flex h-10 w-10 items-center justify-center rounded-xl text-white text-lg font-bold"
-                  style={{ backgroundColor: color }}
-                >
+            <div key={connector.platform} style={{ padding: "24px", background: "var(--bg-surface)", borderBottom: "1px solid var(--border)" }}>
+
+              {/* Заголовок */}
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+                <div style={{ width: 42, height: 42, borderRadius: "var(--radius-sm)", background: color, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, fontWeight: 800 }}>
                   {connector.platform[0].toUpperCase()}
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900">{connector.name}</h3>
-                  <p className="text-sm text-gray-500">
+                  <h3 style={{ fontWeight: 650, fontSize: "var(--text-sm)" }}>{connector.name}</h3>
+                  <p style={{ fontSize: "var(--text-xs)", color: "var(--ink-muted)" }}>
                     {existing
                       ? existing.enabled
-                        ? "✅ Подключен"
+                        ? hasLogin ? "🟢 Подключён и работает" : "🟡 Подключён, но не настроен логин/пароль"
                         : "⏸ Приостановлен"
-                      : "Не подключен"}
+                      : "Не подключён"}
                   </p>
                 </div>
               </div>
 
+              {/* Последняя проверка */}
               {existing && (
-                <>
-                  <div className="mt-4 flex items-center gap-4 text-sm text-gray-500">
-                    <span>
-                      Проверен:{" "}
-                      {existing.lastCheckAt
-                        ? new Date(existing.lastCheckAt).toLocaleString("ru")
-                        : "Никогда"}
+                <div style={{ fontSize: "var(--text-xs)", color: "var(--ink-muted)", marginBottom: 16 }}>
+                  Последняя проверка:{" "}
+                  {existing.lastCheckAt
+                    ? new Date(existing.lastCheckAt).toLocaleString("ru")
+                    : "—"}
+                  {existing.status === "error" && (
+                    <span style={{ color: "var(--red)", marginLeft: 8 }} title={(existing as any).lastError || ""}>
+                      ⚠️ Ошибка
                     </span>
-                  </div>
-
-                  {/* Настройки Profi */}
-                  {connector.platform === "profi" && (
-                    <form
-                      action={async (formData: FormData) => {
-                        "use server";
-                        const login = formData.get("login") as string;
-                        const password = formData.get("password") as string;
-                        const currentSource = await db.source.findUnique({
-                          where: { id: existing.id },
-                        });
-                        const currentConfig = (currentSource?.config as Record<string, unknown>) || {};
-                        await db.source.update({
-                          where: { id: existing.id },
-                          data: {
-                            config: { ...currentConfig, login: login || "", password: password || "" },
-                          },
-                        });
-                        revalidatePath("/dashboard/sources");
-                      }}
-                      className="mt-4 space-y-3"
-                    >
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          👤 Логин Profi.ru
-                        </label>
-                        <p className="text-xs text-gray-400 mb-1">
-                          Из анкеты: Настройки → Логин (например TimofeyevAG11)
-                        </p>
-                        <input
-                          name="login"
-                          defaultValue={
-                            ((existing.config as Record<string, unknown>)?.login as string) || ""
-                          }
-                          placeholder="TimofeyevAG11"
-                          className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-gray-50 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          🔐 Пароль Profi.ru
-                        </label>
-                        <input
-                          name="password"
-                          type="password"
-                          defaultValue={
-                            ((existing.config as Record<string, unknown>)?.password as string) || ""
-                          }
-                          placeholder="••••••••"
-                          className="block w-full rounded-lg border border-gray-300 px-3 py-2 text-sm bg-gray-50 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none"
-                        />
-                      </div>
-                      <button
-                        type="submit"
-                        className="rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-200 transition-colors"
-                      >
-                        💾 Сохранить
-                      </button>
-                    </form>
                   )}
-                </>
+                </div>
               )}
 
-              <div className="mt-4 flex gap-2">
-                {existing ? (
-                  <form
-                    action={async () => {
-                      "use server";
-                      await db.source.update({
-                        where: { id: existing.id },
-                        data: { enabled: !existing.enabled },
-                      });
-                      revalidatePath("/dashboard/sources");
-                    }}
-                  >
-                    <button
-                      type="submit"
-                      className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${
-                        existing.enabled
-                          ? "bg-red-50 text-red-700 hover:bg-red-100"
-                          : "bg-green-50 text-green-700 hover:bg-green-100"
-                      }`}
-                    >
-                      {existing.enabled ? "Отключить" : "Включить"}
-                    </button>
-                  </form>
-                ) : (
-                  <form
-                    action={async () => {
-                      "use server";
-                      await db.source.create({
-                        data: {
-                          workspaceId: workspace.id,
-                          platform: connector.platform,
-                          name: connector.name,
-                          color: color,
-                          enabled: true,
-                          config: {},
-                        },
-                      });
-                      revalidatePath("/dashboard/sources");
-                    }}
-                  >
-                    <button
-                      type="submit"
-                      className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 transition-colors"
-                    >
-                      Подключить
-                    </button>
-                  </form>
-                )}
-              </div>
+              {/* Форма логина/пароля для Profi */}
+              {connector.platform === "profi" && existing && (
+                <form
+                  action={async (formData: FormData) => {
+                    "use server";
+                    const login = formData.get("login") as string;
+                    const password = formData.get("password") as string;
+                    const currentSource = await db.source.findUnique({ where: { id: existing.id } });
+                    const currentConfig = (currentSource?.config as Record<string, unknown>) || {};
+                    await db.source.update({
+                      where: { id: existing.id },
+                      data: { config: { ...currentConfig, login: login || "", password: password || "" } },
+                    });
+                    revalidatePath("/dashboard/sources");
+                  }}
+                >
+                  {/* Инструкция */}
+                  <div style={{
+                    padding: "12px 14px", borderRadius: "var(--radius-sm)",
+                    background: "var(--bg-layer)", border: "1px solid var(--border)",
+                    marginBottom: 14, fontSize: "var(--text-xs)", lineHeight: 1.7, color: "var(--ink-muted)",
+                  }}>
+                    <p style={{ fontWeight: 650, color: "var(--ink-heading)", marginBottom: 6 }}>📖 Где взять логин?</p>
+                    <ol style={{ paddingLeft: 18, display: "flex", flexDirection: "column", gap: 4, margin: 0 }}>
+                      <li>Войдите на <b style={{color:"var(--accent)"}}>profi.ru</b> под своим аккаунтом</li>
+                      <li>Перейдите в <b>Настройки анкеты</b> (шестерёнка вверху справа)</li>
+                      <li>Найдите поле <b>«Логин»</b> — выглядит как <code style={{background:"var(--bg-root)",padding:"1px 4px",borderRadius:3}}>TimofeyevAG11</code></li>
+                      <li>Скопируйте логин и введите ниже вместе с паролем от аккаунта</li>
+                    </ol>
+                  </div>
+
+                  {/* Поля ввода */}
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                    <div>
+                      <label style={lbl}>👤 Логин Profi.ru</label>
+                      <input name="login" defaultValue={(config.login as string) || ""}
+                        placeholder="TimofeyevAG11" style={inp} />
+                    </div>
+                    <div>
+                      <label style={lbl}>🔐 Пароль Profi.ru</label>
+                      <input name="password" type="password" defaultValue={(config.password as string) || ""}
+                        placeholder="••••••••" style={inp} />
+                    </div>
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                      <button type="submit" style={{
+                        padding: "8px 18px", borderRadius: "var(--radius-sm)",
+                        background: "var(--accent)", color: "#fff", border: "none",
+                        fontWeight: 600, fontSize: "var(--text-xs)", cursor: "pointer",
+                      }}>
+                        💾 Сохранить
+                      </button>
+                      <ProfiTestButton
+                        sourceId={existing.id}
+                        currentLogin={(config.login as string) || ""}
+                        currentPassword={(config.password as string) || ""}
+                      />
+                    </div>
+                  </div>
+                </form>
+              )}
+
+              {/* Для неподключенных — кнопка подключить */}
+              {!existing && (
+                <form action={async () => {
+                  "use server";
+                  await db.source.create({
+                    data: { workspaceId: workspace.id, platform: connector.platform, name: connector.name, color, enabled: true, config: {} },
+                  });
+                  revalidatePath("/dashboard/sources");
+                }}>
+                  <button type="submit" style={{
+                    padding: "10px 20px", borderRadius: "var(--radius-sm)",
+                    background: color, color: "#fff", border: "none",
+                    fontWeight: 600, fontSize: "var(--text-sm)", cursor: "pointer",
+                  }}>
+                    Подключить {connector.name}
+                  </button>
+                </form>
+              )}
+
+              {/* Кнопка вкл/выкл */}
+              {existing && (
+                <form action={async () => {
+                  "use server";
+                  await db.source.update({ where: { id: existing.id }, data: { enabled: !existing.enabled } });
+                  revalidatePath("/dashboard/sources");
+                }} style={{ marginTop: 16 }}>
+                  <button type="submit" style={{
+                    padding: "6px 14px", borderRadius: "var(--radius-sm)",
+                    background: existing.enabled ? "var(--red-soft)" : "var(--green-soft)",
+                    color: existing.enabled ? "var(--red)" : "var(--green)",
+                    border: `1px solid ${existing.enabled ? "var(--red)" : "var(--green)"}`,
+                    fontWeight: 600, fontSize: "var(--text-xs)", cursor: "pointer",
+                  }}>
+                    {existing.enabled ? "⏸ Отключить" : "▶ Включить"}
+                  </button>
+                </form>
+              )}
             </div>
           );
         })}
       </div>
 
-      {/* Инструкция */}
-      <div className="mt-8 rounded-xl bg-green-50 p-6 ring-1 ring-green-200">
-        <p className="font-semibold text-green-900">📖 Как подключить Profi.ru</p>
-        <ol className="mt-3 space-y-2 text-sm text-green-800 list-decimal list-inside">
-          <li>Войдите в <b>profi.ru</b> → Настройки анкеты</li>
-          <li>Найдите поле <b>«Логин»</b> (формат: TimofeyevAG11)</li>
-          <li>Введите логин и пароль в полях выше</li>
-          <li>Нажмите <b>«Сохранить»</b></li>
-          <li>Worker автоматически авторизуется и начнёт сбор заявок</li>
-        </ol>
-      </div>
-
       {/* Плагинная архитектура */}
-      <div className="mt-8 rounded-xl bg-indigo-50 p-6 ring-1 ring-indigo-200">
-        <p className="font-semibold text-indigo-900">🔌 Плагинная архитектура</p>
-        <p className="mt-2 text-sm text-indigo-700">
-          Каждый источник — отдельный коннектор. Новые площадки добавляются как
-          модули без изменения ядра. В планах: Telegram-каналы, VK Услуги, HH.ru,
-          Freelancehunt.
+      <div style={{
+        marginTop: 24, padding: "20px 24px", borderRadius: "var(--radius-lg)",
+        background: "var(--bg-surface)", border: "1px solid var(--border)",
+      }}>
+        <p style={{ fontWeight: 650, fontSize: "var(--text-sm)", marginBottom: 6 }}>🔌 Плагинная архитектура</p>
+        <p style={{ fontSize: "var(--text-xs)", color: "var(--ink-muted)", lineHeight: 1.6 }}>
+          Каждый источник — отдельный коннектор. Новые площадки добавляются как модули без изменения ядра.
+          В планах: Авито Услуги, FL.ru, Kwork, Telegram-каналы, VK Услуги, HH.ru.
         </p>
       </div>
     </div>
   );
 }
+
+const lbl: React.CSSProperties = {
+  display: "block", fontSize: "var(--text-xs)", color: "var(--ink-muted)",
+  marginBottom: 4, fontWeight: 500,
+};
+
+const inp: React.CSSProperties = {
+  width: "100%", padding: "10px 14px", borderRadius: "var(--radius-sm)",
+  border: "1px solid var(--border)", background: "var(--bg-root)",
+  color: "var(--ink-body)", fontSize: "var(--text-sm)", outline: "none",
+  boxSizing: "border-box",
+};
