@@ -171,7 +171,7 @@ export const profiConnector: Connector = {
         const title = meaningful[0]?.slice(0, 150) || "Заказ";
 
         leads.push({
-          externalId: link.href,
+          externalId: link.href.replace(/&analytics_data=.*$/, ""),
           title,
           description: link.text.slice(0, 1000),
           budgetMin: budget.min,
