@@ -32,8 +32,8 @@ export async function POST(req: NextRequest) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         chat_id: ws.settings.telegramChatId,
-        text: `🟢 *Leads AI — проверка связи*\\n\\nБот @${meData.result.username || "—"} работает корректно.\\nУведомления о заявках будут приходить сюда.`,
-        parse_mode: "Markdown",
+        text: `🟢 Leads AI — проверка связи\\n\\nБот @${meData.result.username || "—"} работает корректно.\\nУведомления о заявках будут приходить сюда.`,
+        parse_mode: undefined,
       }),
       signal: AbortSignal.timeout(8000),
     });

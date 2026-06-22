@@ -55,21 +55,31 @@ export async function sendLeadNotification(
     buttons.push([{ text: "📋 Скопировать отклик", url: `copy_response_${lead.url}` }]);
   }
 
-  try {
+  // Пробуем с Markdown, при ошибке парсинга — без форматирования
+  const send = async (useMarkdown: boolean) => {
+    const body: any = {
+      chat_id: chatId,
+      text,
+      disable_web_page_preview: true,
+      reply_markup: { inline_keyboard: buttons },
+    };
+    if (useMarkdown) body.parse_mode = "Markdown";
+    
     const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        chat_id: chatId,
-        text,
-        parse_mode: "Markdown",
-        disable_web_page_preview: true,
-        reply_markup: { inline_keyboard: buttons },
-      }),
+      body: JSON.stringify(body),
       signal: AbortSignal.timeout(8_000),
     });
+    return response.json() as Promise<{ ok: boolean; description?: string }>;
+  };
 
-    const data = await response.json() as { ok: boolean };
+  try {
+    let data = await send(true);
+    if (!data.ok && data.description?.includes("parse")) {
+      // Markdown не удался — пробуем без форматирования
+      data = await send(false);
+    }
     return data.ok === true;
   } catch (error) {
     console.error("[telegram] Ошибка отправки:", error);
