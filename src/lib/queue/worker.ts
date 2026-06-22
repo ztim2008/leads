@@ -450,7 +450,10 @@ async function processSource(sourceId: string) {
                   rating: details.rating,
                   lastOnline: details.lastOnline,
                   budgetRaw: details.budgetRaw,
+                  clientRating: details.clientRating,
+                  regDate: details.regDate,
                 },
+                clientRating: details.clientRating || null,
               },
             });
             

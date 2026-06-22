@@ -232,6 +232,7 @@ export interface OrderDetails {
   author?: string;
   reviewCount?: number;
   rating?: number;
+  clientRating?: number;
   fullDescription?: string;
   city?: string;
   lastOnline?: string;
@@ -274,6 +275,34 @@ export async function scrapeOrderPage(sourceId: string, orderUrl: string): Promi
     // Количество отзывов
     const reviewMatch = bodyText.match(/(?:Оставил[аи]?\s*)(\d+)\s*(?:отзыв|отзыва|отзывов)/i) || bodyText.match(/(\d+)\s*(?:отзыв|отзыва|отзывов)/i);
     if (reviewMatch) details.reviewCount = parseInt(reviewMatch[1]);
+
+    // Дата регистрации на Profi: "На Профи.рус 04 марта 2018"
+    const regMatch = bodyText.match(/На Профи\.рус\s+(\d{1,2}\s+(?:января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)\s+(\d{4}))/i);
+    let monthsOnPlatform = 0;
+    if (regMatch) {
+      const months: Record<string,number> = {января:0,февраля:1,марта:2,апреля:3,мая:4,июня:5,июля:6,августа:7,сентября:8,октября:9,ноября:10,декабря:11};
+      const [_, day, monthName, year] = regMatch;
+      const regDate = new Date(parseInt(year), months[monthName.toLowerCase()] || 0, parseInt(day));
+      monthsOnPlatform = Math.floor((Date.now() - regDate.getTime()) / (1000 * 60 * 60 * 24 * 30));
+    }
+
+    // Оценка клиента 1-3 ★
+    let clientScore = 0;
+    // Критерий 1: время на платформе
+    if (monthsOnPlatform >= 24) clientScore += 1.5;      // 2+ года
+    else if (monthsOnPlatform >= 6) clientScore += 0.8;   // полгода+
+    else if (monthsOnPlatform > 0) clientScore += 0.3;    // новичок
+    
+    // Критерий 2: отзывы
+    const revs = details.reviewCount || 0;
+    if (revs >= 10) clientScore += 1.5;     // много отзывов
+    else if (revs >= 3) clientScore += 0.8;  // несколько
+    else if (revs >= 1) clientScore += 0.3;  // есть хоть один
+    
+    // Итог: округляем до 1-3
+    if (clientScore >= 2.2) details.clientRating = 3;
+    else if (clientScore >= 1.1) details.clientRating = 2;
+    else if (clientScore > 0) details.clientRating = 1;
 
     // Рейтинг
     const ratingMatch = bodyText.match(/(?:рейтинг|rating)[:\s]*(\d+[.,]\d+)/i);

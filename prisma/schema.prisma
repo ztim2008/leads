@@ -94,6 +94,7 @@ model Lead {
   city        String?
   author      String?
   reviewCount Int?     @map("review_count")
+  clientRating Int?   @map("client_rating")
   metadata    Json?     @map("metadata")
   status      String   @default("new")
   score       Int?
