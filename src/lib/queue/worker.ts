@@ -451,9 +451,7 @@ async function processSource(sourceId: string) {
                   lastOnline: details.lastOnline,
                   budgetRaw: details.budgetRaw,
                   clientRating: details.clientRating,
-                  regDate: details.regDate,
                 },
-                clientRating: details.clientRating || null,
               },
             });
             
@@ -462,6 +460,15 @@ async function processSource(sourceId: string) {
               await db.lead.delete({ where: { id: lead.id } });
               await db.leadAnalysis.deleteMany({ where: { leadId: lead.id } });
               console.log(`[worker] 🗑 Удалена заявка без отзывов: ${lead.id.slice(0,8)}`);
+              return;
+            }
+
+            // Фильтр: минимальный рейтинг клиента
+            const minRating = s?.minClientRating;
+            if (minRating && (!details.clientRating || details.clientRating < minRating)) {
+              await db.lead.delete({ where: { id: lead.id } });
+              await db.leadAnalysis.deleteMany({ where: { leadId: lead.id } });
+              console.log(`[worker] 🗑 Удалена заявка с низким рейтингом (${details.clientRating || 0} < ${minRating}): ${lead.id.slice(0,8)}`);
               return;
             }
 

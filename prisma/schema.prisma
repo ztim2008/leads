@@ -154,6 +154,7 @@ model Settings {
   budgetMax      Int      @default(500000) @map("budget_max")
   showNoBudget   Boolean  @default(true) @map("show_no_budget")
   showOnlyWithReviews Boolean @default(false) @map("show_only_with_reviews")
+  minClientRating Int? @map("min_client_rating")
   regions        String   @default("Russia")
   telegramChatId String?  @map("telegram_chat_id")
   telegramToken  String?  @map("telegram_bot_token")

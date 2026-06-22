@@ -91,6 +91,23 @@ export default async function SettingsPage() {
             </label>
             <SaveBtn />
           </form>
+          <form action={async (fd: FormData) => {
+            "use server";
+            const val = parseInt(fd.get("minClientRating") as string) || 0;
+            await db.settings.update({ where: { workspaceId: workspace.id }, data: { minClientRating: val || null } });
+            revalidatePath("/dashboard/settings");
+          }} style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 12 }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: "var(--text-sm)", color: "var(--ink-body)" }}>
+              <span style={{ color: "var(--ink-muted)", fontSize: "var(--text-xs)" }}>Мин. рейтинг клиента:</span>
+              <select name="minClientRating" defaultValue={s.minClientRating || 0} style={{ padding: "6px 10px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--bg-root)", color: "var(--ink-body)", fontSize: "var(--text-sm)" }}>
+                <option value={0}>Без фильтра</option>
+                <option value={1}>★☆☆ и выше</option>
+                <option value={2}>★★☆ и выше</option>
+                <option value={3}>★★★ только</option>
+              </select>
+            </label>
+            <SaveBtn />
+          </form>
         </Section>
 
         {/* ═══ Интеграции: Telegram ═══ */}
