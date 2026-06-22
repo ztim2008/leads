@@ -160,9 +160,15 @@ export const profiConnector: Connector = {
         if (!matchesKeywords(link.text, c.keywords)) continue;
 
         const budget = extractBudget(link.text);
-        // Первая строка — дата, вторая — заголовок заказа
-        const lines = link.text.split("\n").map(l => l.trim()).filter(Boolean);
-        const title = lines[1]?.slice(0, 150) || lines[0]?.slice(0, 150) || "Заказ";
+        // Извлекаем заголовок: пропускаем даты, "false", "true", короткие строки
+        const lines = link.text.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+        const meaningful = lines.filter(l => {
+          if (l === "false" || l === "true") return false;
+          if (/^\d{1,2}\s+(июня|июля|августа|сентября|октября|ноября|декабря|января|февраля|марта|апреля|мая)/.test(l)) return false;
+          if (/^(Вчера|Сегодня|\d+\s+(час|минут|день|дня).*назад)/.test(l)) return false;
+          return l.length >= 3;
+        });
+        const title = meaningful[0]?.slice(0, 150) || "Заказ";
 
         leads.push({
           externalId: link.href,
@@ -189,11 +195,17 @@ export const profiConnector: Connector = {
 
           const budget = extractBudget(snippet.text);
           const id = `profi-${Date.now()}-${leads.length}`;
-          const sLines = snippet.text.split("\n").map(l => l.trim()).filter(Boolean);
+          const sLines = snippet.text.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+          const sMeaningful = sLines.filter(l => {
+            if (l === "false" || l === "true") return false;
+            if (/^\d{1,2}\s+(июня|июля|августа|сентября|октября|ноября|декабря|января|февраля|марта|апреля|мая)/.test(l)) return false;
+            if (/^(Вчера|Сегодня|\d+\s+(час|минут|день|дня).*назад)/.test(l)) return false;
+            return l.length >= 3;
+          });
 
           leads.push({
             externalId: id,
-            title: sLines[1]?.slice(0, 150) || sLines[0]?.slice(0, 150) || "Заказ",
+            title: sMeaningful[0]?.slice(0, 150) || "Заказ",
             description: snippet.text.slice(0, 1000),
             budgetMin: budget.min,
             url: LOGIN_URL,
