@@ -160,7 +160,9 @@ export const profiConnector: Connector = {
         if (!matchesKeywords(link.text, c.keywords)) continue;
 
         const budget = extractBudget(link.text);
-        const title = link.text.split("\n")[0]?.slice(0, 150) || "Заказ";
+        // Первая строка — дата, вторая — заголовок заказа
+        const lines = link.text.split("\n").map(l => l.trim()).filter(Boolean);
+        const title = lines[1]?.slice(0, 150) || lines[0]?.slice(0, 150) || "Заказ";
 
         leads.push({
           externalId: link.href,
@@ -187,10 +189,11 @@ export const profiConnector: Connector = {
 
           const budget = extractBudget(snippet.text);
           const id = `profi-${Date.now()}-${leads.length}`;
+          const sLines = snippet.text.split("\n").map(l => l.trim()).filter(Boolean);
 
           leads.push({
             externalId: id,
-            title: snippet.text.split("\n")[0]?.slice(0, 150) || "Заказ",
+            title: sLines[1]?.slice(0, 150) || sLines[0]?.slice(0, 150) || "Заказ",
             description: snippet.text.slice(0, 1000),
             budgetMin: budget.min,
             url: LOGIN_URL,
