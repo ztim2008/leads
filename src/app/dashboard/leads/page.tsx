@@ -97,6 +97,8 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
               url: lead.url,
               city: lead.city,
               author: lead.author,
+              reviewCount: lead.reviewCount,
+              clientRating: lead.clientRating,
               status: lead.status,
               source: {
                 platform: lead.source.platform,
