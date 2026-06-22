@@ -88,6 +88,20 @@ export default async function SettingsPage() {
         <Section title="🤖 Telegram Bot Token" hint="Токен от @BotFather">
           <TextForm field="telegramToken" defaultValue={s.telegramToken || ""} placeholder="123456:ABC-DEF..." workspaceId={workspace.id} />
         </Section>
+        <Section title="🔔 Telegram-уведомления" hint="Мгновенная отправка новых заявок в бот">
+          <form action={async (fd: FormData) => {
+            "use server";
+            const val = fd.get("telegramAlerts") === "on";
+            await db.settings.update({ where: { workspaceId: workspace.id }, data: { telegramAlerts: val } });
+            revalidatePath("/dashboard/settings");
+          }} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: "var(--text-sm)", color: "var(--ink-body)" }}>
+              <input name="telegramAlerts" type="checkbox" defaultChecked={s.telegramAlerts !== false} style={{ width: 16, height: 16, accentColor: "var(--accent)" }} />
+              Присылать новые заявки в Telegram мгновенно
+            </label>
+            <SaveBtn />
+          </form>
+        </Section>
         <Section title="🤖 OpenRouter ключ" hint="Для AI-анализа. openrouter.ai/keys" last>
           <TextForm field="openrouterKey" defaultValue={s.openrouterKey || ""} placeholder="sk-or-v1-..." workspaceId={workspace.id} />
         </Section>

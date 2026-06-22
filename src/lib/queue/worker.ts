@@ -236,16 +236,18 @@ async function logActivity(type: string, description: string, workspaceId?: stri
 
 // ─── Быстрая отправка в Telegram ─────────────────────────────────────────
 
-async function notifyFast(lead: { id: string; title: string; url: string; budgetMin: any; description?: string }, platform: string, color: string) {
+async function notifyFast(
+  lead: { id: string; title: string; url: string; budgetMin: any; description?: string },
+  platform: string, color: string,
+  telegramChatId: string, telegramToken: string
+) {
   try {
-    const s = await db.settings.findFirst();
-    if (!s?.telegramChatId || !s?.telegramToken) return;
     const budget = lead.budgetMin ? `${lead.budgetMin} ₽` : "бюджет не указан";
-    await sendLeadNotification(s.telegramChatId, {
+    await sendLeadNotification(telegramChatId, {
       platform, platformColor: color, score: 0,
       title: lead.title, budget,
       url: lead.url, reasoning: "⚡ Новая заявка! AI-анализ...",
-    }, s.telegramToken);
+    }, telegramToken);
   } catch {}
 }
 
@@ -376,8 +378,8 @@ async function processSource(sourceId: string) {
         },
       });
 
-      if (s?.telegramChatId && s?.telegramToken) {
-        notifyFast({ id: lead.id, title: rawLead.title, url: rawLead.url, budgetMin: rawLead.budgetMin, description: rawLead.description }, source.platform, (source.color as string) || "#22c55e");
+      if (s?.telegramChatId && s?.telegramToken && s?.telegramAlerts !== false) {
+        notifyFast({ id: lead.id, title: rawLead.title, url: rawLead.url, budgetMin: rawLead.budgetMin, description: rawLead.description }, source.platform, (source.color as string) || "#22c55e", s.telegramChatId, s.telegramToken);
       }
 
       if (apiKey) {
