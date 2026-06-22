@@ -149,7 +149,7 @@ export default function PartnersList() {
                 <td style={td}>
                   <div style={{display:"flex",gap:4}}>
                     <button onClick={()=>loginAs(p.email)} style={btn("var(--accent-soft)","var(--accent)")}>🔑 Войти</button>
-                    <button onClick={()=>markPaid(p.email)} style={btn("var(--green-soft)","var(--green)")}>💰</button>
+                    {(() => { const isPaid = p.subscription?.plan === "pro" && p.subscription?.status === "active"; return <button onClick={()=>markPaid(p.email)} title={isPaid ? "Pro активна" : "Не оплачено"} style={btn(isPaid ? "var(--green-soft)" : "var(--bg-hover)", isPaid ? "var(--green)" : "var(--ink-muted)")}>💰</button>; })()}
                     <button onClick={()=>deletePartner(p.email)} style={btn("var(--red-soft)","var(--red)")}>🗑</button>
                   </div>
                 </td>

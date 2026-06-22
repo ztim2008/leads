@@ -15,6 +15,7 @@ export async function GET() {
     where: { role: { not: "admin" } },
     include: {
       workspaces: { include: { sources: true, settings: true, _count: { select: { leads: true } } } },
+      subscription: true,
     },
     orderBy: { createdAt: "desc" },
   });
@@ -24,6 +25,7 @@ export async function GET() {
     return {
       id: p.id, email: p.email, name: p.firstName,
       role: p.role, createdAt: p.createdAt,
+      subscription: p.subscription ? { plan: p.subscription.plan, status: p.subscription.status } : null,
       workspace: ws ? {
         id: ws.id, name: ws.name,
         sources: ws.sources.map(s => ({
