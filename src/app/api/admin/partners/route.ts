@@ -26,8 +26,19 @@ export async function GET() {
       role: p.role, createdAt: p.createdAt,
       workspace: ws ? {
         id: ws.id, name: ws.name,
-        sources: ws.sources.map(s => ({ platform: s.platform, enabled: s.enabled, lastCheck: s.lastCheckAt })),
-        settings: ws.settings ? { keywords: ws.settings.keywords, telegramChatId: ws.settings.telegramChatId } : null,
+        sources: ws.sources.map(s => ({
+          id: s.id,
+          platform: s.platform,
+          enabled: s.enabled,
+          lastCheckAt: s.lastCheckAt,
+          status: s.status || "active",
+          lastError: s.lastError || null,
+        })),
+        settings: ws.settings ? {
+          keywords: ws.settings.keywords,
+          telegramChatId: ws.settings.telegramChatId,
+          telegramToken: ws.settings.telegramToken,
+        } : null,
         leadsCount: ws._count.leads,
       } : null,
     };

@@ -70,6 +70,8 @@ model Source {
   config          Json      @default("{}")
   color           String    @default("#6366f1")
   lastCheckAt     DateTime? @map("last_check_at")
+  status          String?   @default("active") @map("status")
+  lastError       String?   @map("last_error")
   createdAt       DateTime  @default(now()) @map("created_at")
   updatedAt       DateTime  @updatedAt @map("updated_at")
 

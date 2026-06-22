@@ -271,6 +271,39 @@ async function notifyFast(lead: { id: string; title: string; url: string; budget
   } catch {}
 }
 
+
+// ─── Проверка здоровья Telegram-бота ──────────────────────────────────────
+
+async function checkTelegramBot(chatId: string, botToken: string): Promise<{ok: boolean, error?: string}> {
+  if (!chatId || !botToken) return { ok: false, error: "Нет Chat ID или Bot Token" };
+  try {
+    // Проверяем сам бот (getMe)
+    const meRes = await fetch(`https://api.telegram.org/bot${botToken}/getMe`, { signal: AbortSignal.timeout(8000) });
+    const meData = await meRes.json() as any;
+    if (!meData.ok) return { ok: false, error: `Бот не отвечает: ${meData.description || "неверный токен"}` };
+
+    // Проверяем может ли бот писать в чат
+    const sendRes = await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId, text: "🟢 Leads AI — проверка связи" }),
+      signal: AbortSignal.timeout(8000),
+    });
+    const sendData = await sendRes.json() as any;
+    if (!sendData.ok) {
+      const desc = sendData.description || "";
+      if (desc.includes("chat not found") || desc.includes("bot was blocked")) {
+        return { ok: false, error: "Чат не найден или бот заблокирован" };
+      }
+      return { ok: false, error: desc || "Не удалось отправить сообщение" };
+    }
+    return { ok: true };
+  } catch (err: any) {
+    return { ok: false, error: err.message || "Ошибка соединения" };
+  }
+}
+
+
 // ─── Обработка одного источника ──────────────────────────────────────────
 
 async function processSource(sourceId: string) {
@@ -313,6 +346,16 @@ async function processSource(sourceId: string) {
     const leads = await connector.fetchLeads(config);
 
     if (leads.length === 0) {
+      // Проверка Telegram-бота этого workspace
+      const tgChatId = s?.telegramChatId;
+      const tgToken = s?.telegramToken;
+      if (tgChatId && tgToken) {
+        const tgHealth = await checkTelegramBot(tgChatId, tgToken);
+        if (!tgHealth.ok) {
+          console.log(`[worker] 📱 Telegram бот ${source.platform}: ${tgHealth.error}`);
+        }
+      }
+      
       // Проверка: 0 заявок может означать проблему с коннектором
       await logActivity("fetch_empty", `${source.platform}: 0 заявок — возможна проблема с авторизацией`);
     }
@@ -375,7 +418,7 @@ async function processSource(sourceId: string) {
       }
     }
 
-    await db.source.update({ where: { id: source.id }, data: { lastCheckAt: new Date() } });
+    await db.source.update({ where: { id: source.id }, data: { lastCheckAt: new Date(), status: "active", lastError: null } });
     lastCheckAt = new Date();
     lastError = null;
     statusReason = "Активна (МСК)";
@@ -386,6 +429,7 @@ async function processSource(sourceId: string) {
     statusReason = `Ошибка: ${msg.slice(0, 40)}`;
     totalErrors++;
     console.error(`[worker] ❌ ${source.platform}: ${msg}`);
+    await db.source.update({ where: { id: source.id }, data: { status: "error", lastError: msg.slice(0, 500) } });
     await logActivity("fetch_error", `${source.platform}: ${msg.slice(0, 200)}`);
 
     // Telegram-уведомление о критической ошибке
