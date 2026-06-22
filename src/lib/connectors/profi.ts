@@ -194,7 +194,8 @@ export const profiConnector: Connector = {
           if (!matchesKeywords(snippet.text, c.keywords)) continue;
 
           const budget = extractBudget(snippet.text);
-          const id = `profi-${Date.now()}-${leads.length}`;
+          // Генерируем стабильный ID из текста чтобы избежать дубликатов
+          const id = `profi-${snippet.text.slice(0, 80).replace(/[^a-zа-яё0-9]/gi, "").slice(0, 30)}`;
           const sLines = snippet.text.split("\n").map(l => l.trim()).filter(l => l.length > 0);
           const sMeaningful = sLines.filter(l => {
             if (l === "false" || l === "true") return false;
