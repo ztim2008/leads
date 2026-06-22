@@ -81,14 +81,58 @@ export default async function SettingsPage() {
           </form>
         </Section>
 
-        {/* ═══ Интеграции ═══ */}
-        <Section title="📱 Telegram Chat ID" hint="Найдите @getmyid_bot → /start → он пришлёт число">
-          <TextForm field="telegramChatId" defaultValue={s.telegramChatId || ""} placeholder="778784292" workspaceId={workspace.id} />
-        </Section>
-        <Section title="🤖 Telegram Bot Token" hint="@BotFather → /newbot → придумайте имя → скопируйте токен. Затем найдите бота и напишите ему /start">
-          <TextForm field="telegramToken" defaultValue={s.telegramToken || ""} placeholder="123456:ABC-DEF..." workspaceId={workspace.id} />
-        </Section>
-        <Section title="🔔 Telegram-уведомления" hint="Мгновенная отправка новых заявок в бот">
+        {/* ═══ Интеграции: Telegram ═══ */}
+        <div style={{ padding: "20px 24px", background: "var(--bg-surface)", borderBottom: "1px solid var(--border)" }}>
+          <h3 style={{ fontSize: "var(--text-sm)", fontWeight: 650, marginBottom: 4 }}>📱 Telegram-уведомления</h3>
+          <p style={{ fontSize: "var(--text-xs)", color: "var(--ink-muted)", marginBottom: 16 }}>Заявки будут приходить мгновенно в ваш Telegram</p>
+
+          {/* Инструкция по шагам */}
+          <div style={{
+            padding: "14px 16px", borderRadius: "var(--radius-sm)",
+            background: "var(--bg-layer)", border: "1px solid var(--border)",
+            marginBottom: 18, fontSize: "var(--text-xs)", lineHeight: 1.8, color: "var(--ink-body)",
+          }}>
+            <p style={{ fontWeight: 700, color: "var(--ink-heading)", marginBottom: 10, fontSize: "var(--text-sm)" }}>📖 Как подключить бота за 2 минуты</p>
+            
+            <div style={{ marginBottom: 14 }}>
+              <p style={{ fontWeight: 650, color: "var(--accent)", marginBottom: 4 }}>Шаг 1 — Создать бота</p>
+              <ol style={{ paddingLeft: 18, margin: 0, display: "flex", flexDirection: "column", gap: 3 }}>
+                <li>Откройте Telegram → найдите <b>@BotFather</b></li>
+                <li>Напишите команду <code style={{background:"var(--bg-root)",padding:"1px 5px",borderRadius:3}}>/newbot</code></li>
+                <li>Придумайте имя боту (например: «Заявки Насти»)</li>
+                <li>Придумайте username (например: <code style={{background:"var(--bg-root)",padding:"1px 5px",borderRadius:3}}>NastyaLeadsBot</code>)</li>
+                <li>BotFather пришлёт токен — скопируйте его</li>
+                <li>Вставьте токен в поле «Bot Token» ниже</li>
+              </ol>
+            </div>
+
+            <div style={{ marginBottom: 14 }}>
+              <p style={{ fontWeight: 650, color: "var(--accent)", marginBottom: 4 }}>Шаг 2 — Активировать бота</p>
+              <ol style={{ paddingLeft: 18, margin: 0, display: "flex", flexDirection: "column", gap: 3 }}>
+                <li>Найдите вашего бота в Telegram (по username из шага 1)</li>
+                <li>Напишите ему любое сообщение (например: «Привет»)</li>
+                <li>⚠️ <b>Без этого бот не сможет вам писать!</b></li>
+              </ol>
+            </div>
+
+            <div>
+              <p style={{ fontWeight: 650, color: "var(--accent)", marginBottom: 4 }}>Шаг 3 — Узнать Chat ID</p>
+              <ol style={{ paddingLeft: 18, margin: 0, display: "flex", flexDirection: "column", gap: 3 }}>
+                <li>Найдите <b>@getmyid_bot</b> в Telegram</li>
+                <li>Напишите <code style={{background:"var(--bg-root)",padding:"1px 5px",borderRadius:3}}>/start</code></li>
+                <li>Бот ответит числом — это ваш Chat ID</li>
+                <li>Вставьте его в поле «Chat ID» ниже</li>
+              </ol>
+            </div>
+          </div>
+
+          {/* Поля ввода */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 10, marginBottom: 14 }}>
+            <TextForm field="telegramToken" defaultValue={s.telegramToken || ""} placeholder="1234567890:ABCdefGHIjklMNOpqrsTUVwxyz" workspaceId={workspace.id} prefix="🤖 Bot Token" />
+            <TextForm field="telegramChatId" defaultValue={s.telegramChatId || ""} placeholder="778784292" workspaceId={workspace.id} prefix="📱 Chat ID" />
+          </div>
+
+          {/* Выключатель */}
           <form action={async (fd: FormData) => {
             "use server";
             const val = fd.get("telegramAlerts") === "on";
@@ -97,11 +141,11 @@ export default async function SettingsPage() {
           }} style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: "var(--text-sm)", color: "var(--ink-body)" }}>
               <input name="telegramAlerts" type="checkbox" defaultChecked={s.telegramAlerts !== false} style={{ width: 16, height: 16, accentColor: "var(--accent)" }} />
-              Присылать новые заявки в Telegram мгновенно
+              Присылать новые заявки в Telegram
             </label>
             <SaveBtn />
           </form>
-        </Section>
+        </div>
         <Section title="🤖 OpenRouter ключ" hint="Для AI-анализа. openrouter.ai/keys" last>
           <TextForm field="openrouterKey" defaultValue={s.openrouterKey || ""} placeholder="sk-or-v1-..." workspaceId={workspace.id} />
         </Section>
@@ -151,15 +195,18 @@ function Section({ title, hint, children, last }: { title: string; hint?: string
   );
 }
 
-function TextForm({ field, defaultValue, placeholder, workspaceId }: { field: string; defaultValue: string; placeholder: string; workspaceId: string }) {
+function TextForm({ field, defaultValue, placeholder, workspaceId, prefix }: { field: string; defaultValue: string; placeholder: string; workspaceId: string; prefix?: string }) {
   return (
     <form action={async (fd: FormData) => {
       "use server";
       await db.settings.update({ where: { workspaceId }, data: { [field]: fd.get(field) || "" } });
       revalidatePath("/dashboard/settings");
-    }} style={{ display: "flex", gap: 10 }}>
-      <input name={field} defaultValue={defaultValue} placeholder={placeholder} style={{ flex: 1, padding: "10px 14px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--bg-root)", color: "var(--ink-body)", fontSize: "var(--text-sm)", outline: "none" }} />
-      <SaveBtn />
+    }} style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+      {prefix && <label style={{ fontSize: "var(--text-xs)", color: "var(--ink-muted)", marginBottom: 4, fontWeight: 500 }}>{prefix}</label>}
+      <div style={{ display: "flex", gap: 10 }}>
+        <input name={field} defaultValue={defaultValue} placeholder={placeholder} style={{ flex: 1, padding: "10px 14px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--bg-root)", color: "var(--ink-body)", fontSize: "var(--text-sm)", outline: "none" }} />
+        <SaveBtn />
+      </div>
     </form>
   );
 }
