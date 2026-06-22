@@ -148,8 +148,8 @@ export default function LeadDetail({ lead }: LeadDetailProps) {
               {lead.title || "Без названия"}
             </span>
           </div>
-          <p style={{ fontSize: "var(--text-xs)", color: "var(--ink-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 350 }}>
-            {lead.description?.slice(0, 100)}
+          <p style={{ fontSize: "var(--text-xs)", color: "var(--ink-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 550 }}>
+            {lead.description?.slice(0, 500)}
           </p>
           <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
             {analysis?.score != null && (

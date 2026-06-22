@@ -158,7 +158,7 @@ async function logActivity(type: string, description: string) {
 
 // ─── Быстрая отправка в Telegram ─────────────────────────────────────────
 
-async function notifyFast(lead: { id: string; title: string; url: string; budgetMin: any }, platform: string, color: string) {
+async function notifyFast(lead: { id: string; title: string; url: string; budgetMin: any; description?: string }, platform: string, color: string) {
   try {
     const s = await db.settings.findFirst();
     if (!s?.telegramChatId || !s?.telegramToken) return;
@@ -248,7 +248,7 @@ async function processSource(sourceId: string) {
       });
 
       if (s?.telegramChatId && s?.telegramToken) {
-        notifyFast({ id: lead.id, title: rawLead.title, url: rawLead.url, budgetMin: rawLead.budgetMin }, source.platform, (source.color as string) || "#22c55e");
+        notifyFast({ id: lead.id, title: rawLead.title, url: rawLead.url, budgetMin: rawLead.budgetMin, description: rawLead.description }, source.platform, (source.color as string) || "#22c55e");
       }
 
       if (apiKey) {

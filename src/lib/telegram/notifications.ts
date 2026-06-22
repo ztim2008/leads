@@ -9,7 +9,8 @@ export interface LeadNotification {
   budget: string;
   url: string;
   reasoning: string;
-  response?: string; // сгенерированный отклик
+  response?: string;
+  description?: string; // сгенерированный отклик
 }
 
 const SCORE_EMOJI: Record<string, string> = {
@@ -43,6 +44,7 @@ export async function sendLeadNotification(
     `💰 ${escapeMarkdown(lead.budget)}`,
     ``,
     `_${escapeMarkdown(lead.reasoning)}_`,
+    lead.description ? `\n${escapeMarkdown(lead.description.slice(0, 200))}...` : "",
   ].join("\n");
 
   const buttons = [
