@@ -474,8 +474,9 @@ async function processSource(sourceId: string) {
 
             // Повторное уведомление с обогащёнными данными
             if (s?.telegramChatId && s?.telegramToken && s?.telegramAlerts !== false) {
-              const reviewInfo = details.reviewCount ? `${details.reviewCount} отз.` : "";
+              const reviewInfo = details.reviewCount ? `⭐${details.reviewCount} отз.` : "";
               const authorInfo = details.author ? `👤 ${details.author}` : "";
+              const stars = details.clientRating ? "★".repeat(details.clientRating) + "☆".repeat(3 - details.clientRating) : "";
               await sendLeadNotification(s.telegramChatId, {
                 platform: source.platform,
                 platformColor: (source.color as string) || "#22c55e",
@@ -483,7 +484,7 @@ async function processSource(sourceId: string) {
                 title: rawLead.title,
                 budget: rawLead.budgetMin ? `${rawLead.budgetMin} ₽` : "бюджет не указан",
                 url: rawLead.url,
-                reasoning: [authorInfo, reviewInfo, "🔄 Полное ТЗ загружено"].filter(Boolean).join(" · "),
+                reasoning: [stars, authorInfo, reviewInfo, "🔄 Полное ТЗ"].filter(Boolean).join(" · "),
               }, s.telegramToken);
             }
           } catch (e) {
