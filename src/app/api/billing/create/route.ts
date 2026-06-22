@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     const idempotenceKey = `${ws.id}-${Date.now()}`;
     
     const body: any = {
-      amount: { value: plan === "pro" ? "700.00" : "700.00", currency: "RUB" },
+      amount: { value: plan === "pro" ? "999.00" : "999.00", currency: "RUB" },
       capture: true,
       confirmation: { type: "redirect", return_url: `https://leads.konversus.ru/dashboard/billing?paid=1` },
       description: `Konversus Leads AI — тариф ${plan.toUpperCase()} на 1 месяц`,

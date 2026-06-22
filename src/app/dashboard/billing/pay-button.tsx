@@ -36,7 +36,7 @@ export default function PayButton({ plan }: { plan: string }) {
         cursor: "pointer", opacity: loading ? 0.7 : 1,
       }}
     >
-      {loading ? "Загрузка..." : "Оплатить 700 ₽"}
+      {loading ? "Загрузка..." : "Оплатить 999 ₽"}
     </button>
   );
 }
