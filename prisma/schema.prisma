@@ -155,7 +155,7 @@ model Settings {
   telegramToken  String?  @map("telegram_bot_token")
   telegramAlerts Boolean  @default(true) @map("telegram_alerts")
   openrouterKey  String?  @map("openrouter_api_key")
-  checkInterval   Int      @default(3)  @map("check_interval")
+  checkInterval   Float    @default(3)  @map("check_interval")
   yandexMetrika   String?  @map("yandex_metrika")
   yandexWebmaster String?  @map("yandex_webmaster")
   bodyCode        String?  @map("body_code")

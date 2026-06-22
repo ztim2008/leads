@@ -36,7 +36,7 @@ export default async function SettingsPage() {
         <Section title="⏱ Интервал опроса" hint="Как часто проверять новые заявки">
           <form action={async (fd: FormData) => {
             "use server";
-            const val = parseInt(fd.get("checkInterval") as string) || 3;
+            const val = parseFloat(fd.get("checkInterval") as string) || 3;
             await db.settings.update({ where: { workspaceId: workspace.id }, data: { checkInterval: val } });
             revalidatePath("/dashboard/settings");
           }} style={{ display: "flex", gap: 10, alignItems: "flex-end" }}>
