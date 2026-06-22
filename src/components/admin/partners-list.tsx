@@ -7,7 +7,10 @@ export default function PartnersList() {
   useEffect(() => { fetch("/api/admin/partners").then(r=>r.json()).then(d=>setPartners(d.partners||[])).catch(()=>{}); }, []);
 
   async function loginAs(email: string) {
-    window.open("/auth?email="+encodeURIComponent(email), "_blank");
+    const res = await fetch("/api/admin/login-as", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) });
+    const d = await res.json();
+    if (d.ok) window.open(d.url, "_blank");
+    else alert("Ошибка: " + (d.error || "Неизвестно"));
   }
 
   if (partners.length === 0) return <p style={{padding:"20px",color:"var(--ink-muted)",fontSize:"var(--text-sm)",textAlign:"center"}}>Нет партнёров</p>;

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { revalidatePath } from "next/cache";
 import { Shield, Users, CreditCard, Activity, UserPlus } from "lucide-react";
 import AddPartnerButton from "@/components/admin/add-partner-button";
+import ClientLoginButton from "@/components/admin/login-as-button";
 import PartnersList from "@/components/admin/partners-list";
 
 export default async function AdminPage() {
@@ -117,6 +118,7 @@ export default async function AdminPage() {
               <th style={thStyle}>Telegram</th>
               <th style={thStyle}>Подписка</th>
               <th style={thStyle}>Дата</th>
+              <th style={thStyle}></th>
             </tr>
           </thead>
           <tbody>
@@ -156,6 +158,9 @@ export default async function AdminPage() {
                   </td>
                   <td style={{ ...tdStyle, fontSize: "var(--text-xs)", color: "var(--ink-muted)" }}>
                     {new Date(u.createdAt).toLocaleDateString("ru")}
+                  </td>
+                  <td style={tdStyle}>
+                    <ClientLoginButton email={u.email} />
                   </td>
                 </tr>
               );
