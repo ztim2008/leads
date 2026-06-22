@@ -33,7 +33,7 @@ function saveStatusToFile() {
     const status = getWorkerStatus();
     writeFileSync(
       join(process.cwd(), ".worker-status.json"),
-      JSON.stringify({ ...status, updatedAt: new Date().toISOString() })
+      JSON.stringify({ ...status, checkIntervalMin: lastKnownInterval / 60000, updatedAt: new Date().toISOString() })
     );
   } catch {}
 }

@@ -13,6 +13,7 @@ interface WorkerStatus {
   totalCycles?: number;
   totalErrors?: number;
   totalLeadsCollected?: number;
+  checkIntervalMin?: number;
 }
 
 export default function StatusIndicator() {
@@ -50,7 +51,14 @@ export default function StatusIndicator() {
     : "";
 
   // Статистика внизу
+  const intervalText = status.checkIntervalMin
+    ? status.checkIntervalMin < 1
+      ? `⏱ ${Math.round(status.checkIntervalMin * 60)} сек`
+      : `⏱ ${status.checkIntervalMin} мин`
+    : null;
+
   const statsLine = [
+    intervalText,
     status.totalCycles != null && `Циклов: ${status.totalCycles}`,
     status.totalLeadsCollected != null && `Заявок: ${status.totalLeadsCollected}`,
     (status.totalErrors || 0) > 0 && `Ошибок: ${status.totalErrors}`,
