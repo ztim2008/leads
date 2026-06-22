@@ -6,6 +6,7 @@
 
 import { db } from "@/lib/db";
 import { getConnector } from "@/lib/connectors/types";
+import { scrapeOrderPage } from "@/lib/connectors/profi";
 import { analyzeLead, generateResponses } from "@/lib/ai/lead-analyzer";
 import { sendLeadNotification } from "@/lib/telegram/notifications";
 
@@ -405,6 +406,9 @@ async function processSource(sourceId: string) {
       const minusWords = (s?.minusKeywords || "").toLowerCase().split(",").map(w => w.trim()).filter(Boolean);
       const text = `${rawLead.title} ${rawLead.description}`.toLowerCase();
       if (minusWords.some(w => text.includes(w))) continue;
+
+      // Фильтр «только с отзывами» — применяется ПОСЛЕ глубокого сканирования
+      // для бесплатных пользователей пропускаем (не можем проверить)
       // Бюджетный фильтр
       if (rawLead.budgetMin) {
         if (s?.budgetMin && rawLead.budgetMin < s.budgetMin) continue;
@@ -426,6 +430,56 @@ async function processSource(sourceId: string) {
 
       if (s?.telegramChatId && s?.telegramToken && s?.telegramAlerts !== false) {
         notifyFast({ id: lead.id, title: rawLead.title, url: rawLead.url, budgetMin: rawLead.budgetMin, description: rawLead.description }, source.platform, (source.color as string) || "#22c55e", s.telegramChatId, s.telegramToken);
+      }
+
+      // Глубокий просмотр для Pro
+      const sub = await db.subscription.findFirst({ where: { workspaceId: source.workspaceId } });
+      const isPro = sub?.plan === "pro" && sub?.status === "active";
+      if (isPro && rawLead.url && rawLead.url.includes("?o=")) {
+        scrapeOrderPage(source.id, rawLead.url).then(async (details) => {
+          if (!details) return;
+          try {
+            await db.lead.update({
+              where: { id: lead.id },
+              data: {
+                author: details.author || undefined,
+                reviewCount: details.reviewCount || null,
+                description: details.fullDescription || rawLead.description,
+                city: details.city || rawLead.city,
+                metadata: {
+                  rating: details.rating,
+                  lastOnline: details.lastOnline,
+                  budgetRaw: details.budgetRaw,
+                },
+              },
+            });
+            
+            // Фильтр: только с отзывами
+            if (s?.showOnlyWithReviews && (!details.reviewCount || details.reviewCount === 0)) {
+              await db.lead.delete({ where: { id: lead.id } });
+              await db.leadAnalysis.deleteMany({ where: { leadId: lead.id } });
+              console.log(`[worker] 🗑 Удалена заявка без отзывов: ${lead.id.slice(0,8)}`);
+              return;
+            }
+
+            // Повторное уведомление с обогащёнными данными
+            if (s?.telegramChatId && s?.telegramToken && s?.telegramAlerts !== false) {
+              const reviewInfo = details.reviewCount ? `${details.reviewCount} отз.` : "";
+              const authorInfo = details.author ? `👤 ${details.author}` : "";
+              await sendLeadNotification(s.telegramChatId, {
+                platform: source.platform,
+                platformColor: (source.color as string) || "#22c55e",
+                score: 0,
+                title: rawLead.title,
+                budget: rawLead.budgetMin ? `${rawLead.budgetMin} ₽` : "бюджет не указан",
+                url: rawLead.url,
+                reasoning: [authorInfo, reviewInfo, "🔄 Полное ТЗ загружено"].filter(Boolean).join(" · "),
+              }, s.telegramToken);
+            }
+          } catch (e) {
+            console.error("[worker] Ошибка обновления после deep scan:", e);
+          }
+        }).catch(() => {});
       }
 
       if (apiKey) {

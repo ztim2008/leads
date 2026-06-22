@@ -93,6 +93,8 @@ model Lead {
   url         String?
   city        String?
   author      String?
+  reviewCount Int?     @map("review_count")
+  metadata    Json?     @map("metadata")
   status      String   @default("new")
   score       Int?
   difficulty  String?
@@ -150,6 +152,7 @@ model Settings {
   budgetMin      Int      @default(30000) @map("budget_min")
   budgetMax      Int      @default(500000) @map("budget_max")
   showNoBudget   Boolean  @default(true) @map("show_no_budget")
+  showOnlyWithReviews Boolean @default(false) @map("show_only_with_reviews")
   regions        String   @default("Russia")
   telegramChatId String?  @map("telegram_chat_id")
   telegramToken  String?  @map("telegram_bot_token")

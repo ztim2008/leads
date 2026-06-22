@@ -79,6 +79,18 @@ export default async function SettingsPage() {
             </label>
             <SaveBtn />
           </form>
+          <form action={async (fd: FormData) => {
+            "use server";
+            const val = fd.get("showOnlyWithReviews") === "on";
+            await db.settings.update({ where: { workspaceId: workspace.id }, data: { showOnlyWithReviews: val } });
+            revalidatePath("/dashboard/settings");
+          }} style={{ marginTop: 10, display: "flex", alignItems: "center", gap: 12 }}>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: "var(--text-sm)", color: "var(--ink-body)" }}>
+              <input name="showOnlyWithReviews" type="checkbox" defaultChecked={s.showOnlyWithReviews === true} style={{ width: 16, height: 16, accentColor: "var(--accent)" }} />
+              Только заявки с отзывами ⭐ (Pro)
+            </label>
+            <SaveBtn />
+          </form>
         </Section>
 
         {/* ═══ Интеграции: Telegram ═══ */}

@@ -224,6 +224,88 @@ export const profiConnector: Connector = {
   },
 };
 
+
+// ─── Глубокий просмотр страницы заявки ─────────────────────────────────
+
+export interface OrderDetails {
+  author?: string;
+  reviewCount?: number;
+  rating?: number;
+  fullDescription?: string;
+  city?: string;
+  lastOnline?: string;
+  budgetRaw?: string;
+}
+
+export async function scrapeOrderPage(sourceId: string, orderUrl: string): Promise<OrderDetails | null> {
+  let deepPage: any = null;
+  try {
+    const cached = sessionCache.get(sourceId);
+    if (!cached) {
+      console.log("[profi] ⚠️ Нет активной сессии для deep scan");
+      return null;
+    }
+
+    // Используем ОТДЕЛЬНУЮ страницу чтобы не мешать основному сбору
+    const ctx = cached.page.context();
+    
+    // Очищаем URL от аналитических параметров
+    const cleanUrl = orderUrl.replace(/&analytics_data=.*$/, '');
+    console.log(`[profi] 🔍 Глубокий просмотр: ${cleanUrl.slice(0, 60)}...`);
+
+    deepPage = await ctx.newPage();
+    await deepPage.goto(cleanUrl, { waitUntil: "domcontentloaded", timeout: 15000 });
+    await deepPage.waitForTimeout(2000);
+
+    const bodyText = await deepPage.locator("body").innerText();
+    console.log(`[profi] 📄 Тело страницы (первые 400): ${bodyText.slice(0, 400).replace(/\n/g, " | ")}`);
+    
+    const details: OrderDetails = {};
+
+    // Имя заказчика
+    // Ищем имя: на Profi имя после инициала на отдельных строках
+    // "А\n\nАнгелина" или "А\nАртем"
+    let nameMatch = bodyText.match(/[А-ЯЁ]\s*\n\s*\n?\s*([А-ЯЁ][а-яё]+)/);
+    if (!nameMatch) nameMatch = bodyText.match(/[А-ЯЁ]\s*\n\s*([А-ЯЁ][а-яё]+)/);
+    if (!nameMatch) nameMatch = bodyText.match(/(?:Заказчик|Исполнитель)[:\s]*([А-ЯЁ][а-яё]+)/i);
+    if (nameMatch) details.author = nameMatch[1].trim();
+
+    // Количество отзывов
+    const reviewMatch = bodyText.match(/(?:Оставил[аи]?\s*)(\d+)\s*(?:отзыв|отзыва|отзывов)/i) || bodyText.match(/(\d+)\s*(?:отзыв|отзыва|отзывов)/i);
+    if (reviewMatch) details.reviewCount = parseInt(reviewMatch[1]);
+
+    // Рейтинг
+    const ratingMatch = bodyText.match(/(?:рейтинг|rating)[:\s]*(\d+[.,]\d+)/i);
+    if (ratingMatch) details.rating = parseFloat(ratingMatch[1].replace(",", "."));
+
+    // Город
+    const cityMatch = bodyText.match(/(?:Москва|СПб|Санкт-Петербург|Казань|Новосибирск|Екатеринбург|Нижний Новгород|Челябинск|Красноярск|Самара|Омск|Ростов|Уфа|Волгоград|Пермь|Воронеж|Краснодар)/i);
+    if (cityMatch) details.city = cityMatch[0];
+
+    // Последняя активность
+    const onlineMatch = bodyText.match(/(?:был[а]?\s*(?:в сети|онлайн)|онлайн)\s*(.+?)(?:\n|$)/i);
+    if (onlineMatch) details.lastOnline = onlineMatch[1].trim();
+
+    // Полное описание (всё что после заголовка до "Пожелания" или "Город")
+    const descParts = bodyText.split(/Пожелания и особенности|Город|Дистанционно/i);
+    if (descParts.length > 1) {
+      details.fullDescription = descParts[1].trim().slice(0, 2000);
+    }
+
+    // Бюджет
+    const budgetMatch = bodyText.match(/(?:бюджет|стоимость|цена)[:\s]*(\d[\d\s]*)\s*(?:руб|₽)/i);
+    if (budgetMatch) details.budgetRaw = budgetMatch[1].replace(/\s/g, "");
+
+    console.log(`[profi] ✅ Глубокий просмотр: автор=${details.author || '?'} отзывов=${details.reviewCount || 0}`);
+    await deepPage.close().catch(() => {});
+    return details;
+  } catch (err: any) {
+    await deepPage.close().catch(() => {});
+    console.error(`[profi] ❌ Ошибка глубокого просмотра:`, err.message);
+    return null;
+  }
+}
+
 registerConnector(profiConnector);
 
 // При выходе — закрываем все браузеры
