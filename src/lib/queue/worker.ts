@@ -388,14 +388,17 @@ async function processSource(sourceId: string) {
       await logActivity("fetch_empty", `${source.platform}: 0 заявок — возможна проблема с авторизацией`, source.workspaceId);
     }
 
-    const existingIds = new Set(
-      (await db.lead.findMany({
-        where: { sourceId: source.id, externalId: { in: leads.map(l => l.externalId).filter(Boolean) as string[] } },
-        select: { externalId: true },
-      })).map(l => l.externalId)
-    );
+    // Нормализуем externalId (без analytics_data) для дедупликации
+    const normalizeId = (id: string) => id.replace(/&analytics_data=.*$/, '');
+    
+    // Загружаем ВСЕ externalId для этого source (может быть много)
+    const allExisting = (await db.lead.findMany({
+      where: { sourceId: source.id },
+      select: { externalId: true },
+    })).map(l => normalizeId(l.externalId || ''));
+    const existingIds = new Set(allExisting);
 
-    const newLeads = leads.filter(l => !existingIds.has(l.externalId));
+    const newLeads = leads.filter(l => !existingIds.has(normalizeId(l.externalId)));
     if (newLeads.length > 0) {
       console.log(`[worker]    новых: ${newLeads.length}`);
       totalLeadsCollected += newLeads.length;
