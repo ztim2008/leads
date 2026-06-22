@@ -13,7 +13,7 @@ export default async function PartnerDetailPage({ params }: { params: { email: s
   const admin = await db.user.findUnique({ where: { email: (session.user as any).email } });
   if (!admin || admin.role !== "admin") return notFound();
 
-  const email = decodeURIComponent(params.email);
+  const email = params.email;  // Next.js уже декодирует URL-параметры
   const partner = await db.user.findUnique({
     where: { email },
     include: {
