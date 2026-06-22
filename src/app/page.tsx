@@ -1,5 +1,6 @@
 // Главная — Konversus Leads AI
 import Link from "next/link";
+import { LegalFooter } from "@/components/legal-layout";
 import {
   Search, Brain, FileText, MessageSquare, BarChart3, Filter,
   ArrowRight, Zap, Globe, Shield, ChevronRight, Moon, Sun, ArrowUpRight
@@ -350,23 +351,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ─── Footer ────────────────────────────────────────── */}
-      <footer style={{
-        borderTop: "1px solid var(--border)", padding: "48px 0",
-        background: "var(--bg-layer)",
-      }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px", textAlign: "center" }}>
-          <p style={{ fontWeight: 700, fontSize: "var(--text-lg)", color: "var(--ink-heading)" }}>
-            Konversus Leads AI
-          </p>
-          <p style={{ color: "var(--ink-muted)", marginTop: 8, fontSize: "var(--text-sm)" }}>
-            Автоматический поиск и анализ заказов для веб-разработчиков и агентств
-          </p>
-          <p style={{ color: "var(--ink-muted)", marginTop: 24, fontSize: "var(--text-xs)" }}>
-            © 2025 Konversus
-          </p>
-        </div>
-      </footer>
+<LegalFooter />
     </div>
   );
 }
