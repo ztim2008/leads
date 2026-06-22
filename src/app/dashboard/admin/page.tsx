@@ -208,7 +208,7 @@ export default async function AdminPage() {
           </div>
           <div style={{ padding: "12px 16px", borderRadius: "var(--radius-sm)", background: "var(--bg-layer)", border: "1px solid var(--border)" }}>
             <p style={{ fontWeight: 650, marginBottom: 4 }}>💰 Тарифы</p>
-            <p style={{ color: "var(--ink-muted)", fontSize: "var(--text-xs)" }}><b>Бесплатный</b>: 1 источник, 50 заявок/день<br/><b>Pro</b> (990₽/мес): все источники, AI, отклики</p>
+            <p style={{ color: "var(--ink-muted)", fontSize: "var(--text-xs)" }}><b>Бесплатный</b>: 1 источник, 50 заявок/день<br/><b>Pro</b> (999₽/мес): все источники, AI, отклики</p>
           </div>
         </div>
       </div>
@@ -245,7 +245,7 @@ export default async function AdminPage() {
           💳 Монетизация
         </h2>
         <p style={{ color: "var(--ink-muted)", fontSize: "var(--text-sm)", marginBottom: 16 }}>
-          ЮKassa будет подключена для приёма платежей. Пользователи смогут оплатить подписку Pro (990 ₽/мес).
+          ЮKassa будет подключена для приёма платежей. Пользователи смогут оплатить подписку Pro (999 ₽/мес).
         </p>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <div style={{
@@ -263,7 +263,7 @@ export default async function AdminPage() {
             background: "var(--accent-soft)", border: "1px solid var(--accent)",
           }}>
             <p style={{ fontWeight: 650, fontSize: "var(--text-sm)", marginBottom: 4, color: "var(--accent)" }}>Pro</p>
-            <p style={{ fontSize: "var(--text-2xl)", fontWeight: 800 }}>990 ₽/мес</p>
+            <p style={{ fontSize: "var(--text-2xl)", fontWeight: 800 }}>999 ₽/мес</p>
             <p style={{ fontSize: "var(--text-xs)", color: "var(--ink-muted)", marginTop: 4 }}>
               Все источники · Безлимит · AI · Отклики
             </p>

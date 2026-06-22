@@ -330,7 +330,7 @@ export default function LandingPage() {
                 Для профессионалов
               </p>
               <p style={{ fontSize: "3rem", fontWeight: 800, marginBottom: 28, color: "#fff" }}>
-                990&nbsp;₽/мес
+                999&nbsp;₽/мес
               </p>
               <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 12 }}>
                 {["Все источники заявок", "Без лимита заявок", "AI-анализ каждой заявки", "4 типа откликов", "Аналитика и воронка", "Приоритетная поддержка"].map(t => (

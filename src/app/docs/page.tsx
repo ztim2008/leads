@@ -73,7 +73,7 @@ export default function DocsPage() {
           </div>
           <div style={{ padding: 16, borderRadius: "var(--radius-sm)", background: "var(--accent)", color: "#fff" }}>
             <h3 style={{ fontWeight: 700, marginBottom: 4, color: "#fff" }}>Pro</h3>
-            <p style={{ fontSize: "var(--text-2xl)", fontWeight: 800 }}>990 ₽/мес</p>
+            <p style={{ fontSize: "var(--text-2xl)", fontWeight: 800 }}>999 ₽/мес</p>
             <ul style={{ fontSize: "var(--text-sm)", opacity: 0.9 }}>
               <li>Все источники</li>
               <li>Безлимит заявок</li>
