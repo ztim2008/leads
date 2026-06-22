@@ -24,7 +24,7 @@ export default function PartnersList() {
               <td style={{padding:"10px 16px",fontSize:"var(--text-xs)"}}>{ws?.sources?.some((s:any)=>s.platform==="profi"&&s.enabled)?"✅":"❌"}</td>
               <td style={{padding:"10px 16px",fontSize:"var(--text-sm)",fontWeight:600}}>{ws?.leadsCount||0}</td>
               <td style={{padding:"10px 16px",fontSize:"var(--text-xs)"}}>{ws?.settings?.telegramChatId?"✅":"—"}</td>
-              <td style={{padding:"10px 16px"}}><button onClick={()=>loginAs(p.email)} style={{padding:"4px 10px",borderRadius:"var(--radius-sm)",background:"var(--accent-soft)",color:"var(--accent)",border:"1px solid var(--accent)",fontSize:"var(--text-xs)",fontWeight:600,cursor:"pointer"}}>🔑 Войти как</button></td>
+              <td style={{padding:"10px 16px"}}><div style={{display:"flex",gap:4}}><button onClick={()=>loginAs(p.email)} style={{padding:"4px 10px",borderRadius:"var(--radius-sm)",background:"var(--accent-soft)",color:"var(--accent)",border:"1px solid var(--accent)",fontSize:"var(--text-xs)",fontWeight:600,cursor:"pointer"}}>🔑 Войти как</button><button onClick={async()=>{if(!confirm("Пометить оплату на 30 дней?"))return;await fetch("/api/admin/mark-paid",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({email:p.email})});alert("✅ Отмечено");}} style={{padding:"4px 10px",borderRadius:"var(--radius-sm)",background:"var(--green-soft)",color:"var(--green)",border:"1px solid var(--green)",fontSize:"var(--text-xs)",fontWeight:600,cursor:"pointer"}}>💰 Оплатил</button></div></td>
             </tr>
           );
         })}
