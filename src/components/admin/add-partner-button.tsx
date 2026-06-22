@@ -8,10 +8,22 @@ export default function AddPartnerButton() {
   const [msg, setMsg] = useState("");
   const router = useRouter();
 
+    const [loginError, setLoginError] = useState("");
+
+  function validateProfiLogin(v: string) {
+    if (!v) { setLoginError(""); return true; }
+    if (v.includes("@")) { setLoginError("❌ Это email, а не логин Profi.ru. Логин выглядит как TimofeyevAG11 — без @"); return false; }
+    if (v.length < 4) { setLoginError("❌ Слишком короткий логин"); return false; }
+    setLoginError("");
+    return true;
+  }
+
   async function handleSubmit(e: any) { e.preventDefault(); setLoading(true); setMsg("");
     const fd = new FormData(e.target); const body: any = {};
     fd.forEach((v,k) => { body[k]=v; });
     body.budgetMin = parseInt(body.budgetMin)||3000; body.budgetMax = parseInt(body.budgetMax)||500000;
+    const loginVal = (body.profiLogin || "");
+    if (loginVal && loginVal.includes("@")) { setMsg("❌ Логин Profi.ru не может быть email. Формат: TimofeyevAG11"); setLoading(false); return; }
     const res = await fetch("/api/admin/partners",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
     const d = await res.json();
     setMsg(d.ok ? "✅ Партнёр создан!" : "❌ "+(d.error||"Ошибка"));
@@ -42,10 +54,10 @@ export default function AddPartnerButton() {
 
         {/* Блок 2: Profi.ru */}
         <div style={block}>
-          <div style={blockTitle}>🔌 Profi.ru</div>
+          <div style={blockTitle}>🔌 Profi.ru <span style={{fontWeight:400,fontSize:"0.65rem",color:"var(--ink-muted)",marginLeft:8}}>Настройки анкеты → поле «Логин»</span></div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-            <div><label style={lbl}>Логин (из анкеты)</label><input name="profiLogin" style={i} placeholder="TimofeyevAG11"/></div>
-            <div><label style={lbl}>Пароль</label><input name="profiPassword" type="password" style={i}/></div>
+            <div><label style={lbl}>Логин (из анкеты Profi.ru)</label><input name="profiLogin" style={i} placeholder="TimofeyevAG11" onChange={(e)=>validateProfiLogin(e.target.value)}/><div style={{fontSize:"0.6rem",color:"var(--red)",marginTop:2,minHeight:16}}>{loginError}</div></div>
+            <div><label style={lbl}>Пароль Profi.ru</label><input name="profiPassword" type="password" style={i}/></div>
           </div>
         </div>
 
