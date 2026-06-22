@@ -77,11 +77,12 @@ async function ensureLoggedIn(sourceId: string, login: string, password: string)
     console.log(`[profi] ✅ Вход выполнен: ${login} → ${url}`);
     sessionCache.set(sourceId, { browser, page, login });
     return page;
-  } catch (err) {
-    console.error(`[profi] ❌ Ошибка входа для ${login}:`, err);
+  } catch (err: any) {
+    console.error(`[profi] ❌ Ошибка входа для ${login}:`, err?.message || err);
     await page.close().catch(() => {});
     await browser.close().catch(() => {});
-    return null;
+    // Пробрасываем ошибку чтобы Worker обновил source.status="error"
+    throw err instanceof Error ? err : new Error(String(err));
   }
 }
 
