@@ -186,42 +186,17 @@ async function canWorkNow(): Promise<boolean> {
   if (!isRunning) { saveStatusToFile(); return false; }
 
   try {
-    const s = await db.settings.findFirst();
-    if (!s) return true; // нет настроек — работаем 24/7
-
-    // Глобальный выключатель
-    if (!s.systemEnabled) {
-      statusReason = "Выключена глобально"; saveStatusToFile(); console.log("[worker] ⏸ systemEnabled=false");
+    // Проверяем: есть ли хотя бы ОДИН включённый workspace
+    const enabledCount = await db.settings.count({ where: { systemEnabled: true } });
+    if (enabledCount === 0) {
+      statusReason = "Выключена глобально"; saveStatusToFile();
       return false;
     }
 
-    // Если расписание НЕ настроено — работаем 24/7
-    if (!s.workDays || !s.workHoursStart || !s.workHoursEnd) {
-      statusReason = "Активна (24/7 МСК)";
-      return true;
-    }
-
-    // Проверка дня недели
-    const now = moscowNow();
-    const dow = String(now.getDay());
-    const workDays = s.workDays.split(",");
-    if (!workDays.includes(dow)) {
-      statusReason = `Выходной (день ${dow})`; saveStatusToFile(); console.log(`[worker] ⏸ Сегодня выходной (день ${dow})`);
-      return false;
-    }
-
-    // Проверка времени
-    const mins = now.getHours() * 60 + now.getMinutes();
-    const [sh, sm] = s.workHoursStart.split(":").map(Number);
-    const [eh, em] = s.workHoursEnd.split(":").map(Number);
-    if (mins < sh * 60 + sm || mins > eh * 60 + em) {
-      statusReason = `По расписанию (до ${s.workHoursEnd} МСК)`; saveStatusToFile(); console.log(`[worker] ⏸ Нерабочее время`);
-      return false;
-    }
-
+    statusReason = "Активна (МСК)";
     return true;
   } catch (err) {
-    console.error("[worker] Ошибка проверки расписания:", err);
+    console.error("[worker] Ошибка проверки:", err);
     statusReason = "Активна (МСК)";
     return true;
   }
@@ -245,13 +220,16 @@ async function autoCleanup() {
 
 // ─── Журнал действий ─────────────────────────────────────────────────────
 
-async function logActivity(type: string, description: string) {
+async function logActivity(type: string, description: string, workspaceId?: string) {
   try {
-    const ws = await db.workspace.findFirst();
-    if (ws) {
-      await db.activityLog.create({
-        data: { workspaceId: ws.id, type, description },
-      });
+    if (workspaceId) {
+      await db.activityLog.create({ data: { workspaceId, type, description } });
+    } else {
+      // Логируем во все активные workspace
+      const wss = await db.workspace.findMany({ where: { settings: { systemEnabled: true } } });
+      for (const ws of wss) {
+        await db.activityLog.create({ data: { workspaceId: ws.id, type, description } }).catch(() => {});
+      }
     }
   } catch {}
 }
@@ -358,7 +336,7 @@ async function processSource(sourceId: string) {
       }
       
       // Проверка: 0 заявок может означать проблему с коннектором
-      await logActivity("fetch_empty", `${source.platform}: 0 заявок — возможна проблема с авторизацией`);
+      await logActivity("fetch_empty", `${source.platform}: 0 заявок — возможна проблема с авторизацией`, source.workspaceId);
     }
 
     const existingIds = new Set(
@@ -372,7 +350,7 @@ async function processSource(sourceId: string) {
     if (newLeads.length > 0) {
       console.log(`[worker]    новых: ${newLeads.length}`);
       totalLeadsCollected += newLeads.length;
-      await logActivity("fetch_leads", `${source.platform}: ${newLeads.length} новых заявок`);
+      await logActivity("fetch_leads", `${source.platform}: ${newLeads.length} новых заявок`, source.workspaceId);
     }
 
     for (const rawLead of newLeads) {
@@ -438,7 +416,7 @@ async function processSource(sourceId: string) {
     totalErrors++;
     console.error(`[worker] ❌ ${source.platform}: ${msg}`);
     await db.source.update({ where: { id: source.id }, data: { status: "error", lastError: msg.slice(0, 500) } });
-    await logActivity("fetch_error", `${source.platform}: ${msg.slice(0, 200)}`);
+    await logActivity("fetch_error", `${source.platform}: ${msg.slice(0, 200)}`, source.workspaceId);
 
     // Telegram-уведомление о критической ошибке
     if (msg.includes("логин") || msg.includes("парол") || msg.includes("вход") || msg.includes("login") || msg.includes("auth")) {
@@ -456,10 +434,15 @@ async function processSource(sourceId: string) {
 let lastKnownInterval = 0;
 
 async function pollAllSources() {
-  // Динамическая проверка интервала
+  // Динамическая проверка интервала — МИНИМАЛЬНЫЙ среди всех активных
   try {
-    const s = await db.settings.findFirst();
-    const newInterval = (s?.checkInterval || 3) * 60 * 1000;
+    const allSettings = await db.settings.findMany({
+      where: { systemEnabled: true },
+      select: { checkInterval: true },
+    });
+    const intervals = allSettings.map(s => s.checkInterval).filter(Boolean);
+    const minInterval = intervals.length > 0 ? Math.min(...intervals) : 3;
+    const newInterval = minInterval * 60 * 1000;
     if (newInterval !== lastKnownInterval && lastKnownInterval > 0) {
       console.log(`[worker] 🔄 Интервал изменён: ${lastKnownInterval/60000}→${newInterval/60000} мин`);
       if (intervalId) clearInterval(intervalId);
@@ -524,8 +507,12 @@ export function stopScheduler() {
 // Динамический перезапуск с новым интервалом
 export async function restartScheduler() {
   stopScheduler();
-  const s = await db.settings.findFirst();
-  const intervalMin = s?.checkInterval || 3;
+  const allSettings = await db.settings.findMany({
+    where: { systemEnabled: true },
+    select: { checkInterval: true },
+  });
+  const intervals = allSettings.map(s => s.checkInterval).filter(Boolean);
+  const intervalMin = intervals.length > 0 ? Math.min(...intervals) : 3;
   startScheduler(intervalMin * 60 * 1000);
 }
 
