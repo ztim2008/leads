@@ -82,10 +82,10 @@ export default async function SettingsPage() {
         </Section>
 
         {/* ═══ Интеграции ═══ */}
-        <Section title="📱 Telegram Chat ID" hint="Ваш ID в Telegram (@getmyid_bot)">
+        <Section title="📱 Telegram Chat ID" hint="Найдите @getmyid_bot → /start → он пришлёт число">
           <TextForm field="telegramChatId" defaultValue={s.telegramChatId || ""} placeholder="778784292" workspaceId={workspace.id} />
         </Section>
-        <Section title="🤖 Telegram Bot Token" hint="Токен от @BotFather">
+        <Section title="🤖 Telegram Bot Token" hint="@BotFather → /newbot → придумайте имя → скопируйте токен. Затем найдите бота и напишите ему /start">
           <TextForm field="telegramToken" defaultValue={s.telegramToken || ""} placeholder="123456:ABC-DEF..." workspaceId={workspace.id} />
         </Section>
         <Section title="🔔 Telegram-уведомления" hint="Мгновенная отправка новых заявок в бот">

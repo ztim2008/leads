@@ -82,8 +82,8 @@ export default function AddPartnerButton() {
         <div style={block}>
           <div style={blockTitle}>📱 Telegram</div>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-            <div><label style={lbl}>Chat ID — найдите @getmyid_bot → отправьте /start → он пришлёт число</label><input name="telegramChatId" style={i} placeholder="778784292"/></div>
-            <div><label style={lbl}>Bot Token — @BotFather → /newbot → придумайте имя боту → скопируйте токен</label><input name="telegramToken" style={i} placeholder="123456:ABC-DEF..."/></div>
+            <div><label style={lbl}>Chat ID — @getmyid_bot → напишите /start → он пришлёт ваше число</label><input name="telegramChatId" style={i} placeholder="778784292"/></div>
+            <div><label style={lbl}>Bot Token — @BotFather → /newbot → придумайте имя → скопируйте токен</label><input name="telegramToken" style={i} placeholder="123456:ABC-DEF..."/><div style={{fontSize:"0.6rem",color:"var(--ink-muted)",marginTop:3}}>⚡ После создания найдите бота в Telegram и напишите ему любое сообщение</div></div>
           </div>
         </div>
 
