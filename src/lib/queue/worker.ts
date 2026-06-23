@@ -488,8 +488,7 @@ async function processSource(sourceId: string) {
                 title: rawLead.title,
                 budget: rawLead.budgetMin ? `${rawLead.budgetMin} ₽` : "бюджет не указан",
                 url: rawLead.url,
-                const deepDesc = (details.fullDescription || rawLead.description || "").slice(0, 200).replace(/\n/g, " ");
-              reasoning: [stars, authorInfo, reviewInfo, deepDesc].filter(Boolean).join("\n"),
+                reasoning: [stars, authorInfo, reviewInfo, (details.fullDescription || rawLead.description || "").slice(0, 200).replace(/\n/g, " ")].filter(Boolean).join("\n"),
               }, s.telegramToken);
             }
           } catch (e) {
