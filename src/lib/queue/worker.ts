@@ -343,7 +343,7 @@ async function processSource(sourceId: string) {
   if (!source || !source.enabled) { console.log(`[worker] ⏸ источник ${sourceId.slice(0,8)} не найден или выключен`); return; }
 
   const s = source.workspace.settings;
-  if (s && !s.systemEnabled) { console.log(`[worker] ⏸ systemEnabled=false для ${source.platform} (${source.config?.login})`); return; }
+  if (s && !s.systemEnabled) { console.log(`[worker] ⏸ systemEnabled=false для ${source.platform} (${((source.config || {}) as Record<string, any>)?.login})`); return; }
 
   // Проверка расписания из БД
   if (s?.workDays && s?.workHoursStart && s?.workHoursEnd) {
