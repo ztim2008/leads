@@ -189,21 +189,26 @@ async function checkSubscriptions() {
 
 const authErrorCount = new Map<string, number>();
 
-async function handleAuthError(sourceId: string, platform: string, errorMsg: string, workspaceSettings: any) {
+async function handleAuthError(sourceId: string, platform: string, errorMsg: string, workspaceSettings: any, workspaceName?: string) {
   const count = (authErrorCount.get(sourceId) || 0) + 1;
   authErrorCount.set(sourceId, count);
 
-  console.log(`[worker] 🔐 Ошибка авторизации #${count} для ${platform}`);
+  const userTag = workspaceName ? ` (${workspaceName})` : "";
+  console.log(`[worker] 🔐 Ошибка авторизации #${count} для ${platform}${userTag}`);
 
-  if (count >= 3) {
-    console.log(`[worker] 🚨 3 ошибки подряд — уведомление!`);
-
-    // Уведомление админу
+  // Первая ошибка — немедленное уведомление админу
+  if (count === 1) {
     await notifyAdminError(
-      `🔴 *3 ошибки авторизации подряд*\n\n` +
-      `Источник: ${platform}\n` +
-      `Ошибка: ${errorMsg.slice(0, 100)}\n\n` +
-      `Проверьте логин/пароль в настройках источника.`
+      `🔴 Ошибка входа ${platform}${userTag}\n\n${errorMsg.slice(0, 150)}\n\nСистема продолжит попытки.`
+    );
+  }
+
+  // Третья ошибка — повторное + партнёру
+  if (count >= 3) {
+    console.log(`[worker] 🚨 3 ошибки подряд — повторное уведомление!`);
+
+    await notifyAdminError(
+      `🚨 3 ошибки подряд ${platform}${userTag}\n\n${errorMsg.slice(0, 150)}\n\nПроверьте логин/пароль. Авто-сбор приостановлен для этого источника.`
     );
 
     // Уведомление партнёру в его Telegram
@@ -224,7 +229,6 @@ async function handleAuthError(sourceId: string, platform: string, errorMsg: str
       } catch {}
     }
 
-    // Сбрасываем счётчик
     authErrorCount.set(sourceId, 0);
   }
 }
@@ -393,6 +397,15 @@ async function processSource(sourceId: string) {
       
       // Проверка: 0 заявок может означать проблему с коннектором
       await logActivity("fetch_empty", `${source.platform}: 0 заявок — возможна проблема с авторизацией`, source.workspaceId);
+
+      // Если 0 заявок уже 10 циклов подряд — уведомление
+      const emptyKey = `empty-${source.id}`;
+      const emptyCount = (authErrorCount.get(emptyKey) || 0) + 1;
+      authErrorCount.set(emptyKey, emptyCount);
+      if (emptyCount === 10) {
+        await notifyAdminError(`🟡 0 заявок 10 циклов подряд\n\nИсточник: ${source.platform} (${((source.config as any)?.login || "?")})\n\nВозможно сессия истекла или нет новых заказов.`);
+        authErrorCount.set(emptyKey, 0);
+      }
     }
 
     // Нормализуем externalId (без analytics_data) для дедупликации
@@ -547,12 +560,16 @@ async function processSource(sourceId: string) {
     // При ошибке сессии — удаляем кеш чтобы заново залогиниться
     if (msg.includes("сессия истекла") || msg.includes("неверный логин") || msg.includes("неверный пароль")) {
       try { sessionCache.delete(source.id); } catch {}
+      // Отправляем отчет об ошибке админу сразу
+      await notifyAdminError(
+        `🔐 Profi отклонил вход ${((source.config as any)?.login || source.platform)}\n\n${msg.slice(0, 200)}\n\nБраузер перезапущен, пробуем заново.`
+      );
     }
 
     // Сброс счётчика при успехе (выше)
     // При ошибке авторизации — инкремент
     if (msg.includes("логин") || msg.includes("парол") || msg.includes("вход") || msg.includes("login") || msg.includes("auth") || msg.includes("неверный")) {
-      await handleAuthError(source.id, source.platform, msg, s);
+      await handleAuthError(source.id, source.platform, msg, s, ((source.config as any)?.login || "?"));
     } else {
       // Не авторизация — сбрасываем счётчик
       authErrorCount.set(source.id, 0);
