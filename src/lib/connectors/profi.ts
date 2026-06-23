@@ -232,7 +232,7 @@ export const profiConnector: Connector = {
         leads.push({
           externalId: link.href.replace(/&analytics_data=.*$/, ""),
           title,
-          description: link.text.slice(0, 1000),
+          description: link.text.replace(/\bfalse\b|\btrue\b/gi, "").replace(/\n{2,}/g, "\n").slice(0, 1000).trim(),
           budgetMin: budget.min,
           url: link.href,
           createdAt: new Date().toISOString(),
@@ -266,7 +266,7 @@ export const profiConnector: Connector = {
           leads.push({
             externalId: id,
             title: sMeaningful[0]?.slice(0, 150) || "Заказ",
-            description: snippet.text.slice(0, 1000),
+            description: snippet.text.replace(/\bfalse\b|\btrue\b/gi, "").replace(/\n{2,}/g, "\n").slice(0, 1000).trim(),
             budgetMin: budget.min,
             url: LOGIN_URL,
             createdAt: new Date().toISOString(),
