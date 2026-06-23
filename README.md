@@ -1,36 +1,56 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Konversus Leads AI
 
-## Getting Started
+**AI-отбор заказов с фриланс-бирж. Не скорость, а качество.**
 
-First, run the development server:
+## Что это
+
+Система подключается к Profi.ru, анализирует заказы через ИИ и присылает в Telegram **только горячие лиды** — с оценкой реальности заказчика, вероятностью сделки и готовым откликом.
+
+## Как работает
+
+1. **Сбор** — система заходит в Profi с человеческим поведением (читает сообщения, листает ленту, смотрит случайные заказы)
+2. **Deep scan** — открывает заказ, собирает данные: отзывы, возраст на платформе, рейтинг, подробность ТЗ
+3. **AI-скоринг** — оценивает заявку по 100-балльной шкале, определяет реальность заказчика (96%+), прогнозирует бюджет
+4. **Telegram-карточка** — партнёр получает не просто ссылку, а аналитику: ★★★ рейтинг, 18 отзывов, 7 лет на Profi
+
+## Анти-детект
+
+- Случайный интервал опроса (пул: 1, 3, 5, 7, 11, 13, 15, 17, 20, 25 мин)
+- Человеческое поведение: сообщения, скроллы, случайные заказы, пропуски 20%
+- Только рабочие часы (8:00–22:00 МСК), ночью — раз в 2–3 часа
+- Изолированные браузеры на каждого партнёра
+
+## Стек
+
+Next.js 16 · TypeScript · Prisma · PostgreSQL 16 · Redis 7 · Playwright · DeepSeek AI · Telegram Bot API
+
+## Быстрый старт
 
 ```bash
+npm install
+cp .env.example .env   # заполнить переменные
+npx prisma migrate deploy
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Структура
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+src/
+├── lib/
+│   ├── connectors/     # Коннекторы площадок (profi.ts)
+│   ├── ai/             # AI-анализатор (lead-analyzer.ts)
+│   ├── telegram/       # Уведомления (notifications.ts)
+│   ├── queue/          # Worker — автосбор (worker.ts)
+│   ├── auth/           # NextAuth
+│   └── db/             # Prisma client
+├── app/
+│   ├── dashboard/      # Личный кабинет
+│   ├── api/            # API-ручки
+│   └── page.tsx        # Лендинг
+└── components/         # UI-компоненты
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Лицензия
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Private. © Konversus, 2025–2026.

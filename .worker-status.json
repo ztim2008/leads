@@ -1,1 +1,1 @@
-{"running":true,"currentSource":null,"lastCheckAt":"2026-06-23T11:20:39.523Z","lastError":null,"uptime":6800,"totalCycles":106,"totalErrors":0,"totalLeadsCollected":2132,"statusReason":"Активна (МСК)","checkIntervalMin":1,"updatedAt":"2026-06-23T11:20:39.530Z"}
+{"running":true,"currentSource":null,"lastCheckAt":"2026-06-23T15:54:03.493Z","lastError":null,"uptime":39,"totalCycles":1,"totalErrors":0,"totalLeadsCollected":0,"statusReason":"Активна (МСК)","mode":"random","intervalPool":[1,3,5,7,11,13,15,17,20,25],"updatedAt":"2026-06-23T15:54:03.505Z"}

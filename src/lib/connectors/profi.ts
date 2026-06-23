@@ -1,7 +1,8 @@
 // @ts-nocheck
 // Коннектор Profi.ru — Playwright (авторизация + парсинг HTML)
-// v2: Изолированные браузеры на каждый source (партнёра)
+// v3: Человеческое поведение — сообщения, скроллы, случайные заказы, пропуски
 // Каждый партнёр = свой контекст, свои куки, своя сессия
+// Имитация реального пользователя: читает сообщения, листает ленту, смотрит заказы
 
 import { chromium, type BrowserContext, type Page } from "playwright";
 import type { Connector, ConnectorConfig, NormalizedLead } from "./types";
@@ -191,11 +192,58 @@ export const profiConnector: Connector = {
     if (!page) return [];
 
     try {
-      // Случайная пауза 1-3 сек перед парсингом (имитация чтения)
-    await page.waitForTimeout(1000 + Math.random() * 2000);
-    // Случайный скролл
-    await page.evaluate(() => window.scrollBy(0, 100 + Math.random() * 400));
-    await page.waitForTimeout(500 + Math.random() * 1000);
+      // ─── ЧЕЛОВЕЧЕСКОЕ ПОВЕДЕНИЕ: имитация реальной сессии ──────────────
+      
+      // 1. Иногда (30%) — сначала «читаем сообщения»
+      if (Math.random() < 0.3) {
+        console.log(`[profi] 📨 ${c.login}: зашёл в сообщения...`);
+        try {
+          await page.goto('https://profi.ru/backoffice/messages.php', { waitUntil: 'domcontentloaded', timeout: 15000 });
+          await page.waitForTimeout(8000 + Math.random() * 12000); // читает 8-20 сек
+          // Возвращаемся к заказам
+          await page.goto('https://profi.ru/backoffice/n.php', { waitUntil: 'domcontentloaded', timeout: 15000 });
+        } catch {
+          // Если не получилось — не страшно, продолжаем
+        }
+      }
+      
+      // 2. Скролл ленты вниз-вверх (человек листает)
+      console.log(`[profi] 📜 ${c.login}: листает ленту...`);
+      const scrollSteps = 2 + Math.floor(Math.random() * 4); // 2-5 шагов скролла
+      for (let i = 0; i < scrollSteps; i++) {
+        await page.evaluate(() => window.scrollBy(0, 200 + Math.random() * 600));
+        await page.waitForTimeout(1500 + Math.random() * 3500); // пауза между скроллами 1.5-5 сек
+      }
+      // Иногда скроллим обратно вверх
+      if (Math.random() < 0.5) {
+        await page.evaluate(() => window.scrollTo(0, 0));
+        await page.waitForTimeout(1000 + Math.random() * 2000);
+      }
+      
+      // 3. Иногда (40%) — кликаем на 1-2 случайных заказа (любопытство)
+      if (Math.random() < 0.4) {
+        const randomLinks = await page.locator('a[href*="?o="]').all();
+        const count = Math.min(1 + Math.floor(Math.random() * 2), randomLinks.length); // 1-2 заказа
+        console.log(`[profi] 👀 ${c.login}: смотрит ${count} случайных заказа...`);
+        for (let i = 0; i < count; i++) {
+          try {
+            const idx = Math.floor(Math.random() * randomLinks.length);
+            await randomLinks[idx].click({ timeout: 5000 });
+            await page.waitForTimeout(4000 + Math.random() * 8000); // «читает» 4-12 сек
+            await page.goBack({ waitUntil: 'domcontentloaded', timeout: 10000 });
+            await page.waitForTimeout(1500 + Math.random() * 2500);
+          } catch { break; }
+        }
+      }
+      
+      // 4. Иногда (10%) — просто уходим без парсинга («не нашёл ничего интересного»)
+      if (Math.random() < 0.10) {
+        console.log(`[profi] 🚶 ${c.login}: ушёл без парсинга (имитация «ничего интересного»)`);
+        return [];
+      }
+      
+      // 5. Финальная пауза перед парсингом (человек «вчитывается»)
+      await page.waitForTimeout(2000 + Math.random() * 4000);
     
     console.log(`[profi] 📊 Парсинг заказов для ${c.login}...`);
 
@@ -292,6 +340,7 @@ export interface OrderDetails {
   reviewCount?: number;
   rating?: number;
   clientRating?: number;
+  monthsOnPlatform?: number;  // сколько месяцев на платформе
   fullDescription?: string;
   city?: string;
   lastOnline?: string;
@@ -385,7 +434,10 @@ export async function scrapeOrderPage(sourceId: string, orderUrl: string): Promi
     const budgetMatch = bodyText.match(/(?:бюджет|стоимость|цена)[:\s]*(\d[\d\s]*)\s*(?:руб|₽)/i);
     if (budgetMatch) details.budgetRaw = budgetMatch[1].replace(/\s/g, "");
 
-    console.log(`[profi] ✅ Глубокий просмотр: автор=${details.author || '?'} отзывов=${details.reviewCount || 0}`);
+    // Добавляем monthsOnPlatform в результат
+    details.monthsOnPlatform = monthsOnPlatform;
+    
+    console.log(`[profi] ✅ Глубокий просмотр: автор=${details.author || '?'} отзывов=${details.reviewCount || 0} мес=${monthsOnPlatform}`);
     await deepPage.close().catch(() => {});
     return details;
   } catch (err: any) {

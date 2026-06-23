@@ -1,7 +1,9 @@
 // @ts-nocheck
-// Worker v3 — предсказуемый, с диагностикой, Telegram-ошибками
-// - Работает 24/7 если расписание не настроено
-// - Интервал опроса из настроек (1-15 мин)
+// Worker v4 — гуманный режим, анти-детект
+// - Активный опрос: 8:00-22:00 МСК, случайный интервал (1-25 мин)
+// - Ночной режим: раз в 2-3 часа
+// - Случайные пропуски 20% (имитация занятости)
+// - Пул интервалов [1, 3, 5, 7, 11, 13, 15, 17, 20, 25] мин + секундный джиттер
 // - Ошибки → в ActivityLog + Telegram админу
 // - Статус каждого цикла логируется
 
@@ -35,7 +37,7 @@ function saveStatusToFile() {
     const status = getWorkerStatus();
     writeFileSync(
       join(process.cwd(), ".worker-status.json"),
-      JSON.stringify({ ...status, checkIntervalMin: lastKnownInterval / 60000, updatedAt: new Date().toISOString() })
+      JSON.stringify({ ...status, mode: "random", intervalPool: RANDOM_INTERVAL_POOL, updatedAt: new Date().toISOString() })
     );
   } catch {}
 }
@@ -82,6 +84,45 @@ async function notifyAdminError(message: string) {
 // Московское время (UTC+3)
 function moscowNow(): Date {
   return new Date(Date.now() + 3 * 60 * 60 * 1000);
+}
+
+// ─── Человеческое расписание (МСК) ──────────────────────────────────────
+
+function isWorkingHours(): boolean {
+  const hour = moscowNow().getUTCHours();
+  return hour >= 8 && hour < 22; // активный опрос 8:00-22:00 МСК
+}
+
+function isNightTime(): boolean {
+  const hour = moscowNow().getUTCHours();
+  return hour >= 1 && hour < 7; // глубокий сон 1:00-7:00 МСК
+}
+
+// Случайный пропуск цикла — имитация «забыл проверить», «занят», «отошёл»
+function shouldSkipThisCycle(): boolean {
+  return Math.random() < 0.20; // 20% циклов пропускаем
+}
+
+// Ночной интервал: раз в 2-3 часа
+function getNightIntervalMs(): number {
+  return (120 + Math.floor(Math.random() * 60)) * 60 * 1000; // 120-180 мин
+}
+
+// Пул случайных интервалов (минуты) — имитация непредсказуемого человека
+const RANDOM_INTERVAL_POOL = [1, 3, 5, 7, 11, 13, 15, 17, 20, 25];
+let lastIntervalIndex = -1;
+
+function getRandomIntervalMs(): number {
+  // Не повторяем последний интервал (человек не ходит с одинаковым ритмом)
+  let idx: number;
+  do {
+    idx = Math.floor(Math.random() * RANDOM_INTERVAL_POOL.length);
+  } while (idx === lastIntervalIndex && RANDOM_INTERVAL_POOL.length > 1);
+  lastIntervalIndex = idx;
+  const minutes = RANDOM_INTERVAL_POOL[idx];
+  // Добавляем секундный джиттер ±30% внутри выбранной минуты
+  const jitter = 0.7 + Math.random() * 0.6;
+  return Math.round(minutes * 60 * 1000 * jitter);
 }
 
 
@@ -457,9 +498,13 @@ async function processSource(sourceId: string) {
       });
 
       // Глубокий просмотр для Pro (и фильтрация) — сначала deep scan, потом уведомление
+      // ЛИМИТ: не более 3 deep scan за цикл (чтобы не создавать шквал запросов)
+      let deepScanCount = 0;
+      const MAX_DEEP_SCAN_PER_CYCLE = 3;
       const sub = await db.subscription.findFirst({ where: { workspaceId: source.workspaceId } });
       const isPro = sub?.plan === "pro" && sub?.status === "active";
-      if (isPro && rawLead.url && rawLead.url.includes("?o=")) {
+      if (isPro && rawLead.url && rawLead.url.includes("?o=") && deepScanCount < MAX_DEEP_SCAN_PER_CYCLE) {
+        deepScanCount++;
         scrapeOrderPage(source.id, rawLead.url).then(async (details) => {
           if (!details) return;
           try {
@@ -496,19 +541,23 @@ async function processSource(sourceId: string) {
               return;
             }
 
-            // Повторное уведомление с обогащёнными данными
+            // 🔥 Карточка горячего лида — все rich-данные
             if (s?.telegramChatId && s?.telegramToken && s?.telegramAlerts !== false) {
-              const reviewInfo = details.reviewCount ? `⭐${details.reviewCount} отз.` : "";
-              const authorInfo = details.author ? `👤 ${details.author}` : "";
-              const stars = details.clientRating ? "★".repeat(details.clientRating) + "☆".repeat(3 - details.clientRating) : "";
+              const yearsOnPlatform = details.monthsOnPlatform ? Math.round(details.monthsOnPlatform / 12) : 0;
               await sendLeadNotification(s.telegramChatId, {
                 platform: source.platform,
                 platformColor: (source.color as string) || "#22c55e",
-                score: 0,
+                score: 0, // обновится AI-скорингом позже
                 title: rawLead.title,
-                budget: rawLead.budgetMin ? `${rawLead.budgetMin} ₽` : "бюджет не указан",
+                budget: rawLead.budgetMin ? `${rawLead.budgetMin} ₽` : (details.budgetRaw ? `${details.budgetRaw} ₽` : "бюджет не указан"),
                 url: rawLead.url,
-                reasoning: [stars, authorInfo, reviewInfo, (details.fullDescription || rawLead.description || "").slice(0, 200).replace(/\n/g, " ")].filter(Boolean).join("\n"),
+                reasoning: (details.fullDescription || rawLead.description || "").slice(0, 200).replace(/\n/g, " "),
+                author: details.author,
+                reviewCount: details.reviewCount || 0,
+                yearsOnPlatform: yearsOnPlatform || 0,
+                clientRating: details.clientRating || 0,
+                city: details.city,
+                descriptionLength: (details.fullDescription || rawLead.description || "").length,
               }, s.telegramToken);
             }
           } catch (e) {
@@ -518,7 +567,13 @@ async function processSource(sourceId: string) {
       }
 
       if (apiKey) {
-        analyzeLead(rawLead.title, rawLead.description, { apiKey })
+        analyzeLead(rawLead.title, rawLead.description, { 
+          apiKey,
+          signals: { 
+            budgetMin: rawLead.budgetMin,
+            descriptionLength: (rawLead.description || "").length,
+          }
+        })
           .then(async (analysis) => {
             await db.leadAnalysis.create({ data: { leadId: lead.id, score: analysis.score, budgetPrediction: analysis.budgetPrediction, difficulty: analysis.difficulty, recommendation: analysis.recommendation, reasoning: analysis.reasoning, modelUsed: "deepseek-chat", botProbability: analysis.botProbability } });
             await db.lead.update({ where: { id: lead.id }, data: { score: analysis.score, difficulty: analysis.difficulty } });
@@ -531,7 +586,17 @@ async function processSource(sourceId: string) {
               }
             }
             if (analysis.score >= 70 && s?.telegramChatId && s?.telegramToken) {
-              await sendLeadNotification(s.telegramChatId, { platform: source.platform, platformColor: (source.color as string) || "#22c55e", score: analysis.score, title: rawLead.title, budget: analysis.budgetPrediction, url: rawLead.url, reasoning: analysis.reasoning }, s.telegramToken);
+              // Повторное уведомление с AI-скорингом (бот не хранит состояние — отправим обновлённую карточку)
+              await sendLeadNotification(s.telegramChatId, { 
+                platform: source.platform, 
+                platformColor: (source.color as string) || "#22c55e", 
+                score: analysis.score, 
+                title: rawLead.title, 
+                budget: analysis.budgetPrediction, 
+                url: rawLead.url, 
+                reasoning: analysis.reasoning,
+                botProbability: analysis.botProbability,
+              }, s.telegramToken);
             }
           })
           .catch((aiErr) => {
@@ -590,21 +655,32 @@ async function processSource(sourceId: string) {
 let lastKnownInterval = 0;
 
 async function pollAllSources() {
-  // Динамическая проверка интервала — МИНИМАЛЬНЫЙ среди всех активных
-  try {
-    const allSettings = await db.settings.findMany({
-      where: { systemEnabled: true },
-      select: { checkInterval: true },
-    });
-    const intervals = allSettings.map(s => s.checkInterval).filter(Boolean);
-    const minInterval = intervals.length > 0 ? Math.min(...intervals) : 3;
-    const newInterval = Math.max(minInterval * 60 * 1000, 60 * 1000);
-    if (newInterval !== lastKnownInterval && lastKnownInterval > 0) {
-      console.log(`[worker] 🔄 Базовый интервал изменён: ${lastKnownInterval/60000}→${newInterval/60000} мин`);
-    }
-    lastKnownInterval = newInterval;
-  } catch {}
+  // Интервал теперь всегда случайный из пула — не читаем из БД
   if (!(await canWorkNow())) return;
+
+  // Ночной режим: проверяем раз в 2-3 часа, не чаще
+  if (isNightTime()) {
+    const now = moscowNow();
+    console.log(`[worker] 🌙 Ночной режим (${now.getUTCHours()}:00 МСК) — проверка раз в 2-3 часа`);
+    statusReason = `Ночной режим (МСК ${now.getUTCHours()}:00)`;
+    saveStatusToFile();
+  }
+
+  // В нерабочие часы — большие паузы
+  if (!isWorkingHours() && !isNightTime()) {
+    const now = moscowNow();
+    console.log(`[worker] 🕐 Нерабочее время (${now.getUTCHours()}:00 МСК) — увеличенный интервал`);
+    statusReason = `Нерабочее время (МСК ${now.getUTCHours()}:00)`;
+    saveStatusToFile();
+  }
+
+  // Случайный пропуск — имитация «занят/отошёл»
+  if (shouldSkipThisCycle()) {
+    console.log(`[worker] 🎲 Пропуск цикла (имитация «занят»)`);
+    statusReason = "Пропуск (имитация занятости)";
+    saveStatusToFile();
+    return;
+  }
 
   const sources = await db.source.findMany({ where: { enabled: true, status: { not: "pending" } } });
   if (sources.length === 0) return;
@@ -658,27 +734,34 @@ async function pollAllSources() {
   isRunning = true;
   startupTime = startupTime || new Date();
 
-  // Минимальный интервал 60 сек, + случайный разброс ±40% чтобы избежать детекта
-  const baseMs = Math.max(intervalMs || 3 * 60 * 1000, 60 * 1000);
-  const ms = baseMs;
-  console.log(`🚀 Worker запущен (опрос: каждые ${ms / 1000}с ± случайно)`);
-  console.log(`🕐 Расписание: из БД, без настроек — 24/7`);
+  console.log(`🚀 Worker запущен (опрос: случайный — ${RANDOM_INTERVAL_POOL.join(', ')} мин)`);
+  console.log(`🕐 Режим: случайный интервал (${RANDOM_INTERVAL_POOL.join('/')} мин), 8:00-22:00 МСК, ночью — раз в 2-3 часа`);
   console.log(`📱 Telegram: мгновенные + ошибки админу`);
   console.log(`📋 Журнал: все события в activity_log`);
-  console.log(`🎭 Анти-детект: случайный интервал, человеческие задержки`);
+  console.log(`🎭 Анти-детект: случайный интервал, пропуски 20%, человеческое поведение`);
 
-  logActivity("worker_start", `Worker запущен (интервал ${ms / 1000}с)`);
+  logActivity("worker_start", `Worker запущен (случайный интервал: ${RANDOM_INTERVAL_POOL.join('/')} мин)`);
 
   // Первый запуск со случайной задержкой 1-10 сек
   const firstDelay = 1000 + Math.random() * 9000;
   setTimeout(() => pollAllSources(), firstDelay);
   
-  // Рекурсивный планировщик со случайным интервалом
+  // Рекурсивный планировщик — каждый раз случайный интервал из пула
   function scheduleNext() {
     if (!isRunning) return;
-    // Случайный разброс ±30% от базового интервала
-    const jitter = 0.7 + Math.random() * 0.6; // 0.7 ... 1.3
-    const nextMs = Math.round(baseMs * jitter);
+    let nextMs: number;
+    if (isNightTime()) {
+      nextMs = getNightIntervalMs();
+    } else {
+      nextMs = getRandomIntervalMs();
+    }
+    const nextMin = Math.round(nextMs / 60000);
+    const nextSec = Math.round((nextMs % 60000) / 1000);
+    if (nextMin >= 60) {
+      console.log(`[worker] ⏰ Следующий опрос через ${nextMin} мин (${Math.round(nextMin/60*10)/10} ч)`);
+    } else {
+      console.log(`[worker] ⏰ Следующий опрос через ${nextMin} мин ${nextSec} сек`);
+    }
     intervalId = setTimeout(() => {
       pollAllSources().finally(() => scheduleNext());
     }, nextMs);
@@ -698,16 +781,10 @@ export function stopScheduler() {
   console.log("⏸ Worker остановлен");
 }
 
-// Динамический перезапуск с новым интервалом
+// Перезапуск — интервал теперь всегда случайный из пула
 export async function restartScheduler() {
   stopScheduler();
-  const allSettings = await db.settings.findMany({
-    where: { systemEnabled: true },
-    select: { checkInterval: true },
-  });
-  const intervals = allSettings.map(s => s.checkInterval).filter(Boolean);
-  const intervalMin = intervals.length > 0 ? Math.min(...intervals) : 3;
-  startScheduler(intervalMin * 60 * 1000);
+  startScheduler();
 }
 
 // СТАРТ ТОЛЬКО ЧЕРЕЗ worker-run.ts (PM2 процесс)
