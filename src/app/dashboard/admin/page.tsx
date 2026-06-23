@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import { Shield, Users, CreditCard, Activity, UserPlus } from "lucide-react";
 import AddPartnerButton from "@/components/admin/add-partner-button";
 import ClientLoginButton from "@/components/admin/login-as-button";
+import HealthCheckWidget from "@/components/admin/health-check-widget";
 import PartnersList from "@/components/admin/partners-list";
 
 export default async function AdminPage() {
@@ -58,6 +59,9 @@ export default async function AdminPage() {
 
   return (
     <div>
+      {/* ═══ Проверка системы ═══ */}
+      <HealthCheckWidget />
+
       <div style={{ marginBottom: 28 }}>
         <h1 style={{ fontSize: "var(--text-2xl)", fontWeight: 700, marginBottom: 4 }}>
           Админ-панель
