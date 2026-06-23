@@ -153,8 +153,16 @@ export default function LeadDetail({ lead }: LeadDetailProps) {
                 {lead.reviewCount ? <span style={{fontSize:"0.6rem",color:"var(--amber)",marginLeft:6,whiteSpace:"nowrap"}}>⭐{lead.reviewCount} отз.</span> : null}
             </span>
           </div>
-          <p style={{ fontSize: "var(--text-xs)", color: "var(--ink-muted)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 550 }}>
-            {lead.description?.slice(0, 500)}
+          <p style={{
+            fontSize: "var(--text-xs)", color: "var(--ink-muted)", lineHeight: 1.6,
+            maxWidth: 550,
+            overflow: "hidden",
+            textOverflow: expanded ? "unset" : "ellipsis",
+            whiteSpace: expanded ? "pre-wrap" : "nowrap",
+            maxHeight: expanded ? "none" : "1.4em",
+            wordBreak: "break-word",
+          }}>
+            {expanded ? (lead.description || "Нет описания") : (lead.description?.slice(0, 200) || "—")}
           </p>
           <div style={{ display: "flex", gap: 6, marginTop: 4 }}>
             {analysis?.score != null && (
