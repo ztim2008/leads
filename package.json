@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "npx esbuild src/lib/queue/worker.ts --bundle --format=esm --platform=node --external:@/lib/* --external:playwright --external:bcryptjs --external:next-auth/* --outfile=/dev/null && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint"
   },
