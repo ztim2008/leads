@@ -1,6 +1,7 @@
 // Главная — Konversus Leads AI
 import Link from "next/link";
 import { LegalFooter } from "@/components/legal-layout";
+import LeadFeedAnimation from "@/components/lead-feed-animation";
 import CookieBanner from "@/components/cookie-banner";
 import {
   Search, Brain, FileText, MessageSquare, BarChart3, Filter,
@@ -105,8 +106,8 @@ export default function LandingPage() {
         borderBottom: "1px solid var(--border)",
         padding: "176px 0 100px",
       }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px" }}>
-          <div style={{ maxWidth: 720 }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px", display: "flex", alignItems: "center", gap: "clamp(32px, 6vw, 80px)", flexWrap: "wrap" }}>
+          <div style={{ flex: "1 1 400px", maxWidth: 720 }}>
             <div style={{
               display: "inline-flex", alignItems: "center", gap: 8,
               background: "var(--accent-soft)", color: "var(--accent)",
@@ -163,8 +164,16 @@ export default function LandingPage() {
               </Link>
             </div>
           </div>
+          <div className="hero-feed" style={{ flex: "0 0 380px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <LeadFeedAnimation />
+          </div>
         </div>
       </header>
+      <style>{`
+        @media (max-width: 900px) {
+          .hero-feed { display: none !important; }
+        }
+      `}</style>
 
       {/* ─── Как работает ──────────────────────────────────── */}
       <section id="how" style={{ padding: "100px 0" }}>

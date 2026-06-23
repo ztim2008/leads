@@ -2,6 +2,8 @@ import Script from "next/script";
 import type { Metadata } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
+import KonversusNav from "@/components/konversus-nav";
+import KonversusFooter from "@/components/konversus-footer";
 
 const inter = Inter({
   variable: "--font-sans",
