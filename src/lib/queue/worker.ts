@@ -362,6 +362,8 @@ async function processSource(sourceId: string) {
     return;
   }
 
+  // currentSource и statusReason для этого источника
+  const prevSource = currentSource;
   currentSource = `${source.platform}`;
   statusReason = `Сбор: ${source.platform}`;
   const apiKey = s?.openrouterKey || "";
@@ -587,10 +589,13 @@ async function pollAllSources() {
   console.log(`\n[worker] ⏰ Цикл #${totalCycles}: ${sources.length} источников`);
   await logActivity("cycle_start", `Цикл #${totalCycles}: ${sources.length} источников`);
 
-  for (const source of sources) {
-    if (!isRunning || !(await canWorkNow())) break;
-    await processSource(source.id);
-  }
+  // Параллельная обработка источников — у каждого свой браузер
+  // Заявки доставляются в Telegram сразу, не ждут другие источники
+  await Promise.all(sources.map(source => 
+    processSource(source.id).catch(err => {
+      console.error(`[worker] ❌ Ошибка источника ${source.platform}:`, err);
+    })
+  ));
 
   saveStatusToFile();
   console.log(`[worker] ✅ Цикл #${totalCycles} завершён (собрано: ${totalLeadsCollected})\n`);
