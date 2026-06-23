@@ -40,7 +40,7 @@ export default async function SettingsPage() {
             await db.settings.update({ where: { workspaceId: workspace.id }, data: { checkInterval: val } });
             revalidatePath("/dashboard/settings");
           }} style={{ display: "flex", gap: 10, alignItems: "flex-end" }}>
-            <select name="checkInterval" defaultValue={s.checkInterval || 3} style={{ padding: "10px 14px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--bg-root)", color: "var(--ink-body)", fontSize: "var(--text-sm)", outline: "none" }}>
+            <select name="checkInterval" defaultValue={s.checkInterval ?? 3} value={s.checkInterval ?? 3} style={{ padding: "10px 14px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--bg-root)", color: "var(--ink-body)", fontSize: "var(--text-sm)", outline: "none" }}>
               <option value={0.25}>15 секунд (макс. скорость)</option>
               <option value={0.5}>30 секунд</option>
               <option value={1}>1 минута</option>

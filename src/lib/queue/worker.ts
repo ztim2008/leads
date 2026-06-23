@@ -538,6 +538,14 @@ async function processSource(sourceId: string) {
     await db.source.update({ where: { id: source.id }, data: { status: "error", lastError: msg.slice(0, 500) } });
     await logActivity("fetch_error", `${source.platform}: ${msg.slice(0, 200)}`, source.workspaceId);
 
+    // При ошибке сессии — удаляем кеш чтобы заново залогиниться
+    if (msg.includes("сессия истекла") || msg.includes("неверный логин") || msg.includes("неверный пароль")) {
+      try {
+        const { sessionCache } = require("@/lib/connectors/profi");
+        if (sessionCache) sessionCache.delete(source.id);
+      } catch {}
+    }
+
     // Сброс счётчика при успехе (выше)
     // При ошибке авторизации — инкремент
     if (msg.includes("логин") || msg.includes("парол") || msg.includes("вход") || msg.includes("login") || msg.includes("auth") || msg.includes("неверный")) {

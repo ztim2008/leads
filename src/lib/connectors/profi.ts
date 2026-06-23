@@ -74,6 +74,15 @@ async function ensureLoggedIn(sourceId: string, login: string, password: string)
       throw new Error(`Profi.ru: не удалось войти (возможно SMS или капча) для ${login}`);
     }
 
+    // Проверяем что мы НЕ на странице входа
+    const bodyAfterLogin = await page.locator("body").innerText();
+    if (bodyAfterLogin.includes("Вход и регистрация") || bodyAfterLogin.includes("Восстановить пароль")) {
+      console.error(`[profi] ❌ Сессия истекла для ${login} — требуется повторный вход`);
+      await page.close();
+      await browser.close().catch(() => {});
+      throw new Error(`Profi.ru: сессия истекла, требуется заново ввести логин и пароль для ${login}`);
+    }
+
     console.log(`[profi] ✅ Вход выполнен: ${login} → ${url}`);
     sessionCache.set(sourceId, { browser, page, login });
     return page;
