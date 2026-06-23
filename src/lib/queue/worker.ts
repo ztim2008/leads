@@ -293,7 +293,8 @@ async function notifyFast(
     await sendLeadNotification(telegramChatId, {
       platform, platformColor: color, score: 0,
       title: lead.title, budget,
-      url: lead.url, reasoning: "⚡ Новая заявка! AI-анализ...",
+      url: lead.url, reasoning: lead.description ? lead.description.slice(0, 150) : "⚡ Новая заявка! AI-анализ...",
+      description: lead.description?.slice(0, 200),
     }, telegramToken);
   } catch {}
 }
