@@ -456,12 +456,7 @@ async function processSource(sourceId: string) {
         },
       });
 
-      if (s?.telegramChatId && s?.telegramToken && s?.telegramAlerts !== false) {
-        const descPreview = (rawLead.description || "").slice(0, 150).replace(/\n/g, " ");
-            notifyFast({ id: lead.id, title: rawLead.title, url: rawLead.url, budgetMin: rawLead.budgetMin, description: descPreview || rawLead.title }, source.platform, (source.color as string) || "#22c55e", s.telegramChatId, s.telegramToken);
-      }
-
-      // Глубокий просмотр для Pro
+      // Глубокий просмотр для Pro (и фильтрация) — сначала deep scan, потом уведомление
       const sub = await db.subscription.findFirst({ where: { workspaceId: source.workspaceId } });
       const isPro = sub?.plan === "pro" && sub?.status === "active";
       if (isPro && rawLead.url && rawLead.url.includes("?o=")) {
