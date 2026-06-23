@@ -18,12 +18,34 @@ const LOGIN_URL = "https://profi.ru/backoffice/n.php";
 export const sessionCache = new Map<string, { browser: import("playwright").Browser; page: Page; login: string }>();
 
 async function ensureLoggedIn(sourceId: string, login: string, password: string): Promise<Page | null> {
+  // Общий таймаут 45 секунд на всю операцию
+  const timeoutMs = 45000;
+  try {
+    return await Promise.race([
+      doEnsureLoggedIn(sourceId, login, password),
+      new Promise<null>((_, reject) => setTimeout(() => reject(new Error("Таймаут входа (45с)")), timeoutMs)),
+    ]);
+  } catch (e: any) {
+    console.error(`[profi] ❌ Ошибка входа для ${login}:`, e.message || e);
+    return null;
+  }
+}
+
+async function doEnsureLoggedIn(sourceId: string, login: string, password: string): Promise<Page | null> {
   // Проверяем — есть ли сессия для ЭТОГО sourceId с ЭТИМ логином
   const cached = sessionCache.get(sourceId);
   if (cached && cached.login === login) {
     try {
-      await cached.page.url(); // проверка что жива
-      return cached.page;
+      // Проверяем что страница жива и это НЕ страница входа
+      const bodyCheck = await cached.page.locator("body").innerText();
+      if (bodyCheck.includes("Вход и регистрация") || bodyCheck.includes("Восстановить пароль")) {
+        console.log(`[profi] ⚠️ Кешированная сессия ${login} истекла — пересоздаём`);
+        await cached.browser.close().catch(() => {});
+        sessionCache.delete(sourceId);
+      } else {
+        await cached.page.url(); // проверка что жива
+        return cached.page;
+      }
     } catch {
       // Умерла — удаляем и пересоздаём
       await cached.browser.close().catch(() => {});
@@ -40,7 +62,10 @@ async function ensureLoggedIn(sourceId: string, login: string, password: string)
 
   console.log(`[profi] 🔑 Вход: ${login} (source: ${sourceId})...`);
 
-  const browser = await chromium.launch({ headless: true });
+  const browser = await chromium.launch({ 
+    headless: true,
+    timeout: 20000,  // 20 сек на запуск браузера
+  });
   // Stealth-контекст: маскируемся под обычного пользователя
   const context = await browser.newContext({
     viewport: { width: 1920, height: 1080 },

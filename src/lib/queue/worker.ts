@@ -349,11 +349,11 @@ async function processSource(sourceId: string) {
   if (s?.workDays && s?.workHoursStart && s?.workHoursEnd) {
     const now = moscowNow();
     const dow = String(now.getDay());
-    if (!s.workDays.split(",").includes(dow)) return;
+    if (!s.workDays.split(",").includes(dow)) { console.log("[worker] ⏸ выходной (день " + dow + ") для " + ((source.config||{})?.login||"?")); return; }
     const mins = now.getHours() * 60 + now.getMinutes();
     const [sh, sm] = s.workHoursStart.split(":").map(Number);
     const [eh, em] = s.workHoursEnd.split(":").map(Number);
-    if (mins < sh * 60 + sm || mins > eh * 60 + em) return;
+    if (mins < sh * 60 + sm || mins > eh * 60 + em) { const hint = mins < sh*60+sm ? "начнётся в "+s.workHoursStart : "закончился в "+s.workHoursEnd; console.log("[worker] ⏸ нерабочее время (" + hint + ") для " + ((source.config||{})?.login||"?")); return; }
   }
 
   const connector = getConnector(source.platform);
