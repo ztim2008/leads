@@ -13,6 +13,7 @@ interface LeadDetailProps {
     title: string | null;
     reviewCount?: number | null;
     clientRating?: number | null;
+    orderNumber?: string | null;
     description: string | null;
     budgetMin: any;
     budgetMax: any;
@@ -147,7 +148,7 @@ export default function LeadDetail({ lead }: LeadDetailProps) {
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 3 }}>
             <span style={{ width: 7, height: 7, borderRadius: "50%", background: lead.source.color || "var(--accent)" }} />
             <span style={{ fontWeight: 650, fontSize: "var(--text-sm)", color: "var(--ink-heading)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {lead.title || "Без названия"}
+              {lead.orderNumber && <span style={{fontSize:"0.6rem",color:"var(--ink-muted)",marginRight:6,whiteSpace:"nowrap"}}>№{lead.orderNumber}</span>}{lead.title || "Без названия"}
                 {lead.clientRating ? <span style={{fontSize:"0.7rem",color:"#f59e0b",marginLeft:6,whiteSpace:"nowrap"}}>{"★".repeat(lead.clientRating)}{"☆".repeat(3-lead.clientRating)}</span> : null}
                 {lead.reviewCount ? <span style={{fontSize:"0.6rem",color:"var(--amber)",marginLeft:6,whiteSpace:"nowrap"}}>⭐{lead.reviewCount} отз.</span> : null}
             </span>

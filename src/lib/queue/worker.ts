@@ -290,10 +290,13 @@ async function notifyFast(
 ) {
   try {
     const budget = lead.budgetMin ? `${lead.budgetMin} ₽` : "бюджет не указан";
+    const orderNum = lead.url?.match(/[?&]o=(\d+)/)?.[1];
+    const orderText = orderNum ? `📋 Заказ №${orderNum}` : "";
     await sendLeadNotification(telegramChatId, {
       platform, platformColor: color, score: 0,
       title: lead.title, budget,
-      url: lead.url, reasoning: lead.description ? lead.description.slice(0, 150) : "⚡ Новая заявка! AI-анализ...",
+      url: lead.url,
+      reasoning: [orderText, lead.description?.slice(0, 150) || "⚡ Новая заявка!"].filter(Boolean).join("\n"),
       description: lead.description?.slice(0, 200),
     }, telegramToken);
   } catch {}
@@ -427,7 +430,8 @@ async function processSource(sourceId: string) {
       const lead = await db.lead.create({
         data: {
           workspaceId: source.workspaceId, sourceId: source.id,
-          externalId: rawLead.externalId, title: rawLead.title,
+          externalId: rawLead.externalId,
+          orderNumber: rawLead.externalId?.match(/[?&]o=(\d+)/)?.[1] || null, title: rawLead.title,
           description: rawLead.description, budgetMin: rawLead.budgetMin,
           budgetMax: rawLead.budgetMax, url: rawLead.url,
           city: rawLead.city, author: rawLead.author, status: "new",
