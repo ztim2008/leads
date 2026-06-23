@@ -432,7 +432,7 @@ async function processSource(sourceId: string) {
         data: {
           workspaceId: source.workspaceId, sourceId: source.id,
           externalId: rawLead.externalId,
-          orderNumber: rawLead.externalId?.match(/[?&]o=(\d+)/)?.[1] || null, title: rawLead.title,
+          title: rawLead.title,
           description: rawLead.description, budgetMin: rawLead.budgetMin,
           budgetMax: rawLead.budgetMax, url: rawLead.url,
           city: rawLead.city, author: rawLead.author, status: "new",
