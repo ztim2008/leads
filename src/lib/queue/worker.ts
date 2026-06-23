@@ -422,6 +422,10 @@ async function processSource(sourceId: string) {
     if (newLeads.length > 0) {
       console.log(`[worker]    новых: ${newLeads.length}`);
       totalLeadsCollected += newLeads.length;
+      // Сбрасываем счётчик «нет новых заявок» для этого workspace
+      if (newLeads.length > 0) {
+        authErrorCount.set("no-leads-" + source.workspaceId, 0);
+      }
       await logActivity("fetch_leads", `${source.platform}: ${newLeads.length} новых заявок`, source.workspaceId);
     }
 
@@ -625,6 +629,25 @@ async function pollAllSources() {
       console.error(`[worker] ❌ Ошибка источника ${source.platform}(${(source.config as Record<string, any>)?.login || "?" || '?'}):`, err.message || err);
     })
   ));
+
+  // Проверка: workspace без новых заявок > 2 часов
+  try {
+    const allWs = await db.workspace.findMany({ where: { sources: { some: { enabled: true } } }, include: { user: true, settings: true } });
+    for (const ws of allWs) {
+      const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+      const recentLeads = await db.lead.count({ where: { workspaceId: ws.id, createdAt: { gte: twoHoursAgo } } });
+      if (recentLeads === 0) {
+        const noLeadKey = "no-leads-" + ws.id;
+        const noLeadCount = (authErrorCount.get(noLeadKey) || 0) + 1;
+        authErrorCount.set(noLeadKey, noLeadCount);
+        if (noLeadCount === 1) {
+          await notifyAdminError(
+            `🟡 Нет новых заявок > 2 часов\n\nПартнёр: ${ws.user?.email || "?"}\nАккаунт Profi: ${ws.sources[0]?.config?.login || "?"}\n\nПроверьте подключение в админке.`
+          );
+        }
+      }
+    }
+  } catch {}
 
   saveStatusToFile();
   console.log(`[worker] ✅ Цикл #${totalCycles} завершён (собрано: ${totalLeadsCollected})\n`);
