@@ -190,7 +190,13 @@ export const profiConnector: Connector = {
     if (!page) return [];
 
     try {
-      console.log(`[profi] 📊 Парсинг заказов для ${c.login}...`);
+      // Случайная пауза 1-3 сек перед парсингом (имитация чтения)
+    await page.waitForTimeout(1000 + Math.random() * 2000);
+    // Случайный скролл
+    await page.evaluate(() => window.scrollBy(0, 100 + Math.random() * 400));
+    await page.waitForTimeout(500 + Math.random() * 1000);
+    
+    console.log(`[profi] 📊 Парсинг заказов для ${c.login}...`);
 
       const leads: NormalizedLead[] = [];
       const seen = new Set<string>();

@@ -578,9 +578,7 @@ async function pollAllSources() {
     const minInterval = intervals.length > 0 ? Math.min(...intervals) : 3;
     const newInterval = Math.max(minInterval * 60 * 1000, 60 * 1000);
     if (newInterval !== lastKnownInterval && lastKnownInterval > 0) {
-      console.log(`[worker] 🔄 Интервал изменён: ${lastKnownInterval/60000}→${newInterval/60000} мин`);
-      if (intervalId) clearInterval(intervalId);
-      intervalId = setInterval(() => pollAllSources(), newInterval);
+      console.log(`[worker] 🔄 Базовый интервал изменён: ${lastKnownInterval/60000}→${newInterval/60000} мин`);
     }
     lastKnownInterval = newInterval;
   } catch {}
@@ -619,17 +617,32 @@ async function pollAllSources() {
   isRunning = true;
   startupTime = startupTime || new Date();
 
-  // Минимальный интервал 60 сек чтобы не получить бан от Profi
-  const ms = Math.max(intervalMs || 3 * 60 * 1000, 60 * 1000);
-  console.log(`🚀 Worker запущен (опрос: каждые ${ms / 1000}с)`);
+  // Минимальный интервал 60 сек, + случайный разброс ±40% чтобы избежать детекта
+  const baseMs = Math.max(intervalMs || 3 * 60 * 1000, 60 * 1000);
+  const ms = baseMs;
+  console.log(`🚀 Worker запущен (опрос: каждые ${ms / 1000}с ± случайно)`);
   console.log(`🕐 Расписание: из БД, без настроек — 24/7`);
   console.log(`📱 Telegram: мгновенные + ошибки админу`);
   console.log(`📋 Журнал: все события в activity_log`);
+  console.log(`🎭 Анти-детект: случайный интервал, человеческие задержки`);
 
   logActivity("worker_start", `Worker запущен (интервал ${ms / 1000}с)`);
 
-  setTimeout(() => pollAllSources(), 3000);
-  intervalId = setInterval(() => pollAllSources(), ms);
+  // Первый запуск со случайной задержкой 1-10 сек
+  const firstDelay = 1000 + Math.random() * 9000;
+  setTimeout(() => pollAllSources(), firstDelay);
+  
+  // Рекурсивный планировщик со случайным интервалом
+  function scheduleNext() {
+    if (!isRunning) return;
+    // Случайный разброс ±30% от базового интервала
+    const jitter = 0.7 + Math.random() * 0.6; // 0.7 ... 1.3
+    const nextMs = Math.round(baseMs * jitter);
+    intervalId = setTimeout(() => {
+      pollAllSources().finally(() => scheduleNext());
+    }, nextMs);
+  }
+  scheduleNext();
 
   autoCleanup();
   checkSubscriptions();
@@ -638,7 +651,7 @@ async function pollAllSources() {
 
 export function stopScheduler() {
   isRunning = false;
-  if (intervalId) { clearInterval(intervalId); intervalId = null; }
+  if (intervalId) { clearTimeout(intervalId); intervalId = null; }
   if (cleanupIntervalId) { clearInterval(cleanupIntervalId); cleanupIntervalId = null; }
   logActivity("worker_stop", "Worker остановлен");
   console.log("⏸ Worker остановлен");
