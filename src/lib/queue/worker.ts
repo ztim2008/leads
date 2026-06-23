@@ -6,7 +6,7 @@
 
 import { db } from "@/lib/db";
 import { getConnector } from "@/lib/connectors/types";
-import { scrapeOrderPage } from "@/lib/connectors/profi";
+import { scrapeOrderPage, sessionCache } from "@/lib/connectors/profi";
 import { analyzeLead, generateResponses } from "@/lib/ai/lead-analyzer";
 import { sendLeadNotification } from "@/lib/telegram/notifications";
 
@@ -334,16 +334,16 @@ async function checkTelegramBot(chatId: string, botToken: string): Promise<{ok: 
 // ─── Обработка одного источника ──────────────────────────────────────────
 
 async function processSource(sourceId: string) {
-  if (!(await canWorkNow())) return;
+  if (!(await canWorkNow())) { console.log(`[worker] ⏸ canWorkNow=false для ${sourceId.slice(0,8)}`); return; }
 
   const source = await db.source.findUnique({
     where: { id: sourceId },
     include: { workspace: { include: { settings: true } } },
   });
-  if (!source || !source.enabled) return;
+  if (!source || !source.enabled) { console.log(`[worker] ⏸ источник ${sourceId.slice(0,8)} не найден или выключен`); return; }
 
   const s = source.workspace.settings;
-  if (s && !s.systemEnabled) return;
+  if (s && !s.systemEnabled) { console.log(`[worker] ⏸ systemEnabled=false для ${source.platform} (${source.config?.login})`); return; }
 
   // Проверка расписания из БД
   if (s?.workDays && s?.workHoursStart && s?.workHoursEnd) {
@@ -540,10 +540,7 @@ async function processSource(sourceId: string) {
 
     // При ошибке сессии — удаляем кеш чтобы заново залогиниться
     if (msg.includes("сессия истекла") || msg.includes("неверный логин") || msg.includes("неверный пароль")) {
-      try {
-        const { sessionCache } = require("@/lib/connectors/profi");
-        if (sessionCache) sessionCache.delete(source.id);
-      } catch {}
+      try { sessionCache.delete(source.id); } catch {}
     }
 
     // Сброс счётчика при успехе (выше)
@@ -579,7 +576,7 @@ async function pollAllSources() {
     });
     const intervals = allSettings.map(s => s.checkInterval).filter(Boolean);
     const minInterval = intervals.length > 0 ? Math.min(...intervals) : 3;
-    const newInterval = minInterval * 60 * 1000;
+    const newInterval = Math.max(minInterval * 60 * 1000, 60 * 1000);
     if (newInterval !== lastKnownInterval && lastKnownInterval > 0) {
       console.log(`[worker] 🔄 Интервал изменён: ${lastKnownInterval/60000}→${newInterval/60000} мин`);
       if (intervalId) clearInterval(intervalId);
@@ -599,9 +596,12 @@ async function pollAllSources() {
 
   // Параллельная обработка источников — у каждого свой браузер
   // Заявки доставляются в Telegram сразу, не ждут другие источники
+  console.log(`[worker] 📋 Источники: ${sources.map(s => `${s.platform}(${(s.config as any)?.login || '?'})`).join(', ')}`);
   await Promise.all(sources.map(source => 
-    processSource(source.id).catch(err => {
-      console.error(`[worker] ❌ Ошибка источника ${source.platform}:`, err);
+    processSource(source.id).then(() => {
+      console.log(`[worker] ✅ Источник ${source.platform}(${((source.config || {}) as Record<string, any>)?.login || '?'}) завершён`);
+    }).catch(err => {
+      console.error(`[worker] ❌ Ошибка источника ${source.platform}(${((source.config || {}) as Record<string, any>)?.login || '?'}):`, err.message || err);
     })
   ));
 
@@ -619,8 +619,8 @@ async function pollAllSources() {
   isRunning = true;
   startupTime = startupTime || new Date();
 
-  // Интервал из настроек или 3 мин по умолчанию
-  const ms = intervalMs || 3 * 60 * 1000;
+  // Минимальный интервал 60 сек чтобы не получить бан от Profi
+  const ms = Math.max(intervalMs || 3 * 60 * 1000, 60 * 1000);
   console.log(`🚀 Worker запущен (опрос: каждые ${ms / 1000}с)`);
   console.log(`🕐 Расписание: из БД, без настроек — 24/7`);
   console.log(`📱 Telegram: мгновенные + ошибки админу`);

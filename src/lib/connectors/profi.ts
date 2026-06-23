@@ -15,7 +15,7 @@ interface ProfiConfig extends ConnectorConfig {
 const LOGIN_URL = "https://profi.ru/backoffice/n.php";
 
 // Кеш на каждый sourceId (а не глобальный!)
-const sessionCache = new Map<string, { browser: import("playwright").Browser; page: Page; login: string }>();
+export const sessionCache = new Map<string, { browser: import("playwright").Browser; page: Page; login: string }>();
 
 async function ensureLoggedIn(sourceId: string, login: string, password: string): Promise<Page | null> {
   // Проверяем — есть ли сессия для ЭТОГО sourceId с ЭТИМ логином
@@ -41,9 +41,22 @@ async function ensureLoggedIn(sourceId: string, login: string, password: string)
   console.log(`[profi] 🔑 Вход: ${login} (source: ${sourceId})...`);
 
   const browser = await chromium.launch({ headless: true });
+  // Stealth-контекст: маскируемся под обычного пользователя
   const context = await browser.newContext({
     viewport: { width: 1920, height: 1080 },
     userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+    locale: "ru-RU",
+    timezoneId: "Europe/Moscow",
+    deviceScaleFactor: 1,
+    hasTouch: false,
+    javaScriptEnabled: true,
+  });
+  
+  // Убираем признаки автоматизации
+  await context.addInitScript(() => {
+    Object.defineProperty(navigator, 'webdriver', { get: () => false });
+    // @ts-ignore
+    window.chrome = { runtime: {} };
   });
 
   const page = await context.newPage();
@@ -55,7 +68,12 @@ async function ensureLoggedIn(sourceId: string, login: string, password: string)
     await page.locator('input[type="password"]').first().fill(password);
     await page.click('[data-testid="enter_with_sms_btn"]');
 
-    await page.waitForTimeout(6000);
+    // Имитация человеческого поведения: небольшая пауза
+    await page.waitForTimeout(4000 + Math.random() * 4000);
+    
+    // Легкий скролл для имитации активности
+    await page.evaluate(() => window.scrollBy(0, 200 + Math.random() * 300));
+    await page.waitForTimeout(500 + Math.random() * 1000);
 
     const url = page.url();
     const bodyText = await page.locator("body").innerText();
