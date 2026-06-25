@@ -50,6 +50,14 @@ const PRODUCTS = [
     color: "#ec4899",
   },
   {
+    name: "Telegram-консультант",
+    description: "Клиенты пишут на сайте — вы отвечаете из Telegram. AI + человек без CRM.",
+    href: "https://chat.konversus.ru",
+    icon: Globe,
+    color: "#22c55e",
+    badge: "Новое",
+  },
+  {
     name: "Портфолио",
     description: "Работы за 17 лет в digital. Брендинг, сайты, полиграфия.",
     href: "/about",

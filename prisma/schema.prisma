@@ -207,3 +207,40 @@ model ActivityLog {
   @@index([workspaceId, createdAt])
   @@map("activity_log")
 }
+
+
+model PaymentLog {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  workspaceId String   @map("workspace_id")
+  amount      Decimal  @map("amount")
+  currency    String   @default("RUB")
+  plan        String   @default("pro")
+  paymentId   String   @unique @map("payment_id")
+  status      String   @default("succeeded")
+  email       String?
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([userId, createdAt])
+  @@map("payment_log")
+}
+
+
+model AppConfig {
+  id    String @id @default("default")
+  
+  // 💰 Биллинг
+  proPrice         Int    @default(999)   @map("pro_price")
+  proPriceCurrency String @default("RUB") @map("pro_price_currency")
+  trialDays        Int    @default(7)     @map("trial_days")
+  yookassaShopId   String? @map("yookassa_shop_id")
+  yookassaSecret   String? @map("yookassa_secret")
+
+  // 📞 Контакты
+  supportTelegram  String? @map("support_telegram")
+  supportEmail     String? @map("support_email")
+
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("app_config")
+}

@@ -199,28 +199,21 @@ export function SettingsFormWrapper({
             <ToggleSwitch field="systemEnabled" defaultValue={systemEnabled} workspaceId={workspaceId} />
           </div>
 
-          {/* ⏱ Интервал опроса */}
-          <Section title="⏱ Интервал опроса" hint="Как часто проверять новые заявки">
+          {/* 👀 Режим сбора */}
+          <Section title="👀 Режим сбора" hint="Как система собирает заявки">
             <select name="checkInterval" defaultValue={s.checkInterval ?? 0} style={selectStyle}>
-              <option value={0}>🎲 Случайный (1-25 мин)</option>
-              <option value={0.25}>15 секунд (⚠️ риск бана)</option>
-              <option value={0.5}>30 секунд (⚠️ риск бана)</option>
-              <option value={1}>1 минута (⚠️ риск бана)</option>
-              <option value={3}>3 минуты (⚠️ риск бана)</option>
-              <option value={5}>5 минут</option>
-              <option value={10}>10 минут</option>
-              <option value={15}>15 минут</option>
-              <option value={30}>30 минут</option>
+              <option value={0}>👀 Ждун — следит в реальном времени (рекомендуется)</option>
+              <option value={-1}>🔄 Циклы — случайный интервал 1-25 мин</option>
             </select>
             {s.checkInterval === 0 && (
               <p style={{ fontSize: "var(--text-xs)", color: "var(--green)", marginTop: 6 }}>
-                🎲 Интервал выбирается случайно из пула: 1, 3, 5, 7, 11, 13, 15, 17, 20, 25 минут.
-                Дважды подряд один и тот же интервал не повторяется. Рекомендуемый режим.
+                👀 Браузер открыт 1 раз. Сессия живёт часами. Новые заказы ловятся за 3-8 минут.
+                Ночью (00:00-07:00 МСК) ждун отдыхает. Самый безопасный и быстрый режим.
               </p>
             )}
-            {s.checkInterval > 0 && s.checkInterval < 5 && (
-              <p style={{ fontSize: "var(--text-xs)", color: "var(--red)", marginTop: 6 }}>
-                ⚠️ Интервал менее 5 минут создаёт подозрительную активность. Profi может забанить аккаунт.
+            {s.checkInterval === -1 && (
+              <p style={{ fontSize: "var(--text-xs)", color: "var(--amber)", marginTop: 6 }}>
+                🔄 Циклы: сервер заходит-выходит каждые 1-25 мин. Менее эффективно, больше запросов к Profi.
               </p>
             )}
           </Section>

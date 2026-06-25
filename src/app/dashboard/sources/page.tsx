@@ -73,6 +73,22 @@ export default async function SourcesPage() {
                       ⚠️ Ошибка
                     </span>
                   )}
+                  {/* Protection level badge */}
+                  {existing.enabled && (() => {
+                    const ad = (existing.config as any)?.antiDetect || {};
+                    const mode = ad.mode || 'light';
+                    const levels: Record<string, {icon: string; color: string; label: string}> = {
+                      light: { icon: '🛡️', color: '#22c55e', label: 'Light' },
+                      balanced: { icon: '⚔️', color: '#3b82f6', label: 'Balanced' },
+                      stealth: { icon: '🕵️', color: '#8b5cf6', label: 'Stealth' },
+                    };
+                    const lv = levels[mode] || levels.light;
+                    return (
+                      <span style={{ marginLeft: 8, padding: '2px 8px', borderRadius: 100, fontSize: 'var(--text-xs)', fontWeight: 600, background: lv.color + '18', color: lv.color, border: '1px solid ' + lv.color + '30' }}>
+                        {lv.icon} {lv.label}
+                      </span>
+                    );
+                  })()}
                 </div>
               )}
 
@@ -142,7 +158,7 @@ export default async function SourcesPage() {
                 <form action={async () => {
                   "use server";
                   await db.source.create({
-                    data: { workspaceId: workspace.id, platform: connector.platform, name: connector.name, color, enabled: true, config: {} },
+                    data: { workspaceId: workspace.id, platform: connector.platform, name: connector.name, color, enabled: true, config: { antiDetect: { mode: 'light' } } },
                   });
                   revalidatePath("/dashboard/sources");
                 }}>

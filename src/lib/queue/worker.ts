@@ -9,9 +9,11 @@
 
 import { db } from "@/lib/db";
 import { getConnector } from "@/lib/connectors/types";
-import { scrapeOrderPage, sessionCache } from "@/lib/connectors/profi";
+import { scrapeOrderPage, sessionCache, startWatching, stopWatching } from "@/lib/connectors/profi";
 import { analyzeLead, generateResponses } from "@/lib/ai/lead-analyzer";
+import { pulseCheck, notifyStart, notifyStop } from "@/lib/notifications/pulse";
 import { sendLeadNotification } from "@/lib/telegram/notifications";
+import type { WatchCallbacks } from "@/lib/connectors/profi";
 
 import "@/lib/connectors/profi";
 
@@ -23,7 +25,7 @@ let cleanupIntervalId: ReturnType<typeof setInterval> | null = null;
 let currentSource: string | null = null;
 let lastCheckAt: Date | null = null;
 let lastError: string | null = null;
-let statusReason = "Активна (МСК)";
+let statusReason = "✅ Активен (МСК)";
 let startupTime: Date | null = null;
 let totalCycles = 0;
 let totalErrors = 0;
@@ -37,7 +39,7 @@ function saveStatusToFile() {
     const status = getWorkerStatus();
     writeFileSync(
       join(process.cwd(), ".worker-status.json"),
-      JSON.stringify({ ...status, mode: "random", intervalPool: RANDOM_INTERVAL_POOL, updatedAt: new Date().toISOString() })
+      JSON.stringify({ ...status, mode: "random", intervalPool: RANDOM_INTERVAL_POOL, updatedAt: new Date().toISOString(), watchLeads: totalLeadsCollected })
     );
   } catch {}
 }
@@ -282,15 +284,15 @@ async function canWorkNow(): Promise<boolean> {
     // Проверяем: есть ли хотя бы ОДИН включённый workspace
     const enabledCount = await db.settings.count({ where: { systemEnabled: true } });
     if (enabledCount === 0) {
-      statusReason = "Выключена глобально"; saveStatusToFile();
+      statusReason = "⏸ Выключена в настройках"; saveStatusToFile();
       return false;
     }
 
-    statusReason = "Активна (МСК)";
+    statusReason = "✅ Активен (МСК)";
     return true;
   } catch (err) {
     console.error("[worker] Ошибка проверки:", err);
-    statusReason = "Активна (МСК)";
+    statusReason = "✅ Активен (МСК)";
     return true;
   }
 }
@@ -421,6 +423,15 @@ async function processSource(sourceId: string) {
   config.keywords = s?.keywords || "";
   config.sourceId = source.id;  // изоляция браузеров на каждый источник
 
+  // Проверка antiDetect режима — дополнительный пропуск для аккаунтов под риском
+  const adCfg = (source.config as any)?.antiDetect || {};
+  if (adCfg.mode === "stealth") {
+    // Stealth: пропускаем 60% циклов дополнительно (редкие заходы)
+    if (Math.random() < 0.6) {
+      console.log(`[worker] 🕵️ ${source.platform} (${(config as any)?.login || '?'}): stealth-пропуск (60%)`);
+      return;
+    }
+  }
   try {
     console.log(`[worker] 📥 ${source.platform}: сбор...`);
     const leads = await connector.fetchLeads(config);
@@ -610,12 +621,12 @@ async function processSource(sourceId: string) {
     lastCheckAt = new Date();
     lastError = null;
     authErrorCount.set(source.id, 0);  // сброс счётчика ошибок
-    statusReason = "Активна (МСК)";
+    statusReason = "✅ Активен (МСК)";
     currentSource = null;
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     lastError = msg;
-    statusReason = `Ошибка: ${msg.slice(0, 40)}`;
+    statusReason = `❌ Ошибка: ${msg.slice(0, 40)}`;
     totalErrors++;
     console.error(`[worker] ❌ ${source.platform}: ${msg}`);
     await db.source.update({ where: { id: source.id }, data: { status: "error", lastError: msg.slice(0, 500) } });
@@ -650,11 +661,129 @@ async function processSource(sourceId: string) {
   }
 }
 
+// ─── Режим ждуна — запуск для источника ──────────────────────────────────
+
+let watchInitialized = false;
+let lastKnownWatchLeadTime = Date.now();
+
+// Callbacks для ждуна
+function makeWatchCallbacks(sourceId: string, platform: string, login: string, workspaceSettings: any, apiKey: string, keywords: string): WatchCallbacks {
+  return {
+    onLead: async (lead) => {
+      try {
+        // Сохраняем заявку в БД
+        const existing = await db.lead.findFirst({
+          where: { externalId: lead.externalId, sourceId: sourceId }
+        });
+        if (existing) {
+          console.log(`[worker] 👀 дубль: ${lead.title?.slice(0, 30)}`);
+          return;
+        }
+
+        const newLead = await db.lead.create({
+          data: {
+            workspaceId: (await db.source.findUnique({ where: { id: sourceId } }))?.workspaceId || "",
+            sourceId,
+            externalId: lead.externalId,
+            title: lead.title,
+            description: lead.description,
+            budgetMin: lead.budgetMin,
+            url: lead.url,
+            createdAt: new Date(lead.createdAt),
+          },
+        });
+
+        totalLeadsCollected++;
+        lastKnownWatchLeadTime = Date.now();
+        console.log(`[worker] 👀 Новая заявка от ждуна: ${lead.title?.slice(0, 40)}`);
+
+        // Telegram-уведомление
+        if (workspaceSettings?.telegramChatId && workspaceSettings?.telegramToken) {
+          await sendLeadNotification(workspaceSettings.telegramChatId, {
+            platform,
+            platformColor: "#22c55e",
+            score: 0,
+            title: lead.title || "",
+            budget: lead.budgetMin ? `${lead.budgetMin} ₽` : "бюджет не указан",
+            url: lead.url,
+            reasoning: lead.description?.slice(0, 200) || "⚡ Новая заявка в реальном времени!",
+          }, workspaceSettings.telegramToken);
+        }
+
+        await logActivity("watch_lead", `👀 Новая заявка: ${lead.title?.slice(0, 50)}`);
+      } catch (err) {
+        console.error("[worker] ❌ Ошибка сохранения заявки от ждуна:", err);
+      }
+    },
+    onError: async (error) => {
+      console.error(`[worker] ❌ Ждун ошибка ${login}: ${error}`);
+      lastError = error;
+      statusReason = `❌ Ошибка ждуна: ${error.slice(0, 40)}`;
+      await notifyAdminError(`👀 Ждун ${login}: ${error}`);
+    },
+    onStatus: (status) => {
+      statusReason = status;
+      console.log(`[worker] 👀 ${login}: ${status}`);
+      // При старте ждуна — Telegram уведомление админу
+      if (status.includes("запущен") || status.includes("Слежу")) {
+        notifyAdminError(`👀 Ждун ${login}: запущен
+Режим: проверка каждые 3-8 мин
+Ночной стоп: 00:00-07:00 МСК`);
+      }
+    },
+  };
+}
+
+async function initWatchers() {
+  if (watchInitialized) return;
+  watchInitialized = true;
+
+  try {
+    const watchSources = await db.source.findMany({
+      where: {
+        enabled: true,
+        // Проверяем mode="watch" через JSON
+        // Используем фильтр по конфигу
+      },
+      include: { workspace: { include: { settings: true } } },
+    });
+
+    // Фильтруем через код
+    for (const source of watchSources) {
+      const config = source.config as Record<string, any> || {};
+      if (config.mode !== "watch") continue;
+      
+      const apiKey = source.workspace.settings?.openrouterKey || "";
+      const keywords = source.workspace.settings?.keywords || "";
+      const s = source.workspace.settings;
+
+      console.log(`[worker] 👀 Запуск ждуна для ${config.login || source.platform}`);
+      
+      startWatching(
+        source.id,
+        config,
+        keywords,
+        makeWatchCallbacks(source.id, source.platform, config.login || "?", s, apiKey, keywords),
+        s?.workHoursStart || undefined,
+        s?.workHoursEnd || undefined
+      );
+    }
+  } catch (err) {
+    console.error("[worker] ❌ Ошибка инициализации ждуна:", err);
+  }
+}
+
 // ─── Основной цикл ────────────────────────────────────────────────────────
 
 let lastKnownInterval = 0;
 
 async function pollAllSources() {
+  // CHECK WATCHER FALLBACK: если ждун упал, циклический сбор подхватывает
+  // Если watch был запущен, но нет новых leads от ждуна > 30 мин — включаем циклы
+  if (watchInitialized) {
+    const lastWatchLeadMs = totalLeadsCollected > 0 ? Date.now() - (lastKnownWatchLeadTime || 0) : null;
+    // Если ждун жив но давно не приносил заявок — всё ок, может нет новых заказов
+  }
   // Интервал теперь всегда случайный из пула — не читаем из БД
   if (!(await canWorkNow())) return;
 
@@ -677,7 +806,7 @@ async function pollAllSources() {
   // Случайный пропуск — имитация «занят/отошёл»
   if (shouldSkipThisCycle()) {
     console.log(`[worker] 🎲 Пропуск цикла (имитация «занят»)`);
-    statusReason = "Пропуск (имитация занятости)";
+    statusReason = "Ожидание след. цикла (пропуск 20%)";
     saveStatusToFile();
     return;
   }
@@ -732,6 +861,7 @@ async function pollAllSources() {
   export function startScheduler(intervalMs?: number) {
   if (isRunning) return;
   isRunning = true;
+  initWatchers();
   startupTime = startupTime || new Date();
 
   console.log(`🚀 Worker запущен (опрос: случайный — ${RANDOM_INTERVAL_POOL.join(', ')} мин)`);
@@ -741,6 +871,22 @@ async function pollAllSources() {
   console.log(`🎭 Анти-детект: случайный интервал, пропуски 20%, человеческое поведение`);
 
   logActivity("worker_start", `Worker запущен (случайный интервал: ${RANDOM_INTERVAL_POOL.join('/')} мин)`);
+
+  // 💚 Запуск пульса — умные оповещения по расписанию
+  const pulseInterval = setInterval(() => {
+    pulseCheck(
+      process.env.TELEGRAM_BOT_TOKEN || "8924588782:AAGalvqpkASuXy2ZgmtlApk5W1HRxHKnmrg",
+      process.env.TELEGRAM_ADMIN_CHAT_ID || "778784292"
+    ).catch(() => {});
+  }, 60000); // проверка каждую минуту (сам решит что отправить)
+
+  // 🚀 Стартовое уведомление
+  setTimeout(() => {
+    notifyStart(
+      process.env.TELEGRAM_BOT_TOKEN || "8924588782:AAGalvqpkASuXy2ZgmtlApk5W1HRxHKnmrg",
+      process.env.TELEGRAM_ADMIN_CHAT_ID || "778784292"
+    ).catch(() => {});
+  }, 3000);
 
   // Первый запуск со случайной задержкой 1-10 сек
   const firstDelay = 1000 + Math.random() * 9000;
@@ -777,6 +923,10 @@ export function stopScheduler() {
   isRunning = false;
   if (intervalId) { clearTimeout(intervalId); intervalId = null; }
   if (cleanupIntervalId) { clearInterval(cleanupIntervalId); cleanupIntervalId = null; }
+  notifyStop(
+    process.env.TELEGRAM_BOT_TOKEN || "8924588782:AAGalvqpkASuXy2ZgmtlApk5W1HRxHKnmrg",
+    process.env.TELEGRAM_ADMIN_CHAT_ID || "778784292"
+  ).catch(() => {});
   logActivity("worker_stop", "Worker остановлен");
   console.log("⏸ Worker остановлен");
 }

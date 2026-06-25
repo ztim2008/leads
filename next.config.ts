@@ -1,7 +1,13 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Стабильные server actions (Next.js 14+)
+  serverExternalPackages: ["playwright", "bcryptjs"],
+
+  // Логирование для отладки
+  logging: {
+    fetches: { fullUrl: false },
+  },
 };
 
 export default nextConfig;

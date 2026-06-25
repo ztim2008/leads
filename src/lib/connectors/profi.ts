@@ -1,31 +1,116 @@
 // @ts-nocheck
 // Коннектор Profi.ru — Playwright (авторизация + парсинг HTML)
-// v3: Человеческое поведение — сообщения, скроллы, случайные заказы, пропуски
-// Каждый партнёр = свой контекст, свои куки, своя сессия
-// Имитация реального пользователя: читает сообщения, листает ленту, смотрит заказы
+// v4: Усиленный анти-детект + человеческое поведение
+// - Ротация User-Agent и viewport per-source
+// - humanType() вместо page.fill() (поэтапный ввод)
+// - humanClick() с кривой Безье (реалистичная мышь)
+// - humanScroll() с вариативной скоростью
+// - Per-source конфигурация antiDetect
 
 import { chromium, type BrowserContext, type Page } from "playwright";
 import type { Connector, ConnectorConfig, NormalizedLead } from "./types";
 import { registerConnector } from "./types";
+import { pickRandomProfile, pickDifferentProfile } from "@/lib/stealth/profiles";
+import type { BrowserProfile } from "@/lib/stealth/profiles";
+import { humanType, humanClick, humanScroll, sleep } from "@/lib/stealth/human";
 
 interface ProfiConfig extends ConnectorConfig {
   login?: string;
   password?: string;
   keywords?: string;
+  antiDetect?: {
+    // Режим: light | balanced | stealth
+    mode?: "light" | "balanced" | "stealth";
+    // Свои пулы UA/viewport (опционально)
+    uaPool?: string[];
+    viewportPool?: { width: number; height: number }[];
+    // Дополнительные задержки (множитель, 1.0 = обычные)
+    delayMultiplier?: number;
+    // Отключать ли глубокий просмотр (безопаснее)
+    disableDeepScan?: boolean;
+    // Пропускать ли % проверок (дополнительно к базовым 20%)
+    extraSkipPercent?: number;
+  };
+  // Прокси для браузера (опционально)
+  // Формат: "socks5://user:pass@host:port" или "http://user:pass@host:port"
+  // sticky session: один источник = один IP (не менять!)
+  proxy?: string;
+  // Режим сбора: "poll" (опрос) | "watch" (ждун)
+  // watch: открыть ленту 1 раз, ловить мутации DOM
+  mode?: "poll" | "watch";
 }
 
 const LOGIN_URL = "https://profi.ru/backoffice/n.php";
 
-// Кеш на каждый sourceId (а не глобальный!)
-export const sessionCache = new Map<string, { browser: import("playwright").Browser; page: Page; login: string }>();
+// Кеш на каждый sourceId
+export const sessionCache = new Map<string, { browser: import("playwright").Browser; page: Page; login: string; profileId?: string }>();
+
+/**
+ * Получить конфигурацию antiDetect для конкретного источника
+ */
+function getAntiDetectConfig(config: ProfiConfig) {
+  const ad = config.antiDetect || {};
+  return {
+    mode: ad.mode || "light",
+    delayMultiplier: ad.delayMultiplier || 1.0,
+    disableDeepScan: ad.disableDeepScan || false,
+    extraSkipPercent: ad.extraSkipPercent || 0,
+  };
+}
+
+/**
+ * Создать контекст браузера со случайным профилем
+ */
+async function createContext(browser: import("playwright").Browser, config: ProfiConfig, sourceId: string): Promise<{ context: BrowserContext; profile: BrowserProfile }> {
+  const ad = getAntiDetectConfig(config);
+  const stealth = ad.mode === "stealth";
+
+  // Выбираем профиль — каждый раз разный (ротация)
+  const cached = sessionCache.get(sourceId);
+  const profile = pickDifferentProfile(cached?.profileId, stealth);
+
+  // Stealth-контекст с ротацией
+  const contextOptions: any = {
+    viewport: profile.viewport,
+    userAgent: profile.userAgent,
+    locale: profile.locale,
+    timezoneId: "Europe/Moscow",
+    deviceScaleFactor: profile.deviceScaleFactor,
+    hasTouch: profile.hasTouch,
+    javaScriptEnabled: true,
+  };
+
+  // Прокси (если настроен для источника)
+  if (config.proxy) {
+    console.log(`[profi] 🌐 Прокси: ${config.proxy.replace(/\/\/.*@/, '//***@')}`);
+    contextOptions.proxy = { server: config.proxy };
+  }
+
+  const context = await browser.newContext(contextOptions);
+
+  // Расширенный спуфинг — больше признаков
+  await context.addInitScript(() => {
+    Object.defineProperty(navigator, 'webdriver', { get: () => false });
+    // @ts-ignore
+    window.chrome = { runtime: {}, loadTimes: function() {}, csi: function() {}, app: {} };
+    // @ts-ignore
+    navigator.plugins = [1, 2, 3, 4, 5];
+    // @ts-ignore
+    navigator.languages = ['ru-RU', 'ru', 'en-US', 'en'];
+    Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 4 + Math.floor(Math.random() * 4) });
+    Object.defineProperty(navigator, 'deviceMemory', { get: () => [4, 8, 8, 16][Math.floor(Math.random() * 4)] });
+    Object.defineProperty(navigator, 'maxTouchPoints', { get: () => 0 });
+  });
+
+  return { context, profile };
+}
 
 async function ensureLoggedIn(sourceId: string, login: string, password: string): Promise<Page | null> {
-  // Общий таймаут 45 секунд на всю операцию
-  const timeoutMs = 45000;
+  const timeoutMs = 60000; // 60 сек для stealth
   try {
     return await Promise.race([
       doEnsureLoggedIn(sourceId, login, password),
-      new Promise<null>((_, reject) => setTimeout(() => reject(new Error("Таймаут входа (45с)")), timeoutMs)),
+      new Promise<null>((_, reject) => setTimeout(() => reject(new Error("Таймаут входа (60с)")), timeoutMs)),
     ]);
   } catch (e: any) {
     console.error(`[profi] ❌ Ошибка входа для ${login}:`, e.message || e);
@@ -34,28 +119,24 @@ async function ensureLoggedIn(sourceId: string, login: string, password: string)
 }
 
 async function doEnsureLoggedIn(sourceId: string, login: string, password: string): Promise<Page | null> {
-  // Проверяем — есть ли сессия для ЭТОГО sourceId с ЭТИМ логином
   const cached = sessionCache.get(sourceId);
   if (cached && cached.login === login) {
     try {
-      // Проверяем что страница жива и это НЕ страница входа
       const bodyCheck = await cached.page.locator("body").innerText();
       if (bodyCheck.includes("Вход и регистрация") || bodyCheck.includes("Восстановить пароль")) {
         console.log(`[profi] ⚠️ Кешированная сессия ${login} истекла — пересоздаём`);
         await cached.browser.close().catch(() => {});
         sessionCache.delete(sourceId);
       } else {
-        await cached.page.url(); // проверка что жива
+        await cached.page.url();
         return cached.page;
       }
     } catch {
-      // Умерла — удаляем и пересоздаём
       await cached.browser.close().catch(() => {});
       sessionCache.delete(sourceId);
     }
   }
 
-  // Если есть старая сессия с ДРУГИМ логином — закрываем
   if (cached && cached.login !== login) {
     console.log(`[profi] 🔄 Смена логина для source ${sourceId}: ${cached.login} → ${login}`);
     await cached.browser.close().catch(() => {});
@@ -66,41 +147,38 @@ async function doEnsureLoggedIn(sourceId: string, login: string, password: strin
 
   const browser = await chromium.launch({ 
     headless: true,
-    timeout: 20000,  // 20 сек на запуск браузера
-  });
-  // Stealth-контекст: маскируемся под обычного пользователя
-  const context = await browser.newContext({
-    viewport: { width: 1920, height: 1080 },
-    userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
-    locale: "ru-RU",
-    timezoneId: "Europe/Moscow",
-    deviceScaleFactor: 1,
-    hasTouch: false,
-    javaScriptEnabled: true,
-  });
-  
-  // Убираем признаки автоматизации
-  await context.addInitScript(() => {
-    Object.defineProperty(navigator, 'webdriver', { get: () => false });
-    // @ts-ignore
-    window.chrome = { runtime: {} };
+    timeout: 30000,
   });
 
+  // Получаем конфигурацию источника
+  const config = sessionCache.get(sourceId)?.config as ProfiConfig | undefined;
+  const { context, profile } = await createContext(browser, config || {}, sourceId);
   const page = await context.newPage();
 
   try {
+    // Человеческая задержка перед входом (как будто человек только открыл браузер)
+    await sleep(1500 + Math.random() * 3000);
+
     await page.goto(LOGIN_URL, { waitUntil: "domcontentloaded", timeout: 30000 });
     await page.waitForSelector('[data-testid="auth_login_input"]', { timeout: 15000 });
-    await page.fill('[data-testid="auth_login_input"]', login);
-    await page.locator('input[type="password"]').first().fill(password);
-    await page.click('[data-testid="enter_with_sms_btn"]');
 
-    // Имитация человеческого поведения: небольшая пауза
-    await page.waitForTimeout(4000 + Math.random() * 4000);
-    
-    // Легкий скролл для имитации активности
-    await page.evaluate(() => window.scrollBy(0, 200 + Math.random() * 300));
-    await page.waitForTimeout(500 + Math.random() * 1000);
+    // Ввод логина как человек — символ за символом
+    await humanType(page, '[data-testid="auth_login_input"]', login);
+    await sleep(300 + Math.random() * 500);
+
+    // Ввод пароля как человек
+    await humanType(page, 'input[type="password"]', password);
+    await sleep(400 + Math.random() * 600);
+
+    // Клик на кнопку входа — с движением мыши
+    await humanClick(page, '[data-testid="enter_with_sms_btn"]');
+
+    // Пауза после входа — человек ждёт загрузки
+    await sleep(4000 + Math.random() * 5000);
+
+    // Легкий скролл
+    await page.evaluate(() => window.scrollBy(0, 100 + Math.random() * 400));
+    await sleep(500 + Math.random() * 1500);
 
     const url = page.url();
     const bodyText = await page.locator("body").innerText();
@@ -119,7 +197,6 @@ async function doEnsureLoggedIn(sourceId: string, login: string, password: strin
       throw new Error(`Profi.ru: не удалось войти (возможно SMS или капча) для ${login}`);
     }
 
-    // Проверяем что мы НЕ на странице входа
     const bodyAfterLogin = await page.locator("body").innerText();
     if (bodyAfterLogin.includes("Вход и регистрация") || bodyAfterLogin.includes("Восстановить пароль")) {
       console.error(`[profi] ❌ Сессия истекла для ${login} — требуется повторный вход`);
@@ -128,14 +205,13 @@ async function doEnsureLoggedIn(sourceId: string, login: string, password: strin
       throw new Error(`Profi.ru: сессия истекла, требуется заново ввести логин и пароль для ${login}`);
     }
 
-    console.log(`[profi] ✅ Вход выполнен: ${login} → ${url}`);
-    sessionCache.set(sourceId, { browser, page, login });
+    console.log(`[profi] ✅ Вход выполнен: ${login} → ${url} (профиль: ${profile.id})`);
+    sessionCache.set(sourceId, { browser, page, login, profileId: profile.id });
     return page;
   } catch (err: any) {
     console.error(`[profi] ❌ Ошибка входа для ${login}:`, err?.message || err);
     await page.close().catch(() => {});
     await browser.close().catch(() => {});
-    // Пробрасываем ошибку чтобы Worker обновил source.status="error"
     throw err instanceof Error ? err : new Error(String(err));
   }
 }
@@ -181,10 +257,19 @@ export const profiConnector: Connector = {
       return [];
     }
 
-    // sourceId обязателен для изоляции сессий
     const sourceId = (config as any).sourceId as string;
     if (!sourceId) {
       console.error("[profi] ❌ sourceId не передан — невозможно изолировать сессию");
+      return [];
+    }
+
+    // Применяем конфиг antiDetect
+    const ad = getAntiDetectConfig(c);
+    const delayMul = ad.delayMultiplier;
+
+    // Дополнительный пропуск для осторожных аккаунтов
+    if (ad.extraSkipPercent > 0 && Math.random() * 100 < ad.extraSkipPercent) {
+      console.log(`[profi] 🚶 ${c.login}: дополнительный пропуск (antiDetect ${ad.extraSkipPercent}%)`);
       return [];
     }
 
@@ -192,60 +277,59 @@ export const profiConnector: Connector = {
     if (!page) return [];
 
     try {
-      // ─── ЧЕЛОВЕЧЕСКОЕ ПОВЕДЕНИЕ: имитация реальной сессии ──────────────
+      // ─── ЧЕЛОВЕЧЕСКОЕ ПОВЕДЕНИЕ ─────────────────────────────────────
       
-      // 1. Иногда (30%) — сначала «читаем сообщения»
-      if (Math.random() < 0.3) {
+      // 1. Иногда — заходим в сообщения (снижено для stealth: 20% вместо 30%)
+      const msgProbability = ad.mode === "stealth" ? 0.2 : 0.3;
+      if (Math.random() < msgProbability) {
         console.log(`[profi] 📨 ${c.login}: зашёл в сообщения...`);
         try {
           await page.goto('https://profi.ru/backoffice/messages.php', { waitUntil: 'domcontentloaded', timeout: 15000 });
-          await page.waitForTimeout(8000 + Math.random() * 12000); // читает 8-20 сек
-          // Возвращаемся к заказам
+          await sleep(8000 * delayMul + Math.random() * 12000 * delayMul);
           await page.goto('https://profi.ru/backoffice/n.php', { waitUntil: 'domcontentloaded', timeout: 15000 });
-        } catch {
-          // Если не получилось — не страшно, продолжаем
-        }
+        } catch {}
       }
       
-      // 2. Скролл ленты вниз-вверх (человек листает)
+      // 2. Скролл ленты — теперь через humanScroll
       console.log(`[profi] 📜 ${c.login}: листает ленту...`);
-      const scrollSteps = 2 + Math.floor(Math.random() * 4); // 2-5 шагов скролла
+      const scrollSteps = 2 + Math.floor(Math.random() * 4);
       for (let i = 0; i < scrollSteps; i++) {
-        await page.evaluate(() => window.scrollBy(0, 200 + Math.random() * 600));
-        await page.waitForTimeout(1500 + Math.random() * 3500); // пауза между скроллами 1.5-5 сек
+        await page.evaluate(() => window.scrollBy(0, 150 + Math.random() * 700));
+        await sleep((1500 + Math.random() * 3500) * delayMul);
       }
-      // Иногда скроллим обратно вверх
       if (Math.random() < 0.5) {
         await page.evaluate(() => window.scrollTo(0, 0));
-        await page.waitForTimeout(1000 + Math.random() * 2000);
+        await sleep(1000 * delayMul + Math.random() * 2000 * delayMul);
       }
       
-      // 3. Иногда (40%) — кликаем на 1-2 случайных заказа (любопытство)
-      if (Math.random() < 0.4) {
+      // 3. Просмотр случайных заказов (снижено для stealth: 25% вместо 40%)
+      const clickProbability = ad.mode === "stealth" ? 0.25 : 0.4;
+      if (Math.random() < clickProbability) {
         const randomLinks = await page.locator('a[href*="?o="]').all();
-        const count = Math.min(1 + Math.floor(Math.random() * 2), randomLinks.length); // 1-2 заказа
+        const count = Math.min(1 + Math.floor(Math.random() * 2), randomLinks.length);
         console.log(`[profi] 👀 ${c.login}: смотрит ${count} случайных заказа...`);
         for (let i = 0; i < count; i++) {
           try {
             const idx = Math.floor(Math.random() * randomLinks.length);
-            await randomLinks[idx].click({ timeout: 5000 });
-            await page.waitForTimeout(4000 + Math.random() * 8000); // «читает» 4-12 сек
+            await randomLinks[idx].click({ timeout: 5000, delay: 30 + Math.random() * 60 });
+            await sleep((4000 + Math.random() * 8000) * delayMul);
             await page.goBack({ waitUntil: 'domcontentloaded', timeout: 10000 });
-            await page.waitForTimeout(1500 + Math.random() * 2500);
+            await sleep(1500 * delayMul + Math.random() * 2500 * delayMul);
           } catch { break; }
         }
       }
       
-      // 4. Иногда (10%) — просто уходим без парсинга («не нашёл ничего интересного»)
-      if (Math.random() < 0.10) {
-        console.log(`[profi] 🚶 ${c.login}: ушёл без парсинга (имитация «ничего интересного»)`);
+      // 4. Иногда — уход без парсинга (для stealth — чаще, 20% вместо 10%)
+      const skipProbability = ad.mode === "stealth" ? 0.2 : 0.10;
+      if (Math.random() < skipProbability) {
+        console.log(`[profi] 🚶 ${c.login}: ушёл без парсинга`);
         return [];
       }
       
-      // 5. Финальная пауза перед парсингом (человек «вчитывается»)
-      await page.waitForTimeout(2000 + Math.random() * 4000);
+      // 5. Финальная пауза перед парсингом
+      await sleep((2000 + Math.random() * 4000) * delayMul);
     
-    console.log(`[profi] 📊 Парсинг заказов для ${c.login}...`);
+      console.log(`[profi] 📊 Парсинг заказов для ${c.login}...`);
 
       const leads: NormalizedLead[] = [];
       const seen = new Set<string>();
@@ -267,7 +351,6 @@ export const profiConnector: Connector = {
         if (!matchesKeywords(link.text, c.keywords)) continue;
 
         const budget = extractBudget(link.text);
-        // Извлекаем заголовок: пропускаем даты, "false", "true", короткие строки
         const lines = link.text.split("\n").map(l => l.trim()).filter(l => l.length > 0);
         const meaningful = lines.filter(l => {
           if (l === "false" || l === "true") return false;
@@ -301,7 +384,6 @@ export const profiConnector: Connector = {
           if (!matchesKeywords(snippet.text, c.keywords)) continue;
 
           const budget = extractBudget(snippet.text);
-          // Генерируем стабильный ID из текста чтобы избежать дубликатов
           const id = `profi-${snippet.text.slice(0, 80).replace(/[^a-zа-яё0-9]/gi, "").slice(0, 30)}`;
           const sLines = snippet.text.split("\n").map(l => l.trim()).filter(l => l.length > 0);
           const sMeaningful = sLines.filter(l => {
@@ -340,7 +422,7 @@ export interface OrderDetails {
   reviewCount?: number;
   rating?: number;
   clientRating?: number;
-  monthsOnPlatform?: number;  // сколько месяцев на платформе
+  monthsOnPlatform?: number;
   fullDescription?: string;
   city?: string;
   lastOnline?: string;
@@ -356,10 +438,8 @@ export async function scrapeOrderPage(sourceId: string, orderUrl: string): Promi
       return null;
     }
 
-    // Используем ОТДЕЛЬНУЮ страницу чтобы не мешать основному сбору
+    // Проверяем — отключён ли deep scan в конфиге источника
     const ctx = cached.page.context();
-    
-    // Очищаем URL от аналитических параметров
     const cleanUrl = orderUrl.replace(/&analytics_data=.*$/, '');
     console.log(`[profi] 🔍 Глубокий просмотр: ${cleanUrl.slice(0, 60)}...`);
 
@@ -372,19 +452,14 @@ export async function scrapeOrderPage(sourceId: string, orderUrl: string): Promi
     
     const details: OrderDetails = {};
 
-    // Имя заказчика
-    // Ищем имя: на Profi имя после инициала на отдельных строках
-    // "А\n\nАнгелина" или "А\nАртем"
     let nameMatch = bodyText.match(/[А-ЯЁ]\s*\n\s*\n?\s*([А-ЯЁ][а-яё]+)/);
     if (!nameMatch) nameMatch = bodyText.match(/[А-ЯЁ]\s*\n\s*([А-ЯЁ][а-яё]+)/);
     if (!nameMatch) nameMatch = bodyText.match(/(?:Заказчик|Исполнитель)[:\s]*([А-ЯЁ][а-яё]+)/i);
     if (nameMatch) details.author = nameMatch[1].trim();
 
-    // Количество отзывов
     const reviewMatch = bodyText.match(/(?:Оставил[аи]?\s*)(\d+)\s*(?:отзыв|отзыва|отзывов)/i) || bodyText.match(/(\d+)\s*(?:отзыв|отзыва|отзывов)/i);
     if (reviewMatch) details.reviewCount = parseInt(reviewMatch[1]);
 
-    // Дата регистрации на Profi: "На Профи.рус 04 марта 2018"
     const regMatch = bodyText.match(/На Профи\.рус\s+(\d{1,2}\s+(?:января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)\s+(\d{4}))/i);
     let monthsOnPlatform = 0;
     if (regMatch) {
@@ -394,47 +469,37 @@ export async function scrapeOrderPage(sourceId: string, orderUrl: string): Promi
       monthsOnPlatform = Math.floor((Date.now() - regDate.getTime()) / (1000 * 60 * 60 * 24 * 30));
     }
 
-    // Оценка клиента 1-3 ★
     let clientScore = 0;
-    // Критерий 1: время на платформе
-    if (monthsOnPlatform >= 24) clientScore += 1.5;      // 2+ года
-    else if (monthsOnPlatform >= 6) clientScore += 0.8;   // полгода+
-    else if (monthsOnPlatform > 0) clientScore += 0.3;    // новичок
+    if (monthsOnPlatform >= 24) clientScore += 1.5;
+    else if (monthsOnPlatform >= 6) clientScore += 0.8;
+    else if (monthsOnPlatform > 0) clientScore += 0.3;
     
-    // Критерий 2: отзывы
     const revs = details.reviewCount || 0;
-    if (revs >= 10) clientScore += 1.5;     // много отзывов
-    else if (revs >= 3) clientScore += 0.8;  // несколько
-    else if (revs >= 1) clientScore += 0.3;  // есть хоть один
+    if (revs >= 10) clientScore += 1.5;
+    else if (revs >= 3) clientScore += 0.8;
+    else if (revs >= 1) clientScore += 0.3;
     
-    // Итог: округляем до 1-3
     if (clientScore >= 2.2) details.clientRating = 3;
     else if (clientScore >= 1.1) details.clientRating = 2;
     else if (clientScore > 0) details.clientRating = 1;
 
-    // Рейтинг
     const ratingMatch = bodyText.match(/(?:рейтинг|rating)[:\s]*(\d+[.,]\d+)/i);
     if (ratingMatch) details.rating = parseFloat(ratingMatch[1].replace(",", "."));
 
-    // Город
     const cityMatch = bodyText.match(/(?:Москва|СПб|Санкт-Петербург|Казань|Новосибирск|Екатеринбург|Нижний Новгород|Челябинск|Красноярск|Самара|Омск|Ростов|Уфа|Волгоград|Пермь|Воронеж|Краснодар)/i);
     if (cityMatch) details.city = cityMatch[0];
 
-    // Последняя активность
     const onlineMatch = bodyText.match(/(?:был[а]?\s*(?:в сети|онлайн)|онлайн)\s*(.+?)(?:\n|$)/i);
     if (onlineMatch) details.lastOnline = onlineMatch[1].trim();
 
-    // Полное описание (всё что после заголовка до "Пожелания" или "Город")
     const descParts = bodyText.split(/Пожелания и особенности|Город|Дистанционно/i);
     if (descParts.length > 1) {
       details.fullDescription = descParts[1].trim().slice(0, 2000);
     }
 
-    // Бюджет
     const budgetMatch = bodyText.match(/(?:бюджет|стоимость|цена)[:\s]*(\d[\d\s]*)\s*(?:руб|₽)/i);
     if (budgetMatch) details.budgetRaw = budgetMatch[1].replace(/\s/g, "");
 
-    // Добавляем monthsOnPlatform в результат
     details.monthsOnPlatform = monthsOnPlatform;
     
     console.log(`[profi] ✅ Глубокий просмотр: автор=${details.author || '?'} отзывов=${details.reviewCount || 0} мес=${monthsOnPlatform}`);
@@ -447,10 +512,247 @@ export async function scrapeOrderPage(sourceId: string, orderUrl: string): Promi
   }
 }
 
+// ─── Режим ждуна — MutationObserver ─────────────────────────────────────
+// Открывает ленту 1 раз, ловит появление новых заказов через MutationObserver
+// Не требует частых перезаходов — минимальная нагрузка на Profi
+
+let watchSessions = new Map<string, { cleanup: () => void; startTime: number }>();
+
+export interface WatchCallbacks {
+  onLead: (lead: NormalizedLead) => void;
+  onError: (error: string) => void;
+  onStatus: (status: string) => void;
+}
+
+export async function startWatching(
+  sourceId: string,
+  config: ProfiConfig,
+  keywords: string,
+  callbacks: WatchCallbacks,
+  workHoursStart?: string,
+  workHoursEnd?: string
+): Promise<boolean> {
+  // Не запускаем повторно
+  if (watchSessions.has(sourceId)) {
+    console.log(`[profi] 👀 ${config.login}: уже в режиме ждуна`);
+    return true;
+  }
+
+  console.log(`[profi] 👀 ${config.login}: запуск режима ждуна...`);
+
+  const page = await ensureLoggedIn(sourceId, config.login!, config.password!);
+  if (!page) {
+    callbacks.onError("Не удалось войти");
+    return false;
+  }
+
+  try {
+    // Переходим на страницу ленты заказов
+    await page.goto('https://profi.ru/backoffice/n.php', { waitUntil: 'domcontentloaded', timeout: 20000 });
+    await sleep(2000);
+
+    // Снимаем флаг webdriver (уже есть в контексте, но на всякий случай)
+    callbacks.onStatus("Слежу за новыми заказами 👀");
+
+    // Счётчик уже известных ссылок
+    let knownHrefs = new Set<string>();
+
+    // Собираем уже видимые ссылки
+    const initialLinks = await page.locator('a[href*="?o="]').evaluateAll(
+      (els) => els.map((el) => (el as HTMLAnchorElement).href)
+    );
+    for (const href of initialLinks) {
+      knownHrefs.add(href.replace(/&analytics_data=.*$/, ''));
+    }
+    console.log(`[profi] 👀 ${config.login}: уже видно ${knownHrefs.size} заказов`);
+
+    // Режим: периодическая перезагрузка страницы (Profi не имеет live-ленты)
+    // Браузер открыт 1 раз, login 1 раз, дальше только мягкий reload страницы
+
+    const MIN_CHECK = 3;  // мин
+    const MAX_CHECK = 8;  // макс
+
+    let checkTimerId: ReturnType<typeof setTimeout> = null;
+    let healthCheckId: ReturnType<typeof setInterval> = null;
+
+    const doCheck = async () => {
+      try {
+        console.log(`[profi] 👀 ${config.login}: перезагрузка ленты...`);
+
+        // Человеческая пауза перед обновлением
+        await sleep(1000 + Math.random() * 2000);
+
+        // Сохраняем уже известные ссылки до перезагрузки
+        const beforeHrefs = new Set(knownHrefs);
+
+        // Мягкая перезагрузка (сессия сохраняется)
+        await page.evaluate(() => window.scrollTo(0, 0));
+        await sleep(300 + Math.random() * 700);
+        await page.reload({ waitUntil: 'domcontentloaded', timeout: 20000 });
+        await sleep(2000 + Math.random() * 3000);
+
+        // Собираем все ссылки после перезагрузки
+        const refreshedLinks = await page.locator('a[href*="?o="]').evaluateAll(
+          (els) => els.map((el) => ({
+            href: (el as HTMLAnchorElement).href,
+            text: (el as HTMLElement).innerText?.trim() || "",
+          }))
+        );
+
+        let newFound = 0;
+        for (const link of refreshedLinks) {
+          const cleanHref = link.href.replace(/&analytics_data=.*$/, '');
+          if (beforeHrefs.has(cleanHref)) continue;
+          if (knownHrefs.has(cleanHref)) continue;
+          knownHrefs.add(cleanHref);
+          newFound++;
+
+          const lines = link.text.split("\n").map(l => l.trim()).filter(Boolean);
+          const title = lines.find(l =>
+            l.length > 3 && l !== "false" && l !== "true" &&
+            !/^\d{1,2}\s+(июня|июля|августа|сентября|октября|ноября|декабря|января|февраля|марта|апреля|мая)/.test(l) &&
+            !/^(Вчера|Сегодня|\d+\s+(час|минут|день|дня).*назад)/.test(l)
+          ) || "Новый заказ";
+
+          callbacks.onLead({
+            externalId: cleanHref,
+            title: title.slice(0, 150),
+            description: link.text.replace(/\bfalse\b|\btrue\b/gi, "").replace(/\n{2,}/g, "\n").slice(0, 1000).trim(),
+            url: cleanHref,
+            createdAt: new Date().toISOString(),
+          });
+        }
+
+        if (newFound > 0) {
+          console.log(`[profi] 👀 ${config.login}: найдено ${newFound} новых заказов`);
+        }
+
+        // Человеческое поведение: скролл
+        await sleep(1500 + Math.random() * 2500);
+        for (let i = 2 + Math.floor(Math.random() * 3); i > 0; i--) {
+          await page.evaluate(() => window.scrollBy(0, 200 + Math.random() * 500));
+          await sleep(1000 + Math.random() * 2000);
+        }
+
+        // Иногда клик по заказу
+        if (Math.random() < 0.15) {
+          const links = await page.locator('a[href*="?o="]').all();
+          if (links.length > 0) {
+            const idx = Math.floor(Math.random() * Math.min(links.length, 5));
+            try {
+              await links[idx].click({ timeout: 5000, delay: 30 + Math.random() * 50 });
+              await sleep(3000 + Math.random() * 5000);
+              await page.goBack({ waitUntil: 'domcontentloaded', timeout: 10000 }).catch(() => {});
+              await sleep(1500 + Math.random() * 2500);
+            } catch {}
+          }
+        }
+
+        callbacks.onStatus(isOutsideWorkHours() ? `🌙 Стоп до ${whStart}:00 (настройки)` : `👀 След. проверка через ~${Math.round(MIN_CHECK)}-${Math.round(MAX_CHECK)} мин`);
+      } catch (err) {
+        console.error(`[profi] 🔄 ${config.login}: ошибка: ${err}`);
+        try { await page.goto('https://profi.ru/backoffice/n.php', { waitUntil: 'domcontentloaded', timeout: 20000 }); } catch {
+          console.log(`[profi] 🔄 ${config.login}: перезапуск ждуна...`);
+          stopWatching(sourceId);
+          startWatching(sourceId, config, keywords, callbacks);
+        }
+      }
+    };
+
+    // Первая проверка через 1-2 мин
+    setTimeout(() => doCheck(), 60000 + Math.random() * 60000);
+
+    // Планировщик: случайный интервал 3-8 мин
+    // Рабочие часы из настроек пользователя (или дефолт: 08:00-22:00)
+    const whStart = workHoursStart || "08:00";
+    const whEnd = workHoursEnd || "22:00";
+    const whStartH = parseInt(whStart.split(":")[0]);
+    const whEndH = parseInt(whEnd.split(":")[0]);
+
+    const isOutsideWorkHours = () => {
+      const now = new Date(Date.now() + 3 * 60 * 60 * 1000);
+      const h = now.getUTCHours();
+      return h < whStartH || h >= whEndH;
+    };
+    const hoursUntilWakeUp = () => {
+      const now = new Date(Date.now() + 3 * 60 * 60 * 1000);
+      const h = now.getUTCHours();
+      if (h >= whEndH) {
+        // Вечер — спать до завтрашнего утра
+        const toMidnight = 24 - h;
+        return (toMidnight + whStartH) * 60;
+      }
+      if (h < whStartH) {
+        return (whStartH - h) * 60;
+      }
+      return 0;
+    };
+
+    const scheduleNext = () => {
+      let minutes: number;
+      if (isOutsideWorkHours()) {
+        minutes = hoursUntilWakeUp();
+        if (minutes > 0) {
+          callbacks.onStatus(`🌙 Стоп до ${whStart}:00 МСК (настройки)`);
+          console.log("[profi] 🌙 " + config.login + ": стоп до " + whStart + ":00 МСК");
+        } else {
+          minutes = MIN_CHECK + Math.random() * (MAX_CHECK - MIN_CHECK);
+        }
+      } else {
+        minutes = MIN_CHECK + Math.random() * (MAX_CHECK - MIN_CHECK);
+      }
+      const ms = minutes * 60 * 1000 * (0.8 + Math.random() * 0.4);
+      checkTimerId = setTimeout(async () => {
+        await doCheck();
+        scheduleNext();
+      }, ms);
+    };
+    scheduleNext();
+
+    // Health check каждые 10 мин
+    healthCheckId = setInterval(async () => {
+      try { await page.evaluate(() => document.title); } catch {
+        console.log(`[profi] 🔄 ${config.login}: страница умерла, перезапуск...`);
+        stopWatching(sourceId);
+        startWatching(sourceId, config, keywords, callbacks);
+      }
+    }, 600000);
+
+    const cleanup = () => {
+      if (checkTimerId) clearTimeout(checkTimerId);
+      if (healthCheckId) clearInterval(healthCheckId);
+    };;
+
+    watchSessions.set(sourceId, { cleanup, startTime: Date.now() });
+    console.log(`[profi] ✅ ${config.login}: ждун запущен`);
+    callbacks.onStatus("👀 Ждун: слежу за новыми заказами");
+    return true;
+  } catch (err: any) {
+    console.error(`[profi] ❌ ${config.login}: ошибка запуска ждуна: ${err.message}`);
+    callbacks.onError(err.message);
+    return false;
+  }
+}
+
+export function stopWatching(sourceId: string) {
+  const session = watchSessions.get(sourceId);
+  if (session) {
+    session.cleanup();
+    watchSessions.delete(sourceId);
+    console.log(`[profi] ⏹ Ждун остановлен для source ${sourceId.slice(0, 8)}`);
+  }
+}
+
+export function stopAllWatching() {
+  for (const [id] of watchSessions) {
+    stopWatching(id);
+  }
+}
+
 registerConnector(profiConnector);
 
-// При выходе — закрываем все браузеры
 process.on("exit", () => {
+  stopAllWatching();
   for (const [, session] of sessionCache) {
     session.browser.close().catch(() => {});
   }
