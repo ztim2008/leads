@@ -30,6 +30,18 @@ export const authOptions: NextAuthOptions = {
     }),
   ],
   session: { strategy: "jwt" },
+  cookies: {
+    sessionToken: {
+      name: "next-auth.session-token",
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: true,
+        domain: ".konversus.ru",
+      },
+    },
+  },
   pages: { signIn: "/auth", error: "/auth" },
   callbacks: {
     async signIn({ user, account }) {
