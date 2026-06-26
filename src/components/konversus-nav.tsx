@@ -29,6 +29,14 @@ const PRODUCTS = [
     color: "#3b82f6",
   },
   {
+    name: "SEO AI",
+    description: "Анализ позиций в Яндексе, ключевые слова, аудит сайта. Российский рынок.",
+    href: "https://seo.konversus.ru",
+    icon: Search,
+    color: "#8b5cf6",
+    badge: "Новое",
+  },
+  {
     name: "Архитектор сайта",
     description: "AI-аудит сайта: SEO, скорость, безопасность. Умные рекомендации по росту.",
     href: "/architect",

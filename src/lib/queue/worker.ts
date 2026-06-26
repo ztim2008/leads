@@ -37,9 +37,20 @@ import { join } from "path";
 function saveStatusToFile() {
   try {
     const status = getWorkerStatus();
+    // Если ждун активен — показываем его статус, не циклического опроса
+    const hasWatchSessions = typeof globalThis !== "undefined" && (globalThis as any).__watchActive;
     writeFileSync(
       join(process.cwd(), ".worker-status.json"),
-      JSON.stringify({ ...status, mode: "random", intervalPool: RANDOM_INTERVAL_POOL, updatedAt: new Date().toISOString(), watchLeads: totalLeadsCollected })
+      JSON.stringify({
+        ...status,
+        mode: hasWatchSessions ? "watch" : "random",
+        intervalPool: RANDOM_INTERVAL_POOL,
+        updatedAt: new Date().toISOString(),
+        statusReason: hasWatchSessions && (status.statusReason?.includes("Активен") || status.statusReason?.includes("Ожидание"))
+          ? "👀 Ждун: слежу за новыми заказами"
+          : status.statusReason,
+        watchLeads: totalLeadsCollected,
+      })
     );
   } catch {}
 }
@@ -566,8 +577,11 @@ async function processSource(sourceId: string) {
                 author: details.author,
                 reviewCount: details.reviewCount || 0,
                 yearsOnPlatform: yearsOnPlatform || 0,
+                monthsOnPlatform: details.monthsOnPlatform || 0,
                 clientRating: details.clientRating || 0,
                 city: details.city,
+                deadline: details.deadline,
+                responsePrice: details.responsePrice,
                 descriptionLength: (details.fullDescription || rawLead.description || "").length,
               }, s.telegramToken);
             }
@@ -664,6 +678,7 @@ async function processSource(sourceId: string) {
 // ─── Режим ждуна — запуск для источника ──────────────────────────────────
 
 let watchInitialized = false;
+(globalThis as any).__watchActive = false;
 let lastKnownWatchLeadTime = Date.now();
 
 // Callbacks для ждуна
@@ -671,7 +686,6 @@ function makeWatchCallbacks(sourceId: string, platform: string, login: string, w
   return {
     onLead: async (lead) => {
       try {
-        // Сохраняем заявку в БД
         const existing = await db.lead.findFirst({
           where: { externalId: lead.externalId, sourceId: sourceId }
         });
@@ -697,16 +711,42 @@ function makeWatchCallbacks(sourceId: string, platform: string, login: string, w
         lastKnownWatchLeadTime = Date.now();
         console.log(`[worker] 👀 Новая заявка от ждуна: ${lead.title?.slice(0, 40)}`);
 
-        // Telegram-уведомление
+        // Deep scan в фоне для rich-данных
+        if (lead.url && lead.url.includes("?o=")) {
+          scrapeOrderPage(sourceId, lead.url).then(async (details) => {
+            if (!details) return;
+            await db.lead.update({ where: { id: newLead.id }, data: {
+              author: details.author, reviewCount: details.reviewCount,
+              city: details.city, clientRating: details.clientRating,
+              description: details.fullDescription || lead.description,
+              metadata: { monthsOnPlatform: details.monthsOnPlatform, deadline: details.deadline },
+            }});
+            // Обновлённое Telegram с rich-данными
+            if (workspaceSettings?.telegramChatId && workspaceSettings?.telegramToken) {
+              await sendLeadNotification(workspaceSettings.telegramChatId, {
+                platform, platformColor: "#22c55e", score: 0,
+                title: lead.title || "", budget: lead.budgetMin ? `${lead.budgetMin} ₽` : "бюджет не указан",
+                url: lead.url,
+                reasoning: (details.fullDescription || lead.description || "").slice(0, 200),
+                author: details.author,
+                reviewCount: details.reviewCount || 0,
+                monthsOnPlatform: details.monthsOnPlatform || 0,
+                clientRating: details.clientRating || 0,
+                city: details.city,
+                deadline: details.deadline,
+                responsePrice: details.responsePrice,
+              }, workspaceSettings.telegramToken);
+            }
+          }).catch(() => {});
+        }
+
+        // Быстрое Telegram без богатых данных (придёт первым)
         if (workspaceSettings?.telegramChatId && workspaceSettings?.telegramToken) {
           await sendLeadNotification(workspaceSettings.telegramChatId, {
-            platform,
-            platformColor: "#22c55e",
-            score: 0,
-            title: lead.title || "",
-            budget: lead.budgetMin ? `${lead.budgetMin} ₽` : "бюджет не указан",
+            platform, platformColor: "#22c55e", score: 0,
+            title: lead.title || "", budget: lead.budgetMin ? `${lead.budgetMin} ₽` : "бюджет не указан",
             url: lead.url,
-            reasoning: lead.description?.slice(0, 200) || "⚡ Новая заявка в реальном времени!",
+            reasoning: lead.description?.slice(0, 200) || "⚡ Новая заявка!",
           }, workspaceSettings.telegramToken);
         }
 
@@ -737,6 +777,7 @@ function makeWatchCallbacks(sourceId: string, platform: string, login: string, w
 async function initWatchers() {
   if (watchInitialized) return;
   watchInitialized = true;
+  (globalThis as any).__watchActive = true;
 
   try {
     const watchSources = await db.source.findMany({

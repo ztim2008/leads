@@ -427,6 +427,8 @@ export interface OrderDetails {
   city?: string;
   lastOnline?: string;
   budgetRaw?: string;
+  deadline?: string;
+  responsePrice?: number;
 }
 
 export async function scrapeOrderPage(sourceId: string, orderUrl: string): Promise<OrderDetails | null> {
@@ -500,9 +502,33 @@ export async function scrapeOrderPage(sourceId: string, orderUrl: string): Promi
     const budgetMatch = bodyText.match(/(?:бюджет|стоимость|цена)[:\s]*(\d[\d\s]*)\s*(?:руб|₽)/i);
     if (budgetMatch) details.budgetRaw = budgetMatch[1].replace(/\s/g, "");
 
+    // 💰 Цена отклика (сколько стоит откликнуться на Profi)
+    const respMatch = bodyText.match(/(?:цена|стоимость)\s*(?:отклика|контакта|заявки)[:\s]*(\d[\d\s]*)\s*(?:руб|₽)/i)
+      || bodyText.match(/(?:отклик|откликнуться|контакт)[^\d]*(\d[\d\s]*)\s*(?:руб|₽)/i)
+      || bodyText.match(/(\d[\d\s]*)\s*(?:руб|₽)[^\n]*(?:отклик|контакт)/i);
+    if (respMatch) {
+      const val = parseInt(respMatch[1].replace(/\s/g, ''), 10);
+      if (val >= 10 && val <= 100000) details.responsePrice = val;
+    }
+
+    // ⏰ Сроки (deadline)
+    const deadlineMatch = bodyText.match(/(?:срок[и]?|выполнить|сделать|до\s+)(\d{1,2}[\s.]*(?:января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря)\s*\d{4}?)/i);
+    if (deadlineMatch) {
+      details.deadline = deadlineMatch[1].trim();
+    } else {
+      // Ищем "до N дней", "в течение N дней"
+      const daysMatch = bodyText.match(/(?:в\s+течение|до|за)\s+(\d+)\s*(?:дней|дня|день)/i);
+      if (daysMatch) details.deadline = `до ${daysMatch[1]} дней`;
+    }
+    // Часовой пояс
+    const tzMatch = bodyText.match(/(?:МСК|MSK|GMT\+3|UTC\+3|московск[а-я]+\s+врем[а-я]+)/i);
+    if (tzMatch && details.deadline) {
+      details.deadline += ` (${tzMatch[0]})`;
+    }
+
     details.monthsOnPlatform = monthsOnPlatform;
     
-    console.log(`[profi] ✅ Глубокий просмотр: автор=${details.author || '?'} отзывов=${details.reviewCount || 0} мес=${monthsOnPlatform}`);
+    console.log(`[profi] ✅ Глубокий просмотр: автор=${details.author || '?'} отзывов=${details.reviewCount || 0} мес=${monthsOnPlatform} цена отклика=${details.responsePrice || '?'}`);
     await deepPage.close().catch(() => {});
     return details;
   } catch (err: any) {

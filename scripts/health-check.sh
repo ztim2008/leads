@@ -199,8 +199,15 @@ ${PROBLEM_LINES}"
 ${OK_LINES}"
   fi
 
+  WORKER_MODE=$(grep -o '"mode":"[^"]*"' "$PROJECT_DIR/.worker-status.json" 2>/dev/null | head -1 | cut -d'"' -f4)
+WORKER_REASON=$(grep -o '"statusReason":"[^"]*"' "$PROJECT_DIR/.worker-status.json" 2>/dev/null | head -1 | cut -d'"' -f4)
+if [ "$WORKER_MODE" = "watch" ]; then
   MSG="${MSG}
-⏱ Интервал опроса: случайный 1-25 мин · Пропуски: 20% · Норма"
+👀 Режим: ждун · ${WORKER_REASON:-слежу за заказами}"
+else
+  MSG="${MSG}
+🔄 Режим: циклический опрос · ${WORKER_REASON:-1-25 мин}"
+fi
 
   notify "$MSG"
   log "WARN: Non-critical warnings"
