@@ -43,11 +43,12 @@ function saveStatusToFile() {
       join(process.cwd(), ".worker-status.json"),
       JSON.stringify({
         ...status,
+        lastCheckAt: hasWatchSessions ? new Date().toISOString() : status.lastCheckAt,
         mode: hasWatchSessions ? "watch" : "random",
         intervalPool: RANDOM_INTERVAL_POOL,
         updatedAt: new Date().toISOString(),
-        statusReason: hasWatchSessions && (status.statusReason?.includes("Активен") || status.statusReason?.includes("Ожидание"))
-          ? "👀 Ждун: слежу за новыми заказами"
+        statusReason: hasWatchSessions
+          ? "👀 Ждун: непрерывный мониторинг"
           : status.statusReason,
         watchLeads: totalLeadsCollected,
       })
