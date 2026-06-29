@@ -150,7 +150,7 @@ export default function LandingPage() {
                 fontSize: "var(--text-base)", fontWeight: 600,
                 transition: "background 0.15s",
               }}>
-                Начать бесплатно
+                Подключиться
                 <ArrowRight size={18} />
               </Link>
               <Link href="#how" style={{
@@ -283,7 +283,7 @@ export default function LandingPage() {
               Тарифы
             </p>
             <h2 style={{ fontSize: "var(--text-3xl)", fontWeight: 700 }}>
-              Начните бесплатно
+              Подключиться
             </h2>
           </div>
 
@@ -339,7 +339,7 @@ export default function LandingPage() {
                 Для профессионалов
               </p>
               <p style={{ fontSize: "3rem", fontWeight: 800, marginBottom: 28, color: "#fff" }}>
-                999&nbsp;₽/мес
+                2&nbsp;900&nbsp;₽/мес
               </p>
               <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 12 }}>
                 {["Все источники заявок", "Без лимита заявок", "AI-анализ каждой заявки", "4 типа откликов", "Аналитика и воронка", "Приоритетная поддержка"].map(t => (

@@ -51,7 +51,7 @@ export default async function BillingPage() {
             <Shield size={18} /><h2 style={{ fontSize: "var(--text-lg)", fontWeight: 700, color: "#fff" }}>Pro</h2>
           </div>
           <p style={{ opacity: 0.7, fontSize: "var(--text-sm)", marginBottom: 20 }}>Для профессионалов</p>
-          <p style={{ fontSize: "var(--text-3xl)", fontWeight: 800, marginBottom: 4, color: "#fff" }}>999 ₽</p>
+          <p style={{ fontSize: "var(--text-3xl)", fontWeight: 800, marginBottom: 4, color: "#fff" }}>2 900 ₽</p>
           <p style={{ opacity: 0.7, fontSize: "var(--text-sm)", marginBottom: 24 }}>в месяц</p>
           <ul style={{ listStyle: "none", padding: 0, display: "flex", flexDirection: "column", gap: 10, marginBottom: 24 }}>
             {["Все источники заявок", "Безлимит заявок", "AI-анализ каждой заявки", "Генерация 4 типов откликов", "Приоритетная поддержка", "Telegram-уведомления"].map(t => (

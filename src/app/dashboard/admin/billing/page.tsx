@@ -64,8 +64,8 @@ export default function BillingAdminPage() {
         <h2 style={{ fontSize: "var(--text-base)", fontWeight: 650, marginBottom: 16 }}><Settings size={18} /> Настройки цен</h2>
         <form onSubmit={saveConfig}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-            <div><label style={lbl}>💰 Цена Pro (₽/мес)</label><input name="proPrice" type="number" defaultValue={config?.proPrice || 1999} style={inp} /></div>
-            <div><label style={lbl}>🎁 Пробный период (дней)</label><input name="trialDays" type="number" defaultValue={config?.trialDays || 7} style={inp} /></div>
+            <div><label style={lbl}>💰 Цена Pro (₽/мес)</label><input name="proPrice" type="number" defaultValue={config?.proPrice || 2900} style={inp} /></div>
+            <div><label style={lbl}>🎁 Пробный период (отключён)</label><input name="trialDays" type="number" defaultValue={config?.trialDays || 0} style={inp} /></div>
             <div><label style={lbl}>📞 Telegram поддержки</label><input name="supportTelegram" defaultValue={config?.supportTelegram || ""} placeholder="@username" style={inp} /></div>
             <div><label style={lbl}>📧 Email поддержки</label><input name="supportEmail" defaultValue={config?.supportEmail || ""} placeholder="info@..." style={inp} /></div>
           </div>
