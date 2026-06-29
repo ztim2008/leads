@@ -651,6 +651,14 @@ export async function startWatching(
 
     const doCheck = async () => {
       try {
+        // Проверка: не вышли ли за рабочие часы?
+        if (isOutsideWorkHours()) {
+          const skipMin = hoursUntilWakeUp();
+          console.log(`[profi] 🌙 ${config.login}: снаружи рабочих часов, спим ${Math.round(skipMin/60)}ч`);
+          callbacks.onStatus(`🌙 Снаружи рабочих часов (${whStart}:00-${whEnd}:00)`);
+          scheduleNext(); // перепланировать на утро
+          return;
+        }
         console.log(`[profi] 👀 ${config.login}: перезагрузка ленты...`);
 
         // Человеческая пауза перед обновлением
