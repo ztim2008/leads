@@ -494,9 +494,57 @@ export async function scrapeOrderPage(sourceId: string, orderUrl: string): Promi
     const onlineMatch = bodyText.match(/(?:был[а]?\s*(?:в сети|онлайн)|онлайн)\s*(.+?)(?:\n|$)/i);
     if (onlineMatch) details.lastOnline = onlineMatch[1].trim();
 
-    const descParts = bodyText.split(/Пожелания и особенности|Город|Дистанционно/i);
-    if (descParts.length > 1) {
-      details.fullDescription = descParts[1].trim().slice(0, 2000);
+    // ─── Извлечение описания заказа ───────────────────────────────
+    // Пробуем несколько стратегий — от самой точной до fallback
+    let descText = "";
+    
+    // Стратегия 1: "Пожелания и особенности" / "Описание" — самый надёжный разделитель
+    let m = bodyText.match(/Пожелания и особенности[\s\S]*?\n\n([\s\S]+?)(?:\n\n(?:Город|Дистанционно|Когда|Начать|Заказ №)|$)/i);
+    if (!m) m = bodyText.match(/Описание[\s\S]*?\n\n([\s\S]+?)(?:\n\n(?:Город|Дистанционно|Когда|Начать|Заказ №)|$)/i);
+    
+    // Стратегия 2: после заголовка заказа до мета-информации
+    if (!m || !m[1] || m[1].trim().length < 10) {
+      m = bodyText.match(/Заказ №\s*\d+[\s\S]*?\n\n([\s\S]+?)(?:\n\n(?:Город|Дистанционно|Когда|Начать)|$)/i);
+    }
+    
+    // Стратегия 3: после строки с городом/дистанционно до "Начать" или конца
+    if (!m || !m[1] || m[1].trim().length < 10) {
+      m = bodyText.match(/(?:Москва|СПб|Санкт-Петербург|Дистанционно)[^\n]*\n\n([\s\S]+?)(?:\n\n(?:Когда|Начать|Заказ №)|$)/i);
+    }
+    
+    // Стратегия 4: всё что после первых 3-5 строк мета-информации
+    if (!m || !m[1] || m[1].trim().length < 10) {
+      const lines = bodyText.split('\n');
+      // Пропускаем строки с мета-информацией (город, заказ №, время назад, имя с заглавной)
+      let startIdx = 0;
+      let metaLines = 0;
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+        if (/^(Москва|СПб|Санкт-Петербург|Казань|Новосибирск|Дистанционно|Заказ №|Заказ оставлен|был[а]?\s|В сети|На Профи|Оставил|Подтвердил|Когда|начать)/i.test(line)) {
+          metaLines++;
+          continue;
+        }
+        if (/^[A-ZА-ЯЁ][a-zа-яё]+$/.test(line) && i < 10) { metaLines++; continue; } // имя клиента
+        if (/^\d+$/.test(line) && i < 10) { metaLines++; continue; } // цифры
+        startIdx = i;
+        break;
+      }
+      if (startIdx > 0) {
+        descText = lines.slice(startIdx).join('\n').trim();
+      }
+    }
+    
+    if (m && m[1]) {
+      descText = m[1].trim();
+    }
+    
+    // Чистим: убираем строки которые выглядят как мета-данные
+    descText = descText.replace(/\n(?:Когда|начать|Заказ №|В сети|На Профи|Оставил|Подтвердил).*/gi, '');
+    descText = descText.replace(/^\s*(?:Когда|начать|Заказ №).*$/gm, '');
+    
+    if (descText && descText.length > 5) {
+      details.fullDescription = descText.slice(0, 2000).trim();
     }
 
     const budgetMatch = bodyText.match(/(?:бюджет|стоимость|цена)[:\s]*(\d[\d\s]*)\s*(?:руб|₽)/i);

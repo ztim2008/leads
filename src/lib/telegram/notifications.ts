@@ -1,4 +1,4 @@
-// Telegram-уведомления о новых заявках — v3: rich-карточка с глубокими данными
+// Telegram-уведомления — v4: бюджет в плашках, две кнопки
 
 export interface LeadNotification {
   platform: string;
@@ -8,7 +8,6 @@ export interface LeadNotification {
   budget: string;
   url: string;
   reasoning: string;
-  // Данные глубокого сканирования
   author?: string;
   reviewCount?: number;
   yearsOnPlatform?: number;
@@ -40,71 +39,80 @@ export async function sendLeadNotification(
   else if (score >= 40) header = `💡 <b>Заявка</b> · ${lead.platform}`;
   else header = `📌 <b>Заявка</b> · ${lead.platform}`;
 
-  const scoreLine = score > 0 ? `<b>${score}/100</b>` : "";
+  const scoreLine = score > 0 ? `  <b>${score}/100</b>` : "";
 
-  // Rich-метаданные
+  // Rich-мета
   const meta: string[] = [];
   if (lead.reviewCount && lead.reviewCount > 0) meta.push(`⭐ ${lead.reviewCount} отз.`);
-  if (lead.yearsOnPlatform && lead.yearsOnPlatform > 0) meta.push(`📅 ${lead.yearsOnPlatform} г. на Profi`);
-  else if (lead.monthsOnPlatform && lead.monthsOnPlatform > 0) meta.push(`📅 ${lead.monthsOnPlatform} мес. на Profi`);
+  if (lead.yearsOnPlatform && lead.yearsOnPlatform > 0) meta.push(`📅 ${lead.yearsOnPlatform} г.`);
+  else if (lead.monthsOnPlatform && lead.monthsOnPlatform > 0) meta.push(`📅 ${lead.monthsOnPlatform} мес.`);
   if (lead.author) meta.push(`👤 ${lead.author}`);
   if (lead.city) meta.push(`📍 ${lead.city}`);
   if (lead.deadline) meta.push(`⏰ ${lead.deadline}`);
 
-  // Рейтинг клиента
   let ratingLine = "";
   if (lead.clientRating && lead.clientRating > 0) {
     const stars = "★".repeat(lead.clientRating) + "☆".repeat(Math.max(0, 3 - lead.clientRating));
     ratingLine = `${stars}  рейтинг клиента`;
   }
 
-  // Вероятность реальности
   let realnessLine = "";
   if (lead.botProbability !== undefined && lead.botProbability !== null) {
     const realness = 100 - lead.botProbability;
-    let emoji = realness >= 90 ? "🟢" : realness >= 70 ? "🟡" : "🔴";
+    const emoji = realness >= 90 ? "🟢" : realness >= 70 ? "🟡" : "🔴";
     realnessLine = `${emoji} Реальность: <b>${realness}%</b>`;
   }
 
-  // Подробность ТЗ
   let detailLine = "";
   if (lead.descriptionLength && lead.descriptionLength > 0) {
     detailLine = lead.descriptionLength > 2000 ? "📝 ТЗ: подробное" : lead.descriptionLength > 500 ? "📝 ТЗ: среднее" : "📝 ТЗ: краткое";
   }
 
-  // Собираем красивую карточку
-  // Цена отклика (если есть)
   let respLine = "";
   if (lead.responsePrice && lead.responsePrice > 0) {
     respLine = `🎯 <b>Отклик: ${lead.responsePrice} ₽</b>`;
   }
 
+  // ═══ Собираем карточку ═══════════════════════════════════════════
+
   const lines: string[] = [
-    `${header}    ${scoreLine}`,
+    `${header}${scoreLine}`,
     "",
     `<b>${escapeHtml(lead.title)}</b>`,
     "",
-    `💰 <b>${escapeHtml(lead.budget)}</b>`,
+    `━━━ 💰 БЮДЖЕТ ━━━`,
+    `<b>${escapeHtml(lead.budget)}</b>`,
   ];
 
   if (respLine) lines.push(respLine);
+
+  lines.push(`━━━━━━━━━━━━━━━━━`);
 
   if (meta.length > 0) lines.push(meta.join(" · "));
   if (ratingLine) lines.push(ratingLine);
   if (detailLine) lines.push(detailLine);
   if (realnessLine) lines.push(realnessLine);
+
   if (lead.reasoning) {
     lines.push("");
-    const preview = escapeHtml(lead.reasoning.slice(0, 100));
-    lines.push(`💡 ${preview}${lead.reasoning.length > 100 ? '...' : ''}`);
+    const preview = escapeHtml(lead.reasoning.slice(0, 150));
+    lines.push(`💡 ${preview}${lead.reasoning.length > 150 ? "..." : ""}`);
+    lines.push("");
   }
+
+  // Бюджет снизу ещё раз
+  lines.push(`━━━ 💰 <b>${escapeHtml(lead.budget)}</b> ━━━`);
 
   const text = lines.join("\n");
 
-  // Кнопки
+  // ═══ Кнопки (две в ряд) ══════════════════════════════════════════
   const buttons: Array<Array<{ text: string; url: string }>> = [
-    [{ text: "🔗 Открыть заказ", url: lead.url }],
+    [
+      { text: "🔗 Открыть заказ", url: lead.url },
+      { text: "⭐ В избранное", url: lead.url },
+    ],
   ];
+
   if (lead.response) {
     buttons.push([{ text: "💬 Отклик", url: lead.url }]);
   }
