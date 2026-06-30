@@ -126,6 +126,162 @@ function Metric({ value, label }: { value: string; label: string }) {
 
 // ─── Page ───────────────────────────────────────────────────────────────
 
+// ─── Mouse Trail ────────────────────────────────────────────────────────
+
+function MouseTrail() {
+  const [dots, setDots] = useState<{ x: number; y: number; id: number }[]>([]);
+  const idRef = useRef(0);
+  
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      idRef.current++;
+      setDots(prev => {
+        const next = [...prev, { x: e.clientX, y: e.clientY, id: idRef.current }];
+        return next.length > 30 ? next.slice(-30) : next;
+      });
+    };
+    window.addEventListener('mousemove', handler);
+    return () => window.removeEventListener('mousemove', handler);
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setDots(prev => prev.length > 0 ? prev.slice(1) : prev);
+    }, 50);
+    return () => clearInterval(interval);
+  }, []);
+
+  return (
+    <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 9999 }}>
+      {dots.map((dot, i) => {
+        const alpha = i / dots.length;
+        const size = 4 + alpha * 12;
+        return (
+          <div key={dot.id} style={{
+            position: 'absolute', left: dot.x, top: dot.y,
+            width: size, height: size, borderRadius: '50%',
+            background: `radial-gradient(circle, rgba(99,102,241,${0.6 * alpha}) 0%, rgba(139,92,246,${0.3 * alpha}) 50%, transparent 70%)`,
+            boxShadow: `0 0 ${size * 3}px rgba(99,102,241,${0.4 * alpha})`,
+            transform: 'translate(-50%, -50%)',
+            transition: 'opacity 0.3s',
+          }} />
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Live Terminal ──────────────────────────────────────────────────────
+
+const FAKE_LEADS = [
+  { title: "Дизайн интерьера квартиры", score: 85, budget: "45 000 ₽", city: "Москва", name: "Ангелина", reviews: 12 },
+  { title: "Ремонт ванной под ключ", score: 92, budget: "120 000 ₽", city: "СПб", name: "Дмитрий", reviews: 8 },
+  { title: "Перепланировка двушки", score: 78, budget: "85 000 ₽", city: "Казань", name: "Ольга", reviews: 15 },
+  { title: "Кухня на заказ", score: 88, budget: "200 000 ₽", city: "Москва", name: "Сергей", reviews: 23 },
+  { title: "Отделка новостройки", score: 95, budget: "350 000 ₽", city: "Москва", name: "Марина", reviews: 31 },
+  { title: "Потолки натяжные", score: 72, budget: "28 000 ₽", city: "Екб", name: "Алексей", reviews: 5 },
+  { title: "Укладка плитки", score: 65, budget: "55 000 ₽", city: "Новосибирск", name: "Виктор", reviews: 3 },
+  { title: "Электрика в доме", score: 80, budget: "75 000 ₽", city: "Москва", name: "Наталья", reviews: 17 },
+];
+
+function LiveTerminal() {
+  const [lines, setLines] = useState<{ lead: typeof FAKE_LEADS[0]; ts: string; id: number }[]>([]);
+  const idRef = useRef(1);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const obs = new IntersectionObserver(([e]) => { if (e?.isIntersecting) setVisible(true); }, { threshold: 0.3 });
+    if (containerRef.current) obs.observe(containerRef.current);
+    return () => obs.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!visible) return;
+    const addLine = () => {
+      const lead = FAKE_LEADS[Math.floor(Math.random() * FAKE_LEADS.length)];
+      const now = new Date();
+      const ts = now.toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      idRef.current++;
+      setLines(prev => {
+        const next = [{ lead, ts, id: idRef.current }, ...prev];
+        return next.length > 50 ? next.slice(0, 50) : next;
+      });
+      timeoutRef.current = setTimeout(addLine, 1500 + Math.random() * 3000);
+    };
+    timeoutRef.current = setTimeout(addLine, 500);
+    return () => { if (timeoutRef.current) clearTimeout(timeoutRef.current); };
+  }, [visible]);
+
+  return (
+    <div ref={containerRef} style={{
+      background: "#0a0a0f", borderRadius: 24, padding: "36px 32px", border: "1px solid #1a1a2e",
+      maxWidth: 700, margin: "0 auto", position: "relative", overflow: "hidden",
+      boxShadow: "0 0 80px rgba(99,102,241,0.1), inset 0 0 30px rgba(0,0,0,0.5)",
+      fontFamily: "var(--font-mono)", fontSize: "0.75rem",
+      height: 340,
+    }}>
+      {/* Градиентная полоса сверху */}
+      <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 2, background: "linear-gradient(90deg, #6366f1, #8b5cf6, #22c55e)" }} />
+      {/* Заголовок терминала */}
+      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20, paddingBottom: 16, borderBottom: "1px solid #1a1a2e" }}>
+        <div style={{ display: "flex", gap: 6 }}>
+          <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#ff5f57" }} />
+          <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#febc2e" }} />
+          <div style={{ width: 10, height: 10, borderRadius: "50%", background: "#28c840" }} />
+        </div>
+        <span style={{ color: "#666", fontSize: "0.7rem" }}>leads.konversus.ru — ждун активен</span>
+        <div style={{ width: 8, height: 8, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 6px #22c55e", animation: "pulseGlow 1.5s ease-in-out infinite", marginLeft: "auto" }} />
+      </div>
+      {/* Бесконечная лента заявок */}
+      <div style={{
+        height: 250, overflow: "hidden", position: "relative",
+        maskImage: "linear-gradient(to bottom, black 70%, transparent 100%)",
+        WebkitMaskImage: "linear-gradient(to bottom, black 70%, transparent 100%)",
+      }}>
+        <div style={{
+          animation: "scrollUp 30s linear infinite",
+          display: "flex", flexDirection: "column-reverse",
+        }}>
+          {lines.map((line) => (
+            <div key={line.id} style={{
+              padding: "10px 0", borderBottom: "1px solid #1a1a2e",
+              opacity: 0.85, lineHeight: 1.6,
+              animation: "fadeInLine 0.4s ease-out",
+            }}>
+              <div style={{ color: "#666", fontSize: "0.65rem", marginBottom: 4 }}>
+                [{line.ts}] 👀 Profi заказ → <span style={{ color: "#22c55e" }}>новый!</span>
+              </div>
+              <div style={{ color: "#e0e0e0", fontWeight: 600 }}>
+                {line.lead.score >= 85 ? "🔥" : "⭐"} «{line.lead.title}» · {line.lead.score}/100 · {line.lead.budget}
+              </div>
+              <div style={{ color: "#888", fontSize: "0.68rem" }}>
+                📍 {line.lead.city} · 👤 {line.lead.name} · ⭐ {line.lead.reviews} отз.
+              </div>
+              <div style={{ color: "#6366f1", fontSize: "0.68rem", marginTop: 2 }}>
+                📨 Отправлено в Telegram →
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      {/* Затемнение снизу */}
+      <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 60, background: "linear-gradient(to top, #0a0a0f, transparent)", pointerEvents: "none" }} />
+      <style>{`
+        @keyframes scrollUp {
+          0% { transform: translateY(0); }
+          100% { transform: translateY(50%); }
+        }
+        @keyframes fadeInLine {
+          from { opacity: 0; transform: translateY(-8px); }
+          to { opacity: 0.85; transform: translateY(0); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
 export default function Landing() {
   return (
     <div style={{ background: "var(--bg-root)", color: "var(--ink-body)", overflow: "hidden" }}>
@@ -208,19 +364,7 @@ export default function Landing() {
             <p style={{ ...body, textAlign: "center", margin: "0 auto 64px" }}>Никаких опросов каждые 5 минут. Одна сессия браузера — заказы ловятся в реальном времени.</p>
           </FadeIn>
           <FadeIn direction="up" delay={0.1}>
-            <div style={{ background: "var(--bg-root)", borderRadius: 24, padding: "48px 40px", border: "1px solid var(--border)", maxWidth: 700, margin: "0 auto", position: "relative", overflow: "hidden" }}>
-              <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: "linear-gradient(90deg, #6366f1, #8b5cf6, #22c55e)" }} />
-              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
-                <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 8px #22c55e" }} />
-                <span style={{ fontSize: "0.85rem", color: "var(--ink-muted)" }}>Ждун активен</span>
-              </div>
-              <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.8rem", color: "var(--ink-muted)", lineHeight: 1.8 }}>
-                <div>👀 Profi заказ №91234 → <span style={{ color: "var(--green)" }}>новый!</span></div>
-                <div>⭐ «Дизайн интерьера» · 85/100 · 45 000 ₽</div>
-                <div>📍 Москва · 👤 Ангелина · ⭐ 12 отзывов</div>
-                <div style={{ marginTop: 12, color: "var(--accent)" }}>📨 Отправлено в Telegram →</div>
-              </div>
-            </div>
+            <LiveTerminal />
           </FadeIn>
         </div>
       </section>
@@ -295,6 +439,7 @@ export default function Landing() {
         </FadeIn>
       </section>
 
+      <MouseTrail />
       <KonversusFooter />
 
       {/* ─── Animations ──────────────────────────────────────────────── */}
