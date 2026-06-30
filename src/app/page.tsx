@@ -1,368 +1,312 @@
-// Главная — Konversus Leads AI
-import Link from "next/link";
-import { LegalFooter } from "@/components/legal-layout";
-import LeadFeedAnimation from "@/components/lead-feed-animation";
-import CookieBanner from "@/components/cookie-banner";
+"use client";
+
+import { useState, useEffect, useRef } from "react";
 import {
-  Search, Brain, FileText, MessageSquare, BarChart3, Filter,
-  ArrowRight, Zap, Globe, Shield, ChevronRight, Moon, Sun, ArrowUpRight
+  Zap, Shield, Bell, Clock, Sparkles, TrendingUp,
+  Eye, Rocket, ChevronDown, ArrowRight, BarChart3,
+  Brain, Target, Users, Cpu, Globe, MessageCircle,
+  Gauge, Database, Activity,
 } from "lucide-react";
+import KonversusNav from "@/components/konversus-nav";
+import KonversusFooter from "@/components/konversus-footer";
 
-const FEATURES = [
-  { icon: Search, title: "Горячие лиды, а не всё подряд", desc: "AI отсеивает 80% мусора. Вы видите только заказы с высоким рейтингом, проверенными заказчиками и реальным бюджетом." },
-  { icon: Brain, title: "AI-скоринг: реальность заказчика", desc: "Оценивает вероятность что заказчик реален (96%+), прогнозирует бюджет, определяет стоит ли тратить отклик. Сигналы: отзывы, возраст на Profi, рейтинг, подробность ТЗ." },
-  { icon: FileText, title: "Готовые отклики", desc: "4 варианта отклика: краткий, продающий, экспертный и технический. Копируйте и отправляйте одним кликом." },
-  { icon: MessageSquare, title: "Карточки горячих лидов в Telegram", desc: "Не просто ссылка. Полная аналитика: рейтинг заказчика ★★★, 18 отзывов, 7 лет на Profi, вероятность реальности 96%. И готовый отклик." },
-  { icon: BarChart3, title: "Аналитика и воронка", desc: "Конверсия: заявки → отклики → сделки. Понимайте какие площадки приносят больше прибыли." },
-  { icon: Filter, title: "Умные фильтры", desc: "Ключевые слова, минус-слова, диапазон бюджета. Система отсеивает мусор и показывает только релевантные заявки." },
-];
+// ─── Animation hooks ───────────────────────────────────────────────────
 
-const STEPS = [
-  { num: "01", title: "Подключите площадки", desc: "Profi.ru ✅ — подключите сейчас. Авито, FL.ru, Kwork — в разработке." },
-  { num: "02", title: "Получайте лучшие заявки", desc: "AI анализирует каждую заявку, отсеивает мусор, оценивает вероятность сделки. В Telegram только подходящие." },
-  { num: "03", title: "Откликайтесь на лучшее", desc: "Не тратьте деньги на мусорные отклики. AI готовит 4 варианта ответа для каждого горячего лида. Копируйте и выигрывайте." },
-];
+function useInView(ref: React.RefObject<HTMLElement | null>, threshold = 0.2) {
+  const [inView, setInView] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(([entry]) => { if (entry?.isIntersecting) { setInView(true); obs.disconnect(); } }, { threshold });
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [ref, threshold]);
+  return inView;
+}
 
-function Navbar() {
+function FadeIn({ children, className = "", delay = 0, direction = "up" as "up" | "left" | "right" }: any) {
+  const ref = useRef<HTMLDivElement>(null);
+  const visible = useInView(ref, 0.15);
+
+  const transforms: Record<string, string> = {
+    up: `translateY(40px)`,
+    left: `translateX(-40px)`,
+    right: `translateX(40px)`,
+  };
+
   return (
-    <nav style={{
-      position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
-      background: "var(--bg-surface)", borderBottom: "1px solid var(--border)",
-      backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)",
+    <div ref={ref} className={className} style={{
+      opacity: visible ? 1 : 0,
+      transform: visible ? "translate(0, 0)" : transforms[direction] || "translateY(40px)",
+      transition: `opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s, transform 0.8s cubic-bezier(0.16, 1, 0.3, 1) ${delay}s`,
     }}>
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 20px", display: "flex", alignItems: "center", justifyContent: "space-between", height: 56 }}>
-        {/* Логотип — всегда видимый */}
-        <a href="/" style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 700, fontSize: "1.1rem", color: "#fafafa", textDecoration: "none", letterSpacing: "-0.02em" }}>
-          <div style={{
-            width: 30, height: 30, borderRadius: 6,
-            background: "var(--accent)", color: "#fff",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 16, fontWeight: 800, flexShrink: 0,
-          }}>◈</div>
-          <span className="nav-logo-text" style={{ display: "inline" }}>Leads AI</span>
-        </a>
-
-        {/* Десктопное меню */}
-        <div className="nav-desktop" style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <a href="#how" style={{ padding: "6px 10px", borderRadius: 6, fontSize: "0.85rem", color: "var(--ink-muted)", textDecoration: "none", fontWeight: 500 }}>Как работает</a>
-          <a href="/docs" style={{ padding: "6px 10px", borderRadius: 6, fontSize: "0.85rem", color: "var(--ink-muted)", textDecoration: "none", fontWeight: 500 }}>Документация</a>
-          <a href="https://konversus.ru" style={{ fontSize: "0.8rem", color: "var(--ink-muted)", textDecoration: "none", fontWeight: 500, display: "flex", alignItems: "center", gap: 4 }}>
-            <ArrowUpRight size={12} /> konversus.ru
-          </a>
-          <a href="/auth" style={{ padding: "8px 16px", borderRadius: 6, background: "var(--accent)", color: "#fff", fontWeight: 600, fontSize: "0.85rem", textDecoration: "none" }}>Войти</a>
-        </div>
-
-
-      </div>
-
-      {/* Мобильное меню (скрыто по умолчанию) */}
-      <input type="checkbox" id="mobile-menu-toggle" style={{ display: "none" }} />
-      <label htmlFor="mobile-menu-toggle" className="nav-mobile-btn" style={{
-        display: "none", background: "none", border: "1px solid var(--border)",
-        borderRadius: 6, padding: "6px 10px", color: "var(--ink-body)", cursor: "pointer",
-        fontSize: "1.3rem", position: "absolute", right: 20, top: 12,
-      }}>☰</label>
-      <div id="mobile-menu" style={{
-        display: "none", flexDirection: "column", gap: 4,
-        padding: "12px 20px 16px", background: "var(--bg-surface)",
-        borderTop: "1px solid var(--border)",
-      }}>
-        <a href="#how" style={mobileLinkStyle}>Как работает</a>
-        <a href="/docs" style={mobileLinkStyle}>Документация</a>
-        <a href="https://konversus.ru" style={mobileLinkStyle}>← konversus.ru</a>
-        <a href="/auth" style={{ ...mobileLinkStyle, color: "var(--accent)", fontWeight: 600 }}>Войти</a>
-      </div>
-
-      {/* Медиа-запросы для мобильной версии */}
-      <style>{`
-        @media (max-width: 768px) {
-          .nav-desktop { display: none !important; }
-          .nav-mobile-btn { display: flex !important; align-items: center; justify-content: center; }
-        }
-        #mobile-menu-toggle:checked ~ #mobile-menu { display: flex !important; }
-        @media (min-width: 769px) {
-          #mobile-menu, .nav-mobile-btn { display: none !important; }
-        }
-      `}</style>
-    </nav>
+      {children}
+    </div>
   );
 }
 
-const mobileLinkStyle: React.CSSProperties = {
-  padding: "10px 14px", borderRadius: 6,
-  fontSize: "0.9rem", color: "var(--ink-body)",
-  textDecoration: "none", fontWeight: 500,
+// ─── Styles ────────────────────────────────────────────────────────────
+
+const h1: React.CSSProperties = {
+  fontFamily: "var(--font-montserrat)", fontWeight: 800, fontSize: "clamp(2.5rem, 6vw, 4.5rem)", lineHeight: 1.1, letterSpacing: "-0.03em",
+};
+const h2: React.CSSProperties = {
+  fontFamily: "var(--font-montserrat)", fontWeight: 700, fontSize: "clamp(2rem, 4vw, 3.2rem)", lineHeight: 1.15, letterSpacing: "-0.02em",
+};
+const h3: React.CSSProperties = {
+  fontFamily: "var(--font-montserrat)", fontWeight: 700, fontSize: "clamp(1.3rem, 2vw, 1.6rem)", lineHeight: 1.25,
+};
+const body: React.CSSProperties = {
+  fontSize: "clamp(1rem, 1.5vw, 1.25rem)", lineHeight: 1.6, color: "var(--ink-muted)", maxWidth: 600,
+};
+const section: React.CSSProperties = {
+  padding: "clamp(80px, 12vw, 160px) 24px",
+};
+const container: React.CSSProperties = {
+  maxWidth: 1200, margin: "0 auto",
+};
+const grid2: React.CSSProperties = {
+  display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 2,
+};
+const grid3: React.CSSProperties = {
+  display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 2,
 };
 
-export default function LandingPage() {
+// ─── Card ───────────────────────────────────────────────────────────────
+
+function Card({ icon: Icon, title, text, color = "var(--accent)" }: any) {
+  const ref = useRef<HTMLDivElement>(null);
+  const visible = useInView(ref, 0.2);
   return (
-    <div style={{ background: "var(--bg-root)", color: "var(--ink-body)" }}>
-      {/* ─── Навбар ──────────────────────────────────────────── */}
-      <Navbar />
+    <div ref={ref} style={{
+      padding: "40px 32px", borderRadius: 20, background: "var(--bg-surface)", border: "1px solid var(--border)",
+      opacity: visible ? 1 : 0, transform: visible ? "translateY(0)" : "translateY(30px)",
+      transition: "opacity 0.6s ease, transform 0.6s ease",
+      transitionDelay: "0.1s",
+    }}>
+      <div style={{ width: 48, height: 48, borderRadius: 14, background: `${color}18`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 20 }}>
+        <Icon size={24} style={{ color }} strokeWidth={1.75} />
+      </div>
+      <h3 style={{ ...h3, marginBottom: 12, fontSize: "1.2rem" }}>{title}</h3>
+      <p style={{ color: "var(--ink-muted)", fontSize: "0.95rem", lineHeight: 1.7 }}>{text}</p>
+    </div>
+  );
+}
 
-      {/* ─── Hero ──────────────────────────────────────────── */}
-      <header style={{
-        background: "var(--bg-layer)",
-        borderBottom: "1px solid var(--border)",
-        padding: "176px 0 100px",
-      }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px", display: "flex", alignItems: "center", gap: "clamp(32px, 6vw, 80px)", flexWrap: "wrap" }}>
-          <div style={{ flex: "1 1 400px", maxWidth: 720 }}>
-            <div style={{
-              display: "inline-flex", alignItems: "center", gap: 8,
-              background: "var(--accent-soft)", color: "var(--accent)",
-              borderRadius: "var(--radius-sm)", padding: "6px 16px",
-              fontSize: "var(--text-sm)", fontWeight: 600,
-              marginBottom: 32,
-            }}>
-              <Zap size={16} />
-              AI-отбор: только горячие лиды
-            </div>
+// ─── Metric ─────────────────────────────────────────────────────────────
 
-            <h1 style={{
-              fontSize: "clamp(2.5rem, 6vw, 4.5rem)",
-              fontWeight: 800,
-              lineHeight: 1.05,
-              letterSpacing: "-0.04em",
-              color: "var(--ink-heading)",
-              marginBottom: 24,
-            }}>
-              Не собирайте мусор —<br />
-              <span style={{ color: "var(--accent)" }}>получайте горячие лиды</span>
-            </h1>
+function Metric({ value, label }: { value: string; label: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const visible = useInView(ref, 0.3);
+  const [num, setNum] = useState(0);
+  const target = parseInt(value) || 0;
 
-            <p style={{
-              fontSize: "var(--text-lg)",
-              lineHeight: "var(--leading-relaxed)",
-              color: "var(--ink-muted)",
-              maxWidth: 560,
-              marginBottom: 40,
-            }}>
-              AI анализирует каждую заявку: реальный ли заказчик, будет ли платить, стоит ли тратить отклик.
-              В Telegram приходят только горячие лиды — с рейтингом, вероятностью сделки и готовым откликом.
-            </p>
+  useEffect(() => {
+    if (!visible) return;
+    let start = 0;
+    const duration = 1500;
+    const step = Math.ceil(target / (duration / 16));
+    const timer = setInterval(() => {
+      start += step;
+      if (start >= target) { setNum(target); clearInterval(timer); }
+      else setNum(start);
+    }, 16);
+    return () => clearInterval(timer);
+  }, [visible, target]);
 
-            <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
-              <Link href="/dashboard" style={{
-                display: "inline-flex", alignItems: "center", gap: 8,
-                background: "var(--accent)", color: "#fff",
-                borderRadius: "var(--radius-sm)", padding: "14px 28px",
-                fontSize: "var(--text-base)", fontWeight: 600,
-                transition: "background 0.15s",
-              }}>
-                Подключиться
-                <ArrowRight size={18} />
-              </Link>
-              <Link href="#how" style={{
-                display: "inline-flex", alignItems: "center", gap: 8,
-                background: "var(--bg-surface)", color: "var(--ink-body)",
-                border: "1px solid var(--border)",
-                borderRadius: "var(--radius-sm)", padding: "14px 28px",
-                fontSize: "var(--text-base)", fontWeight: 500,
-              }}>
-                Как работает
-              </Link>
-            </div>
+  return (
+    <div ref={ref} style={{ textAlign: "center", padding: "32px 16px" }}>
+      <div style={{ fontFamily: "var(--font-montserrat)", fontWeight: 800, fontSize: "clamp(2.5rem, 4vw, 3.5rem)", lineHeight: 1, color: "var(--accent)" }}>
+        {value.includes("%") ? num + "%" : value.includes("ч") ? value : num.toLocaleString() + (value.includes("+") ? "+" : "")}
+      </div>
+      <p style={{ color: "var(--ink-muted)", marginTop: 8, fontSize: "0.95rem" }}>{label}</p>
+    </div>
+  );
+}
+
+// ─── Page ───────────────────────────────────────────────────────────────
+
+export default function Landing() {
+  return (
+    <div style={{ background: "var(--bg-root)", color: "var(--ink-body)", overflow: "hidden" }}>
+      <KonversusNav />
+
+      {/* ══════════ HERO — Dark ═══════════════════════════════════════ */}
+      <section style={{ ...section, textAlign: "center", paddingTop: "clamp(120px, 16vw, 200px)", position: "relative" }}>
+        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at 50% 0%, rgba(99,102,241,0.12) 0%, transparent 70%)", pointerEvents: "none" }} />
+        <FadeIn>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "8px 18px", borderRadius: 100, background: "var(--accent-soft)", color: "var(--accent)", fontSize: "0.85rem", fontWeight: 600, marginBottom: 32 }}>
+            <Zap size={14} /> Лиды в Telegram за секунды
           </div>
-          <div className="hero-feed" style={{ flex: "0 0 380px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <LeadFeedAnimation />
+        </FadeIn>
+        <FadeIn delay={0.1}>
+          <h1 style={{ ...h1, maxWidth: 800, margin: "0 auto", color: "var(--ink-heading)" }}>
+            Ваши клиенты —<br />прямо в Telegram
+          </h1>
+        </FadeIn>
+        <FadeIn delay={0.2}>
+          <p style={{ ...body, maxWidth: 600, margin: "24px auto 0", fontSize: "clamp(1.1rem, 1.8vw, 1.35rem)" }}>
+            Искусственный интеллект находит заказы на Profi, анализирует и мгновенно присылает в Telegram. Вы первым откликаетесь — конкуренты даже не видят заявку.
+          </p>
+        </FadeIn>
+        <FadeIn delay={0.3}>
+          <div style={{ marginTop: 40, display: "flex", gap: 16, justifyContent: "center", flexWrap: "wrap" }}>
+            <a href="/auth" style={{
+              display: "inline-flex", alignItems: "center", gap: 10, padding: "16px 36px", borderRadius: 14,
+              background: "var(--accent)", color: "#fff", fontWeight: 700, fontSize: "1.05rem", textDecoration: "none",
+              boxShadow: "0 0 40px rgba(99,102,241,0.4), 0 0 80px rgba(99,102,241,0.2)",
+              animation: "pulseGlow 2s ease-in-out infinite",
+            }}>
+              <Rocket size={20} /> Подключить для своего бизнеса
+            </a>
+            <a href="#how" style={{
+              display: "inline-flex", alignItems: "center", gap: 8, padding: "16px 32px", borderRadius: 14,
+              background: "transparent", color: "var(--ink-body)", border: "1px solid var(--border)", fontWeight: 600, fontSize: "1rem", textDecoration: "none",
+            }}>
+              Как это работает <ArrowRight size={16} />
+            </a>
+          </div>
+        </FadeIn>
+      </section>
+
+      {/* ══════════ METRICS — Light ═════════════════════════════════════ */}
+      <section style={{ ...section, background: "var(--bg-surface)", padding: "clamp(60px, 8vw, 100px) 24px" }}>
+        <div className="metrics" style={{ ...container, display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", borderTop: "1px solid var(--border)", borderBottom: "1px solid var(--border)" }}>
+          <Metric value="96" label="Реальность заявки" />
+          <Metric value="17000" label="Заказов в день на Profi" />
+          <Metric value="15" label="Секунд до уведомления" />
+          <Metric value="3" label="Уровня защиты от бана" />
+        </div>
+      </section>
+
+      {/* ══════════ HOW — Dark ═══════════════════════════════════════ */}
+      <section id="how" style={{ ...section, background: "var(--bg-root)" }}>
+        <div style={container}>
+          <FadeIn>
+            <h2 style={{ ...h2, textAlign: "center", color: "var(--ink-heading)", marginBottom: 16 }}>Как это работает</h2>
+            <p style={{ ...body, textAlign: "center", margin: "0 auto 64px" }}>Три шага — и заявки сами приходят в ваш Telegram.</p>
+          </FadeIn>
+          <div style={{ ...grid3, gap: "40px 24px" }}>
+            {[
+              { icon: Eye, title: "1. Подключаем Profi", text: "Вы даёте логин от аккаунта. Система заходит как обычный человек — скроллит ленту, читает сообщения, смотрит заказы. Profi не видит робота.", color: "#6366f1" },
+              { icon: Brain, title: "2. AI анализирует", text: "Нейросеть оценивает заказчика: реальный ли он, сколько отзывов, какой бюджет. Сразу видно — горячий лид или пустышка.", color: "#8b5cf6" },
+              { icon: Bell, title: "3. Telegram-уведомление", text: "Заявка приходит в Telegram с готовой карточкой: имя клиента, бюджет, сроки. Вы первым пишете отклик — пока другие только открыли Profi.", color: "#22c55e" },
+            ].map((s, i) => (
+              <FadeIn key={i} delay={i * 0.1}>
+                <Card icon={s.icon} title={s.title} text={s.text} color={s.color} />
+              </FadeIn>
+            ))}
           </div>
         </div>
-      </header>
+      </section>
+
+      {/* ══════════ WATCHER — Light ═══════════════════════════════════ */}
+      <section style={{ ...section, background: "var(--bg-surface)" }}>
+        <div style={container}>
+          <FadeIn>
+            <h2 style={{ ...h2, textAlign: "center", color: "var(--ink-heading)", marginBottom: 16 }}>Ждун, который не спит</h2>
+            <p style={{ ...body, textAlign: "center", margin: "0 auto 64px" }}>Никаких опросов каждые 5 минут. Одна сессия браузера — заказы ловятся в реальном времени.</p>
+          </FadeIn>
+          <FadeIn direction="up" delay={0.1}>
+            <div style={{ background: "var(--bg-root)", borderRadius: 24, padding: "48px 40px", border: "1px solid var(--border)", maxWidth: 700, margin: "0 auto", position: "relative", overflow: "hidden" }}>
+              <div style={{ position: "absolute", top: 0, left: 0, right: 0, height: 3, background: "linear-gradient(90deg, #6366f1, #8b5cf6, #22c55e)" }} />
+              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+                <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#22c55e", boxShadow: "0 0 8px #22c55e" }} />
+                <span style={{ fontSize: "0.85rem", color: "var(--ink-muted)" }}>Ждун активен</span>
+              </div>
+              <div style={{ fontFamily: "var(--font-mono)", fontSize: "0.8rem", color: "var(--ink-muted)", lineHeight: 1.8 }}>
+                <div>👀 Profi заказ №91234 → <span style={{ color: "var(--green)" }}>новый!</span></div>
+                <div>⭐ «Дизайн интерьера» · 85/100 · 45 000 ₽</div>
+                <div>📍 Москва · 👤 Ангелина · ⭐ 12 отзывов</div>
+                <div style={{ marginTop: 12, color: "var(--accent)" }}>📨 Отправлено в Telegram →</div>
+              </div>
+            </div>
+          </FadeIn>
+        </div>
+      </section>
+
+      {/* ══════════ FEATURES — Dark ═══════════════════════════════════ */}
+      <section style={{ ...section, background: "var(--bg-root)" }}>
+        <div style={container}>
+          <FadeIn>
+            <h2 style={{ ...h2, textAlign: "center", color: "var(--ink-heading)", marginBottom: 16 }}>Всё что нужно для охоты</h2>
+            <p style={{ ...body, textAlign: "center", margin: "0 auto 64px" }}>Продуманная система, а не просто парсер. Каждая деталь работает на результат.</p>
+          </FadeIn>
+          <div className="features" style={{ ...grid3, gap: "2px" }}>
+            {[
+              { icon: Shield, title: "Анти-детект", text: "Три уровня маскировки. Ротация User-Agent, человеческое поведение, случайные паузы. Profi не видит робота." },
+              { icon: Clock, title: "Расписание", text: "Сбор только в рабочие часы. Ночью система спит. Вы сами настраиваете когда и как часто проверять." },
+              { icon: MessageCircle, title: "Rich-карточки", text: "Имя клиента, отзывы, стаж на Profi, город, сроки, цена отклика. Вся информация в одном сообщении." },
+              { icon: Target, title: "AI-скоринг", text: "Нейросеть оценивает заявку 0–100. Отделяет живых людей от ботов. Приоритетные лиды — первыми." },
+              { icon: Users, title: "Мульти-партнёр", text: "Каждый партнёр в своём браузере. Изолированные сессии, свой IP, свой уровень защиты." },
+              { icon: Database, title: "История заявок", text: "Все заказы сохраняются. Поиск, фильтры, аналитика. Ничего не теряется." },
+            ].map((s, i) => (
+              <FadeIn key={i} delay={i * 0.08}>
+                <Card icon={s.icon} title={s.title} text={s.text} />
+              </FadeIn>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════ SAFETY — Light ═══════════════════════════════════ */}
+      <section style={{ ...section, background: "var(--bg-surface)" }}>
+        <div style={container}>
+          <FadeIn>
+            <h2 style={{ ...h2, textAlign: "center", color: "var(--ink-heading)", marginBottom: 16 }}>Безопасность — не функция, а фундамент</h2>
+            <p style={{ ...body, textAlign: "center", margin: "0 auto 64px" }}>Profi банит парсеры. Мы строили защиту с первого дня.</p>
+          </FadeIn>
+          <div className="safety" style={{ ...grid2, gap: "2px" }}>
+            {[
+              { icon: Gauge, title: "Случайные интервалы", text: "Проверка не каждые 5 минут, а случайно: 3, 7, 11, 15, 25 минут. Дважды подряд интервал не повторяется." },
+              { icon: Eye, title: "Человеческое поведение", text: "Браузер скроллит ленту, заходит в сообщения, кликает случайные заказы. 20% проверок пропускается — «занят»." },
+              { icon: Globe, title: "Изолированные сессии", text: "У каждого партнёра свой браузер, свои куки, свой IP. Profi видит разных людей из разных городов." },
+              { icon: Cpu, title: "3 уровня защиты", text: "Light — ротация браузера. Balanced — симуляция мыши. Stealth — 60% пропусков, глубокое скрытие." },
+            ].map((s, i) => (
+              <FadeIn key={i} delay={i * 0.1}>
+                <Card icon={s.icon} title={s.title} text={s.text} />
+              </FadeIn>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════ CTA — Dark ═══════════════════════════════════════ */}
+      <section style={{ ...section, textAlign: "center", position: "relative" }}>
+        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse at 50% 50%, rgba(99,102,241,0.15) 0%, transparent 60%)", pointerEvents: "none" }} />
+        <FadeIn>
+          <h2 style={{ ...h2, color: "var(--ink-heading)", maxWidth: 700, margin: "0 auto 20px" }}>
+            Первыми узнавайте о новых заказах
+          </h2>
+          <p style={{ ...body, maxWidth: 500, margin: "0 auto 40px", textAlign: "center" }}>
+            Пока конкуренты обновляют страницу, ваш телефон уже вибрирует с новым лидом.
+          </p>
+        </FadeIn>
+        <FadeIn delay={0.2}>
+          <a href="/auth" style={{
+            display: "inline-flex", alignItems: "center", gap: 12, padding: "20px 44px", borderRadius: 16,
+            background: "var(--accent)", color: "#fff", fontWeight: 700, fontSize: "1.15rem", textDecoration: "none",
+            boxShadow: "0 0 60px rgba(99,102,241,0.5), 0 0 120px rgba(99,102,241,0.25)",
+            animation: "pulseGlow 2s ease-in-out infinite", position: "relative", overflow: "hidden",
+          }}>
+            <span style={{ position: "absolute", top: 0, left: "-100%", width: "100%", height: "100%", background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)", animation: "shimmer 2s infinite" }} />
+            <Rocket size={22} /> Подключить для своего бизнеса
+          </a>
+        </FadeIn>
+      </section>
+
+      <KonversusFooter />
+
+      {/* ─── Animations ──────────────────────────────────────────────── */}
       <style>{`
-        @media (max-width: 900px) {
-          .hero-feed { display: none !important; }
+        @keyframes pulseGlow {
+          0%, 100% { box-shadow: 0 0 40px rgba(99,102,241,0.4), 0 0 80px rgba(99,102,241,0.2); }
+          50% { box-shadow: 0 0 60px rgba(99,102,241,0.6), 0 0 100px rgba(99,102,241,0.3); }
+        }
+        @keyframes shimmer {
+          0% { left: -100%; } 100% { left: 200%; }
         }
       `}</style>
-
-      {/* ─── Как работает ──────────────────────────────────── */}
-      <section id="how" style={{ padding: "100px 0" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px" }}>
-          <div style={{ marginBottom: 64 }}>
-            <p style={{
-              fontSize: "var(--text-sm)", fontWeight: 600, color: "var(--accent)",
-              textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 12,
-            }}>
-              Как это работает
-            </p>
-            <h2 style={{ fontSize: "var(--text-3xl)", fontWeight: 700, marginBottom: 16 }}>
-              Три шага от хаоса к системе
-            </h2>
-          </div>
-
-          <div style={{
-            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-            gap: 0, border: "1px solid var(--border)", borderRadius: "var(--radius-lg)",
-            overflow: "hidden",
-          }}>
-            {STEPS.map((step, i) => (
-              <div key={step.num} style={{
-                display: "flex", gap: 24, padding: "40px 36px",
-                borderRight: i < 2 ? "1px solid var(--border)" : "none",
-                background: "var(--bg-surface)",
-              }}>
-                <span style={{
-                  fontSize: "var(--text-3xl)", fontWeight: 800,
-                  color: "var(--accent)", lineHeight: 0.9, opacity: 0.3,
-                  flexShrink: 0,
-                }}>
-                  {step.num}
-                </span>
-                <div>
-                  <h3 style={{ fontSize: "var(--text-xl)", fontWeight: 650, marginBottom: 8 }}>
-                    {step.title}
-                  </h3>
-                  <p style={{ color: "var(--ink-muted)", lineHeight: "var(--leading-relaxed)" }}>
-                    {step.desc}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ─── Возможности ──────────────────────────────────── */}
-      <section style={{ background: "var(--bg-layer)", padding: "100px 0" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px" }}>
-          <div style={{ marginBottom: 64 }}>
-            <p style={{
-              fontSize: "var(--text-sm)", fontWeight: 600, color: "var(--accent)",
-              textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 12,
-            }}>
-              Возможности
-            </p>
-            <h2 style={{ fontSize: "var(--text-3xl)", fontWeight: 700 }}>
-              Всё для работы с&nbsp;заказами
-            </h2>
-          </div>
-
-          <div style={{
-            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
-            gap: 0, border: "1px solid var(--border)", borderRadius: "var(--radius-lg)",
-            overflow: "hidden",
-          }}>
-            {FEATURES.map((f, i) => (
-              <div key={f.title} style={{
-                padding: "36px",
-                background: "var(--bg-surface)",
-                borderRight: i % 2 === 0 ? "1px solid var(--border)" : "none",
-                borderBottom: i < 4 ? "1px solid var(--border)" : "none",
-                display: "flex", gap: 20,
-              }}>
-                <div style={{
-                  width: 44, height: 44, borderRadius: "var(--radius-sm)",
-                  background: "var(--accent-soft)", color: "var(--accent)",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  flexShrink: 0,
-                }}>
-                  <f.icon size={22} strokeWidth={1.75} />
-                </div>
-                <div>
-                  <h3 style={{ fontSize: "var(--text-lg)", fontWeight: 650, marginBottom: 6 }}>
-                    {f.title}
-                  </h3>
-                  <p style={{ color: "var(--ink-muted)", lineHeight: "var(--leading-relaxed)", fontSize: "var(--text-sm)" }}>
-                    {f.desc}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ─── Тарифы ───────────────────────────────────────── */}
-      <section style={{ padding: "100px 0" }}>
-        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 24px" }}>
-          <div style={{ textAlign: "center", marginBottom: 64 }}>
-            <p style={{
-              fontSize: "var(--text-sm)", fontWeight: 600, color: "var(--accent)",
-              textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 12,
-            }}>
-              Тарифы
-            </p>
-            <h2 style={{ fontSize: "var(--text-3xl)", fontWeight: 700 }}>
-              Подключиться
-            </h2>
-          </div>
-
-          <div style={{
-            display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(340px, 1fr))",
-            gap: 0, border: "1px solid var(--border)", borderRadius: "var(--radius-lg)",
-            overflow: "hidden", maxWidth: 800, margin: "0 auto",
-          }}>
-            {/* Бесплатный */}
-            <div style={{
-              padding: "44px 40px", background: "var(--bg-surface)",
-              borderRight: "1px solid var(--border)",
-            }}>
-              <h3 style={{ fontSize: "var(--text-xl)", fontWeight: 700, marginBottom: 4 }}>
-                Бесплатный
-              </h3>
-              <p style={{ color: "var(--ink-muted)", fontSize: "var(--text-sm)", marginBottom: 24 }}>
-                Для старта
-              </p>
-              <p style={{ fontSize: "3rem", fontWeight: 800, color: "var(--ink-heading)", marginBottom: 28 }}>
-                0&nbsp;₽
-              </p>
-              <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 12 }}>
-                {["1 источник заявок", "50 заявок в день", "Telegram-уведомления", "Базовые фильтры"].map(t => (
-                  <li key={t} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: "var(--text-sm)", color: "var(--ink-body)" }}>
-                    <span style={{ color: "var(--green)", fontWeight: 700 }}>✓</span> {t}
-                  </li>
-                ))}
-                {["AI-анализ", "Генерация откликов"].map(t => (
-                  <li key={t} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: "var(--text-sm)", color: "var(--ink-muted)" }}>
-                    <span style={{ opacity: 0.3 }}>✗</span> {t}
-                  </li>
-                ))}
-              </ul>
-              <Link href="/dashboard" style={{
-                display: "block", textAlign: "center", marginTop: 32,
-                border: "1px solid var(--accent)", color: "var(--accent)",
-                borderRadius: "var(--radius-sm)", padding: "12px 24px",
-                fontWeight: 600, fontSize: "var(--text-sm)",
-              }}>
-                Начать
-              </Link>
-            </div>
-
-            {/* Pro */}
-            <div style={{
-              padding: "44px 40px", background: "var(--accent)", color: "#fff",
-            }}>
-              <h3 style={{ fontSize: "var(--text-xl)", fontWeight: 700, marginBottom: 4, color: "#fff" }}>
-                Pro
-              </h3>
-              <p style={{ opacity: 0.7, fontSize: "var(--text-sm)", marginBottom: 24 }}>
-                Для профессионалов
-              </p>
-              <p style={{ fontSize: "3rem", fontWeight: 800, marginBottom: 28, color: "#fff" }}>
-                2&nbsp;900&nbsp;₽/мес
-              </p>
-              <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 12 }}>
-                {["Все источники заявок", "Без лимита заявок", "AI-анализ каждой заявки", "4 типа откликов", "Аналитика и воронка", "Приоритетная поддержка"].map(t => (
-                  <li key={t} style={{ display: "flex", alignItems: "center", gap: 10, fontSize: "var(--text-sm)", opacity: 0.9 }}>
-                    <span style={{ fontWeight: 700 }}>✓</span> {t}
-                  </li>
-                ))}
-              </ul>
-              <Link href="/dashboard" style={{
-                display: "block", textAlign: "center", marginTop: 32,
-                background: "#fff", color: "var(--accent)",
-                borderRadius: "var(--radius-sm)", padding: "12px 24px",
-                fontWeight: 600, fontSize: "var(--text-sm)",
-              }}>
-                Попробовать
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
-
-<CookieBanner />
-      <LegalFooter />
     </div>
   );
 }
