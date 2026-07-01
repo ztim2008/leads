@@ -95,7 +95,7 @@ export async function sendLeadNotification(
 
   if (lead.reasoning) {
     lines.push("");
-    const preview = escapeHtml(lead.reasoning.slice(0, 150));
+    const preview = escapeHtml(lead.reasoning.slice(0, 300));
     lines.push(`💡 ${preview}${lead.reasoning.length > 150 ? "..." : ""}`);
     lines.push("");
   }

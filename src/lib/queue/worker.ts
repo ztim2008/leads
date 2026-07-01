@@ -687,11 +687,19 @@ function makeWatchCallbacks(sourceId: string, platform: string, login: string, w
   return {
     onLead: async (lead) => {
       try {
+        // Жёсткая проверка дублей: externalId + последние 30 минут
+        const recent = new Date(Date.now() - 30 * 60 * 1000);
         const existing = await db.lead.findFirst({
-          where: { externalId: lead.externalId, sourceId: sourceId }
+          where: {
+            sourceId: sourceId,
+            OR: [
+              { externalId: lead.externalId },
+              { externalId: lead.externalId, createdAt: { gte: recent } },
+            ],
+          }
         });
         if (existing) {
-          console.log(`[worker] 👀 дубль: ${lead.title?.slice(0, 30)}`);
+          console.log(`[worker] 👀 дубль пропущен: ${lead.title?.slice(0, 30)}`);
           return;
         }
 
