@@ -483,14 +483,14 @@ async function processSource(sourceId: string) {
     const existingIds = new Set(allExisting);
 
     const newLeads = leads.filter(l => !existingIds.has(normalizeId(l.externalId)));
-    if (newLeads.length > 0) {
-      console.log(`[worker]    новых: ${newLeads.length}`);
-      totalLeadsCollected += newLeads.length;
+    if (truly.length > 0) {
+      console.log(`[worker]    новых: ${truly.length}`);
+      totalLeadsCollected += truly.length;
       // Сбрасываем счётчик «нет новых заявок» для этого workspace
-      if (newLeads.length > 0) {
+      if (truly.length > 0) {
         authErrorCount.set("no-leads-" + source.workspaceId, 0);
       }
-      await logActivity("fetch_leads", `${source.platform}: ${newLeads.length} новых заявок`, source.workspaceId);
+      await logActivity("fetch_leads", `${source.platform}: ${truly.length} новых заявок`, source.workspaceId);
     }
 
     for (const rawLead of newLeads) {
@@ -704,6 +704,14 @@ function makeWatchCallbacks(sourceId: string, platform: string, login: string, w
         }
 
         const wsId = (await db.source.findUnique({ where: { id: sourceId } }))?.workspaceId || "";
+        
+        // Проверяем ДО вставки — если уже есть, не шлём Telegram повторно
+        const alreadyExists = await db.lead.findUnique({ where: { externalId: lead.externalId! } });
+        if (alreadyExists) {
+          console.log(`[worker] 👀 дубль (уже в БД): ${lead.title?.slice(0, 30)}`);
+          return;
+        }
+
         const newLead = await db.lead.upsert({
           where: { externalId: lead.externalId! },
           create: {
