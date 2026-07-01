@@ -703,9 +703,11 @@ function makeWatchCallbacks(sourceId: string, platform: string, login: string, w
           return;
         }
 
-        const newLead = await db.lead.create({
-          data: {
-            workspaceId: (await db.source.findUnique({ where: { id: sourceId } }))?.workspaceId || "",
+        const wsId = (await db.source.findUnique({ where: { id: sourceId } }))?.workspaceId || "";
+        const newLead = await db.lead.upsert({
+          where: { externalId: lead.externalId! },
+          create: {
+            workspaceId: wsId,
             sourceId,
             externalId: lead.externalId,
             title: lead.title,
@@ -714,6 +716,7 @@ function makeWatchCallbacks(sourceId: string, platform: string, login: string, w
             url: lead.url,
             createdAt: new Date(lead.createdAt),
           },
+          update: {},
         });
 
         totalLeadsCollected++;
