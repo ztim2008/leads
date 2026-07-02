@@ -760,16 +760,6 @@ function makeWatchCallbacks(sourceId: string, platform: string, login: string, w
           }).catch(() => {});
         }
 
-        // Быстрое Telegram без богатых данных (придёт первым)
-        if (workspaceSettings?.telegramChatId && workspaceSettings?.telegramToken) {
-          await sendLeadNotification(workspaceSettings.telegramChatId, {
-            platform, platformColor: "#22c55e", score: 0,
-            title: lead.title || "", budget: lead.budgetMin ? `${lead.budgetMin} ₽` : "бюджет не указан",
-            url: lead.url,
-            reasoning: lead.description?.slice(0, 200) || "⚡ Новая заявка!",
-          }, workspaceSettings.telegramToken);
-        }
-
         await logActivity("watch_lead", `👀 Новая заявка: ${lead.title?.slice(0, 50)}`);
       } catch (err) {
         console.error("[worker] ❌ Ошибка сохранения заявки от ждуна:", err);
