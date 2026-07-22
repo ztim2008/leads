@@ -407,6 +407,7 @@ async function processSource(sourceId: string) {
   if (!source || !source.enabled) { console.log(`[worker] ⏸ источник ${sourceId.slice(0,8)} не найден или выключен`); return; }
 
   const s = source.workspace.settings;
+  const responseTemplate = s?.responseTemplate || "";
   if (s && !s.systemEnabled) { console.log(`[worker] ⏸ systemEnabled=false для ${source.platform} (${(source.config as Record<string, any>)?.login || "?"})`); return; }
 
   // Проверка расписания из БД
@@ -582,6 +583,7 @@ async function processSource(sourceId: string) {
                 clientRating: details.clientRating || 0,
                 city: details.city,
                 deadline: details.deadline,
+                responseText: responseTemplate ? responseTemplate.replace(/{имя}/g, details.author || "уважаемый заказчик").replace(/{задача}/g, rawLead.title || "").replace(/{город}/g, details.city || "").replace(/{бюджет}/g, rawLead.budgetMin ? rawLead.budgetMin + " ₽" : "не указан") : undefined,
                 responsePrice: details.responsePrice,
                 descriptionLength: (details.fullDescription || rawLead.description || "").length,
               }, s.telegramToken);
@@ -754,6 +756,7 @@ function makeWatchCallbacks(sourceId: string, platform: string, login: string, w
                 clientRating: details.clientRating || 0,
                 city: details.city,
                 deadline: details.deadline,
+                responseText: responseTemplate ? responseTemplate.replace(/{имя}/g, details.author || "уважаемый заказчик").replace(/{задача}/g, rawLead.title || "").replace(/{город}/g, details.city || "").replace(/{бюджет}/g, rawLead.budgetMin ? rawLead.budgetMin + " ₽" : "не указан") : undefined,
                 responsePrice: details.responsePrice,
               }, workspaceSettings.telegramToken);
             }
@@ -807,6 +810,7 @@ async function initWatchers() {
       const apiKey = source.workspace.settings?.openrouterKey || "";
       const keywords = source.workspace.settings?.keywords || "";
       const s = source.workspace.settings;
+  const responseTemplate = s?.responseTemplate || "";
 
       console.log(`[worker] 👀 Запуск ждуна для ${config.login || source.platform}`);
       

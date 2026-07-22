@@ -19,6 +19,7 @@ export interface LeadNotification {
   botProbability?: number;
   descriptionLength?: number;
   response?: string;
+  responseText?: string;
 }
 
 const DEFAULT_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
@@ -106,14 +107,20 @@ export async function sendLeadNotification(
   const text = lines.join("\n");
 
   // ═══ Кнопки (две в ряд) ══════════════════════════════════════════
-  const buttons: Array<Array<{ text: string; url: string }>> = [
+  const buttons: Array<Array<{ text: string; url?: string }>> = [
     [
       { text: "🔗 Открыть заказ", url: lead.url },
       { text: "⭐ В избранное", url: lead.url },
     ],
   ];
 
-  if (lead.response) {
+  if (lead.responseText) {
+    buttons.push([{ text: "💬 Отклик (текст готов)", url: lead.url }]);
+    lines.push("");
+    lines.push("💬 <b>Готовый отклик:</b>");
+    lines.push("<code>" + escapeHtml(lead.responseText.slice(0, 500)) + "</code>");
+    lines.push("<i>Скопируйте текст и отправьте на Profi</i>");
+  } else if (lead.response) {
     buttons.push([{ text: "💬 Отклик", url: lead.url }]);
   }
 
