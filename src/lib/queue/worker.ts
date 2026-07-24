@@ -608,6 +608,18 @@ async function processSource(sourceId: string) {
             console.error("[worker] Ошибка обновления после deep scan:", e);
           }
         }).catch(() => {});
+      } else if (s?.telegramChatId && s?.telegramToken && s?.telegramAlerts !== false) {
+        // Kwork / free: Telegram без deep scan
+        sendLeadNotification(s.telegramChatId, {
+          platform: source.platform,
+          platformColor: (source.color as string) || "#22c55e",
+          score: 0,
+          title: rawLead.title,
+          budget: rawLead.budgetMin ? rawLead.budgetMin + " ₽" : (rawLead.budgetMax ? "до " + rawLead.budgetMax + " ₽" : "бюджет не указан"),
+          url: rawLead.url,
+          reasoning: (rawLead.description || "").slice(0, 250),
+          descriptionLength: (rawLead.description || "").length,
+        }, s.telegramToken).catch(() => {});
       }
 
       if (apiKey) {
