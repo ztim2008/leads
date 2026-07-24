@@ -411,10 +411,6 @@ async function processSource(sourceId: string) {
   const responseTemplate = s?.responseTemplate || "";
   if (s && !s.systemEnabled) { console.log(`[worker] ⏸ systemEnabled=false для ${source.platform} (${(source.config as Record<string, any>)?.login || "?"})`); return; }
 
-  // Per-source расписание (из config источника, приоритет над глобальным)
-  const srcWorkStart = config.workHoursStart || s?.workHoursStart;
-  const srcWorkEnd = config.workHoursEnd || s?.workHoursEnd;
-
   // Проверка расписания из БД
   if (s?.workDays && s?.workHoursStart && s?.workHoursEnd) {
     const now = moscowNow();
@@ -439,7 +435,22 @@ async function processSource(sourceId: string) {
   const apiKey = s?.openrouterKey || "";
   const config = (source.config as Record<string, unknown>) || {};
   config.keywords = s?.keywords || "";
-  config.sourceId = source.id;  // изоляция браузеров на каждый источник
+  config.sourceId = source.id;
+
+  // Per-source расписание (config приоритет над глобальными настройками)
+  const srcWorkStart = (config as any).workHoursStart || s?.workHoursStart;
+  const srcWorkEnd = (config as any).workHoursEnd || s?.workHoursEnd;
+  if (srcWorkStart && srcWorkEnd) {
+    const now = moscowNow();
+    const mins = now.getHours() * 60 + now.getMinutes();
+    const [sh, sm] = srcWorkStart.split(":").map(Number);
+    const [eh, em] = srcWorkEnd.split(":").map(Number);
+    if (mins < sh * 60 + sm || mins > eh * 60 + em) {
+      const hint = mins < sh*60+sm ? "начнётся в "+srcWorkStart : "закончился в "+srcWorkEnd;
+      console.log("[worker] ⏸ нерабочее время (" + hint + ") для " + (source.config as any)?.login || "?");
+      return;
+    }
+  }
 
   // Проверка antiDetect режима — дополнительный пропуск для аккаунтов под риском
   const adCfg = (source.config as any)?.antiDetect || {};
@@ -488,7 +499,7 @@ async function processSource(sourceId: string) {
     })).map(l => normalizeId(l.externalId || ''));
     const existingIds = new Set(allExisting);
 
-    const newLeads = leads.filter(l => !existingIds.has(normalizeId(l.externalId)));
+    const truly = leads.filter(l => !existingIds.has(normalizeId(l.externalId)));
     if (truly.length > 0) {
       console.log(`[worker]    новых: ${truly.length}`);
       totalLeadsCollected += truly.length;
@@ -499,7 +510,7 @@ async function processSource(sourceId: string) {
       await logActivity("fetch_leads", `${source.platform}: ${truly.length} новых заявок`, source.workspaceId);
     }
 
-    for (const rawLead of newLeads) {
+    for (const rawLead of truly) {
       const minusWords = (s?.minusKeywords || "").toLowerCase().split(",").map(w => w.trim()).filter(Boolean);
       const text = `${rawLead.title} ${rawLead.description}`.toLowerCase();
       if (minusWords.some(w => text.includes(w))) continue;
