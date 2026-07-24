@@ -41,6 +41,7 @@ export default async function SourcesPage() {
           const color = PLATFORM_COLORS[connector.platform] || "#6366f1";
           const config = (existing?.config as Record<string, unknown>) || {};
           const hasLogin = !!(config.login && config.password);
+          const noLoginNeeded = connector.platform === "kwork";
 
           return (
             <div key={connector.platform} style={{ padding: "24px", background: "var(--bg-surface)", borderBottom: "1px solid var(--border)" }}>
@@ -55,7 +56,7 @@ export default async function SourcesPage() {
                   <p style={{ fontSize: "var(--text-xs)", color: "var(--ink-muted)" }}>
                     {existing
                       ? existing.enabled
-                        ? hasLogin ? "🟢 Подключён и работает" : "🟡 Подключён, но не настроен логин/пароль"
+                        ? (noLoginNeeded || hasLogin) ? "🟢 Подключён и работает" : "🟡 Подключён, но не настроен логин/пароль"
                         : "⏸ Приостановлен"
                       : "Не подключён"}
                   </p>
