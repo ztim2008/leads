@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import ProfiTestButton from "@/components/profi-test-button";
 
 import "@/lib/connectors/profi";
+import "@/lib/connectors/kwork";
 
 const PLATFORM_COLORS: Record<string, string> = {
   profi: "#22c55e",
