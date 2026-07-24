@@ -308,7 +308,72 @@ export function SettingsFormWrapper({
               </div>
             </div>
             <CheckField name="telegramAlerts" label="Присылать новые заявки в Telegram" defaultChecked={s.telegramAlerts} />
-{/* ✍️ Шаблон отклика */}          <Section title="✍️ Шаблон отклика" hint="Текст для авто-отклика. Переменные: {имя}, {задача}, {город}, {бюджет}">            <textarea name="responseTemplate" defaultValue={s.responseTemplate || ""} placeholder="Здравствуйте, {имя}! Готов выполнить {задача}." style={{ width: "100%", minHeight: 100, padding: 12, borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--bg-root)", color: "var(--ink-body)", fontSize: "var(--text-sm)", fontFamily: "var(--font-mono)", resize: "vertical" }} />            {s.responseTemplate && s.responseTemplate.includes("{") && (              <p style={{ fontSize: "var(--text-xs)", color: "var(--green)", marginTop: 6 }}>✅ Шаблон активен. Текст будет уникализирован под каждую заявку.</p>            )}            {!s.responseTemplate && (              <p style={{ fontSize: "var(--text-xs)", color: "var(--ink-muted)", marginTop: 6 }}>💡 Оставьте пустым если не нужен. Текст придет в Telegram — партнёр скопирует и отправит сам.</p>            )}          </Section>
+{/* ✍️ Шаблон отклика */}
+          <Section title="✍️ Шаблон отклика" hint="Текст для авто-отклика. Нажмите кнопку чтобы вставить переменную.">
+            {/* Быстрые кнопки */}
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+              {[
+                { v: "{имя}",   e: "👤", l: "Имя" },
+                { v: "{задача}", e: "📋", l: "Задача" },
+                { v: "{город}", e: "📍", l: "Город" },
+                { v: "{бюджет}", e: "💰", l: "Бюджет" },
+                { v: "{стаж}",  e: "📅", l: "Стаж" },
+                { v: "{отзывы}", e: "⭐", l: "Отзывы" },
+                { v: "{цена_отклика}", e: "🎯", l: "Цена отклика" },
+                { v: "{ссылка}", e: "🔗", l: "Ссылка" },
+              ].map((btn) => (
+                <span key={btn.v} onClick={() => {
+                  const ta = document.querySelector("textarea[name=responseTemplate]") as HTMLTextAreaElement;
+                  if (ta) {
+                    const start = ta.selectionStart;
+                    const end = ta.selectionEnd;
+                    const before = ta.value.substring(0, start);
+                    const after = ta.value.substring(end);
+                    ta.value = before + btn.v + after;
+                    ta.selectionStart = ta.selectionEnd = start + btn.v.length;
+                    ta.focus();
+                    ta.dispatchEvent(new Event("input", { bubbles: true }));
+                  }
+                }} style={{
+                  cursor: "pointer", padding: "5px 10px", borderRadius: 100,
+                  border: "1px solid var(--border)", background: "var(--bg-layer)",
+                  color: "var(--ink-body)", fontSize: "0.75rem", fontWeight: 600,
+                  userSelect: "none", whiteSpace: "nowrap",
+                }} title={btn.l}>{btn.e} {btn.l}</span>
+              ))}
+            </div>
+
+            {/* Текстовое поле */}
+            <textarea name="responseTemplate" defaultValue={s.responseTemplate || ""}
+              placeholder="Здравствуйте, {имя}! Готов выполнить {задача}. Опыт {стаж}."
+              onChange={(e) => {
+                const preview = document.getElementById("resp-preview");
+                if (preview) preview.textContent = (e.target as HTMLTextAreaElement).value;
+              }}
+              style={{ width: "100%", minHeight: 100, padding: 12, borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--bg-root)", color: "var(--ink-body)", fontSize: "var(--text-sm)", fontFamily: "var(--font-mono)", resize: "vertical" }}
+            />
+
+            {/* Живой предпросмотр */}
+            <div id="resp-preview-wrap" style={{ marginTop: 10, padding: 14, borderRadius: "var(--radius-sm)", background: "#1a1a2e", border: "1px solid #2a2a4e", fontSize: "0.8rem", lineHeight: 1.6, color: "#e0e0e0" }}>
+              <div style={{ fontSize: "0.65rem", color: "#666", marginBottom: 6, textTransform: "uppercase" }}>📱 Предпросмотр в Telegram</div>
+              <div id="resp-preview" style={{ whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                {s.responseTemplate || "Напишите шаблон выше..."}
+              </div>
+              <div style={{ fontSize: "0.6rem", color: "#555", marginTop: 8 }}>
+                👤 Ангелина &nbsp;|&nbsp; 📍 Москва &nbsp;|&nbsp; 📅 5 лет &nbsp;|&nbsp; ⭐ 12 отз. &nbsp;|&nbsp; 💰 50 000 ₽ &nbsp;|&nbsp; 🎯 149 ₽
+              </div>
+            </div>
+
+            {s.responseTemplate && s.responseTemplate.includes("{") ? (
+              <p style={{ fontSize: "var(--text-xs)", color: "var(--green)", marginTop: 6 }}>
+                ✅ Шаблон активен. Текст уникализируется под каждую заявку.
+              </p>
+            ) : (
+              <p style={{ fontSize: "var(--text-xs)", color: "var(--ink-muted)", marginTop: 6 }}>
+                💡 Оставьте пустым если не нужен. Текст придет в Telegram — партнёр скопирует и отправит сам.
+              </p>
+            )}
+          </Section>
           </div>
 
           {/* 🤖 OpenRouter */}

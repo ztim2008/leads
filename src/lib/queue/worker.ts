@@ -583,7 +583,7 @@ async function processSource(sourceId: string) {
                 clientRating: details.clientRating || 0,
                 city: details.city,
                 deadline: details.deadline,
-                responseText: responseTemplate ? responseTemplate.replace(/{имя}/g, details.author || "уважаемый заказчик").replace(/{задача}/g, rawLead.title || "").replace(/{город}/g, details.city || "").replace(/{бюджет}/g, rawLead.budgetMin ? rawLead.budgetMin + " ₽" : "не указан") : undefined,
+                responseText: responseTemplate ? responseTemplate.replace(/{имя}/g, details.author || "уважаемый заказчик").replace(/{задача}/g, rawLead.title || "").replace(/{город}/g, details.city || "").replace(/{бюджет}/g, rawLead.budgetMin ? rawLead.budgetMin + " ₽" : "не указан").replace(/{стаж}/g, (details.monthsOnPlatform ? Math.round(details.monthsOnPlatform/12) + " лет" : "")).replace(/{отзывы}/g, (details.reviewCount ? details.reviewCount + " отз." : "")).replace(/{цена_отклика}/g, (details.responsePrice ? details.responsePrice + " ₽" : "")).replace(/{ссылка}/g, rawLead.url || "") : undefined,
                 responsePrice: details.responsePrice,
                 descriptionLength: (details.fullDescription || rawLead.description || "").length,
               }, s.telegramToken);
@@ -756,7 +756,7 @@ function makeWatchCallbacks(sourceId: string, platform: string, login: string, w
                 clientRating: details.clientRating || 0,
                 city: details.city,
                 deadline: details.deadline,
-                responseText: responseTemplate ? responseTemplate.replace(/{имя}/g, details.author || "уважаемый заказчик").replace(/{задача}/g, rawLead.title || "").replace(/{город}/g, details.city || "").replace(/{бюджет}/g, rawLead.budgetMin ? rawLead.budgetMin + " ₽" : "не указан") : undefined,
+                responseText: responseTemplate ? responseTemplate.replace(/{имя}/g, details.author || "уважаемый заказчик").replace(/{задача}/g, rawLead.title || "").replace(/{город}/g, details.city || "").replace(/{бюджет}/g, rawLead.budgetMin ? rawLead.budgetMin + " ₽" : "не указан").replace(/{стаж}/g, (details.monthsOnPlatform ? Math.round(details.monthsOnPlatform/12) + " лет" : "")).replace(/{отзывы}/g, (details.reviewCount ? details.reviewCount + " отз." : "")).replace(/{цена_отклика}/g, (details.responsePrice ? details.responsePrice + " ₽" : "")).replace(/{ссылка}/g, rawLead.url || "") : undefined,
                 responsePrice: details.responsePrice,
               }, workspaceSettings.telegramToken);
             }
