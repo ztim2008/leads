@@ -411,6 +411,10 @@ async function processSource(sourceId: string) {
   const responseTemplate = s?.responseTemplate || "";
   if (s && !s.systemEnabled) { console.log(`[worker] ⏸ systemEnabled=false для ${source.platform} (${(source.config as Record<string, any>)?.login || "?"})`); return; }
 
+  // Per-source расписание (из config источника, приоритет над глобальным)
+  const srcWorkStart = config.workHoursStart || s?.workHoursStart;
+  const srcWorkEnd = config.workHoursEnd || s?.workHoursEnd;
+
   // Проверка расписания из БД
   if (s?.workDays && s?.workHoursStart && s?.workHoursEnd) {
     const now = moscowNow();
