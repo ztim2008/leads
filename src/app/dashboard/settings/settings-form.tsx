@@ -19,6 +19,7 @@ interface SettingsData {
   telegramToken: string;
   telegramChatId: string;
   telegramAlerts: boolean;
+  responseTemplate: string;
   openrouterKey: string;
   yandexMetrika: string;
   yandexWebmaster: string;
@@ -139,6 +140,7 @@ export function SettingsFormWrapper({
         workHoursEnd: fd.get("workHoursEnd") || "21:00",
         telegramToken: fd.get("telegramToken") || "",
         telegramChatId: fd.get("telegramChatId") || "",
+        responseTemplate: (fd.get("responseTemplate") as string) || "",
         telegramAlerts: fd.get("telegramAlerts") === "on",
         openrouterKey: fd.get("openrouterKey") || "",
       };
@@ -306,6 +308,7 @@ export function SettingsFormWrapper({
               </div>
             </div>
             <CheckField name="telegramAlerts" label="Присылать новые заявки в Telegram" defaultChecked={s.telegramAlerts} />
+{/* u270duFE0F u0428u0430u0431u043Bu043Eu043D u043Eu0442u043Au043Bu0438u043Au0430 */}          <Section title="u270duFE0F u0428u0430u0431u043Bu043Eu043D u043Eu0442u043Au043Bu0438u043Au0430" hint="u0422u0435u043Au0441u0442 u0434u043Bu044F u0430u0432u0442u043E-u043Eu0442u043Au043Bu0438u043Au0430. u041Fu0435u0440u0435u043Cu0435u043Du043Du044Bu0435: {u0438u043Cu044F}, {u0437u0430u0434u0430u0447u0430}, {u0433u043Eu0440u043Eu0434}, {u0431u044Eu0434u0436u0435u0442}">            <textarea name="responseTemplate" defaultValue={s.responseTemplate || ""} placeholder="u0417u0434u0440u0430u0432u0441u0442u0432u0443u0439u0442u0435, {u0438u043Cu044F}! u0413u043Eu0442u043Eu0432 u0432u044Bu043Fu043Eu043Bu043Du0438u0442u044C {u0437u0430u0434u0430u0447u0430}." style={{ width: "100%", minHeight: 100, padding: 12, borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--bg-root)", color: "var(--ink-body)", fontSize: "var(--text-sm)", fontFamily: "var(--font-mono)", resize: "vertical" }} />            {s.responseTemplate && s.responseTemplate.includes("{") && (              <p style={{ fontSize: "var(--text-xs)", color: "var(--green)", marginTop: 6 }}>u2705 u0428u0430u0431u043Bu043Eu043D u0430u043Au0442u0438u0432u0435u043D. u0422u0435u043Au0441u0442 u0431u0443u0434u0435u0442 u0443u043Du0438u043Au0430u043Bu0438u0437u0438u0440u043Eu0432u0430u043D u043Fu043Eu0434 u043Au0430u0436u0434u0443u044E u0437u0430u044Fu0432u043Au0443.</p>            )}            {!s.responseTemplate && (              <p style={{ fontSize: "var(--text-xs)", color: "var(--ink-muted)", marginTop: 6 }}>uD83DuDCA1 u041Eu0441u0442u0430u0432u044Cu0442u0435 u043Fu0443u0441u0442u044Bu043C u0435u0441u043Bu0438 u043Du0435 u043Du0443u0436u0435u043D. u0422u0435u043Au0441u0442 u043Fu0440u0438u0434u0451u0442 u0432 Telegram u2014 u043Fu0430u0440u0442u043Du0451u0440 u0441u043Au043Eu043Fu0438u0440u0443u0435u0442 u0438 u043Eu0442u043Fu0440u0430u0432u0438u0442 u0441u0430u043C.</p>            )}          </Section>
           </div>
 
           {/* 🤖 OpenRouter */}

@@ -88,6 +88,7 @@ export default async function SettingsPage() {
           workHoursEnd: s.workHoursEnd || "21:00",
           telegramToken: s.telegramToken || "",
           telegramChatId: s.telegramChatId || "",
+          responseTemplate: s.responseTemplate || "",
           telegramAlerts: s.telegramAlerts !== false,
           openrouterKey: s.openrouterKey || "",
           yandexMetrika: s.yandexMetrika || "",
