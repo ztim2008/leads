@@ -16,6 +16,7 @@ import { sendLeadNotification } from "@/lib/telegram/notifications";
 import type { WatchCallbacks } from "@/lib/connectors/profi";
 
 import "@/lib/connectors/profi";
+import "@/lib/connectors/kwork";
 
 // ─── Состояние ────────────────────────────────────────────────────────────
 
