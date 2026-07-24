@@ -517,7 +517,7 @@ async function processSource(sourceId: string) {
     for (const rawLead of truly) {
       const minusWords = (s?.minusKeywords || "").toLowerCase().split(",").map(w => w.trim()).filter(Boolean);
       const text = `${rawLead.title} ${rawLead.description}`.toLowerCase();
-      if (minusWords.some(w => text.includes(w))) continue;
+      if (source.platform !== "kwork" && minusWords.some(w => text.includes(w))) continue;
 
       // Фильтр «только с отзывами» — применяется ПОСЛЕ глубокого сканирования
       // для бесплатных пользователей пропускаем (не можем проверить)
