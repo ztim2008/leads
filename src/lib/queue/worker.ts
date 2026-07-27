@@ -539,6 +539,7 @@ async function processSource(sourceId: string) {
           description: rawLead.description, budgetMin: rawLead.budgetMin,
           budgetMax: rawLead.budgetMax, url: rawLead.url,
           city: rawLead.city, author: rawLead.author, status: "new",
+        update: {},
         },
       });
 
