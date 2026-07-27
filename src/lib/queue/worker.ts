@@ -539,8 +539,8 @@ async function processSource(sourceId: string) {
           description: rawLead.description, budgetMin: rawLead.budgetMin,
           budgetMax: rawLead.budgetMax, url: rawLead.url,
           city: rawLead.city, author: rawLead.author, status: "new",
-        update: {},
         },
+        update: {},
       });
 
       // Глубокий просмотр для Pro (и фильтрация) — сначала deep scan, потом уведомление
@@ -744,7 +744,10 @@ function makeWatchCallbacks(sourceId: string, platform: string, login: string, w
           console.log("[worker] dup: " + (lead.title || "").slice(0,30));
           return;
         }
-        const newLead = await saveLeadAndNotify(lead, { id: sourceId, workspaceId: (await db.source.findUnique({ where: { id: sourceId } }))?.workspaceId || "", platform, color: "#22c55e" }, workspaceSettings || {}, "");
+        const wsId = (await db.source.findUnique({ where: { id: sourceId } }))?.workspaceId || "";
+        const newLead = await db.lead.upsert({ where: { externalId: lead.externalId! }, create: { workspaceId: wsId, sourceId, externalId: lead.externalId, title: lead.title, description: lead.description, budgetMin: lead.budgetMin, url: lead.url, createdAt: new Date(lead.createdAt) }, update: {} });
+        totalLeadsCollected++;
+        lastKnownWatchLeadTime = Date.now();
 
         // Deep scan в фоне для rich-данных
         if (lead.url && lead.url.includes("?o=")) {
