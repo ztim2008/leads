@@ -78,6 +78,12 @@ if [ -f "$PROJECT_DIR/.worker-status.json" ]; then
     NOW_EPOCH=$(date +%s)
     if [ -n "$LAST_EPOCH" ]; then
       GAP=$(( (NOW_EPOCH - LAST_EPOCH) / 60 ))
+      # Не лечим если ночной стоп (00:00-07:00 МСК)
+      HOUR_MSK=99
+      if [ "" -ge 0 ] && [ "" -lt 7 ]; then
+        log "🌙 Ночной стоп — не лечим"
+      elif [ "" -gt 15 ]; then
+      fi
       if [ "$GAP" -gt 15 ]; then
         log "🟡 Ждун: lastCheckAt ${GAP} мин назад — лечу (рестарт воркера)..."
         pm2 restart leads-worker 2>/dev/null

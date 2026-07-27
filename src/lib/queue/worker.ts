@@ -764,6 +764,16 @@ function makeWatchCallbacks(sourceId: string, platform: string, login: string, w
         totalLeadsCollected++;
         lastKnownWatchLeadTime = Date.now();
         console.log(`[worker] 👀 Новая заявка от ждуна: ${lead.title?.slice(0, 40)}`);
+n        // Telegram сразу (без ожидания deep scan)
+        if (workspaceSettings?.telegramChatId && workspaceSettings?.telegramToken) {
+          sendLeadNotification(workspaceSettings.telegramChatId, {
+            platform, platformColor: "#22c55e", score: 0,
+            title: lead.title || "", budget: lead.budgetMin ? String(lead.budgetMin) + " ₽" : "бюджет не указан",
+            url: lead.url,
+            reasoning: (lead.description || "").slice(0, 200),
+            descriptionLength: (lead.description || "").length,
+          }, workspaceSettings.telegramToken).catch(() => {});
+        }
 
         // Deep scan в фоне для rich-данных
         if (lead.url && lead.url.includes("?o=")) {
