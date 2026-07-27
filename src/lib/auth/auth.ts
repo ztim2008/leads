@@ -38,7 +38,6 @@ export const authOptions: NextAuthOptions = {
         sameSite: "lax",
         path: "/",
         secure: true,
-        domain: ".konversus.ru",
       },
     },
   },
