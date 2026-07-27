@@ -57,7 +57,7 @@ export default function AuthPage() {
 
     const signRes = await signIn("credentials", { email, password, redirect: false });
     if (signRes?.error) setError("Аккаунт создан, но не удалось войти");
-    else setTimeout(() => { window.location.href = "/dashboard"; }, 500);
+    else window.location.href="/dashboard";
     setLoading(false);
   }
 
