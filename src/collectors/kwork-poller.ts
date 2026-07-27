@@ -35,7 +35,7 @@ async function poll() {
       const extId = lead.externalId;
       const exists = extId ? await db.lead.findUnique({ where: { externalId: extId } }) : null;
       if (exists) continue;
-      await saveAndNotify(lead, { id: src.id, workspaceId: src.workspaceId, platform: "kwork", color: src.color || "#f97316" }, s);
+      await saveAndNotify(lead, { id: src.id, workspaceId: src.workspaceId, platform: "kwork", color: src.color || "#f97316" }, s, "");
       newLeads++;
       totalLeads++;
       await new Promise(r => setTimeout(r, 300));

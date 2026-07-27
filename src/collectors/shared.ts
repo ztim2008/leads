@@ -5,7 +5,7 @@ import { join } from "path";
 
 const STATUS_FILE = join(process.cwd(), ".collector-status.json");
 
-export async function saveAndNotify(lead: any, source: any, s: any) {
+export async function saveAndNotify(lead: any, source: any, s: any, responseText?: string) {
   const extId = lead.externalId || source.platform + "-" + Date.now();
   const saved = await db.lead.upsert({
     where: { externalId: extId },
@@ -23,6 +23,7 @@ export async function saveAndNotify(lead: any, source: any, s: any) {
       title: lead.title || "", budget: lead.budgetMin ? lead.budgetMin + " RUB" : "no budget",
       url: lead.url || "", reasoning: (lead.description || "").slice(0, 250),
       descriptionLength: (lead.description || "").length,
+      responseText: responseText || undefined,
     }, s.telegramToken).catch(() => {});
   }
   return saved;

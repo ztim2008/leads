@@ -16,6 +16,7 @@ async function main() {
     const cfg = src.config as any || {};
     const login = cfg.login || "?";
     const s = src.workspace.settings;
+    const respTemplate = s?.responseTemplate || "";
 
     console.log("[profi-watcher] Starting watcher for " + login);
 
@@ -24,7 +25,8 @@ async function main() {
         const extId = lead.externalId;
         const exists = extId ? await db.lead.findUnique({ where: { externalId: extId } }) : null;
         if (exists) return;
-        await saveAndNotify(lead, { id: src.id, workspaceId: src.workspaceId, platform: "profi", color: src.color || "#22c55e" }, s);
+        const respText = respTemplate ? respTemplate.replace(/{имя}/g, lead.author || "").replace(/{задача}/g, lead.title || "").replace(/{город}/g, lead.city || "").replace(/{бюджет}/g, lead.budgetMin ? lead.budgetMin + " ₽" : "") : "";
+        await saveAndNotify(lead, { id: src.id, workspaceId: src.workspaceId, platform: "profi", color: src.color || "#22c55e" }, s, respText);
         totalLeads++;
         saveStatus({ profi: { running: true, totalLeads, lastCheck: new Date().toISOString() } });
       },
