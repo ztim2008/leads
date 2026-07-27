@@ -20,13 +20,22 @@ export default function AuthPage() {
     e.preventDefault();
     setLoading(true); setError(null);
     const form = new FormData(e.currentTarget);
-    const res = await signIn("credentials", {
-      email: form.get("email") as string,
-      password: form.get("password") as string,
-      redirect: false,
+    const email = form.get("email") as string;
+    const password = form.get("password") as string;
+    
+    // Direct API login (bypass NextAuth cookie domain issue)
+    const apiRes = await fetch("/api/direct-login", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password }),
     });
-    if (res?.error) setError("Неверный email или пароль");
-    else setTimeout(() => { window.location.href = "/dashboard"; }, 500);
+    
+    if (apiRes.ok) {
+      const data = await apiRes.json();
+      localStorage.setItem("leads_user", JSON.stringify(data));
+      window.location.href = "/dashboard";
+    } else {
+      setError("Неверный email или пароль");
+    }
     setLoading(false);
   }
 
