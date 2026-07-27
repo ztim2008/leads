@@ -26,7 +26,7 @@ export default function AuthPage() {
       redirect: false,
     });
     if (res?.error) setError("Неверный email или пароль");
-    else window.location.href = "/dashboard";
+    else setTimeout(() => { window.location.href = "/dashboard"; }, 500);
     setLoading(false);
   }
 
@@ -48,7 +48,7 @@ export default function AuthPage() {
 
     const signRes = await signIn("credentials", { email, password, redirect: false });
     if (signRes?.error) setError("Аккаунт создан, но не удалось войти");
-    else window.location.href = "/dashboard";
+    else setTimeout(() => { window.location.href = "/dashboard"; }, 500);
     setLoading(false);
   }
 
