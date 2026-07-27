@@ -530,8 +530,9 @@ async function processSource(sourceId: string) {
         if (s && !s.showNoBudget) continue;
       }
 
-      const lead = await db.lead.create({
-        data: {
+      const lead = await db.lead.upsert({
+        where: { externalId: rawLead.externalId! },
+        create: {
           workspaceId: source.workspaceId, sourceId: source.id,
           externalId: rawLead.externalId,
           title: rawLead.title,
