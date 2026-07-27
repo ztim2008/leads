@@ -59,7 +59,7 @@ WORKER_PM_STATUS=$(pm2 jlist 2>/dev/null | python3 -c "
 import sys, json
 procs = json.load(sys.stdin)
 for p in procs:
-    if p.get('name') == 'leads-worker':
+    if p.get('name') == 'leads-profi':
         s = p.get('pm2_env',{}).get('status','unknown')
         r = p.get('pm2_env',{}).get('restart_time',0)
         u = p.get('pm2_env',{}).get('pm_uptime',0)

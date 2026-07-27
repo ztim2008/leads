@@ -39,17 +39,17 @@ fi
 WORKER_STATUS=$(pm2 jlist 2>/dev/null | python3 -c "
 import sys,json
 for p in json.load(sys.stdin):
-    if p.get('name')=='leads-worker': print(p.get('pm2_env',{}).get('status','?'))
+    if p.get('name')=='leads-profi': print(p.get('pm2_env',{}).get('status','?'))
 " 2>/dev/null)
 
 if [ "$WORKER_STATUS" != "online" ]; then
   log "🔴 Worker не online (${WORKER_STATUS}) — лечу..."
-  pm2 restart leads-worker 2>/dev/null
+  pm2 restart leads-profi 2>/dev/null
   sleep 8
   WORKER_STATUS2=$(pm2 jlist 2>/dev/null | python3 -c "
 import sys,json
 for p in json.load(sys.stdin):
-    if p.get('name')=='leads-worker': print(p.get('pm2_env',{}).get('status','?'))
+    if p.get('name')=='leads-profi': print(p.get('pm2_env',{}).get('status','?'))
 " 2>/dev/null)
   if [ "$WORKER_STATUS2" = "online" ]; then
     HEALED="${HEALED}✅ Worker: перезапущен\n"
@@ -70,7 +70,7 @@ if [ -f "$PROJECT_DIR/.worker-status.json" ]; then
 
   if [ -z "$RUNNING" ]; then
     log "🔴 Worker stopped (running:false) — лечу..."
-    pm2 restart leads-worker 2>/dev/null
+    pm2 restart leads-profi 2>/dev/null
     HEALED="${HEALED}✅ Worker: перезапущен (был остановлен)\n"
     RESTARTED=1
   elif [ "$MODE" = "watch" ] && [ -n "$LAST_CHECK" ]; then
@@ -86,7 +86,7 @@ if [ -f "$PROJECT_DIR/.worker-status.json" ]; then
       fi
       if [ "$GAP" -gt 15 ]; then
         log "🟡 Ждун: lastCheckAt ${GAP} мин назад — лечу (рестарт воркера)..."
-        pm2 restart leads-worker 2>/dev/null
+        pm2 restart leads-profi 2>/dev/null
         HEALED="${HEALED}✅ Ждун: перезапущен (lastCheck ${GAP} мин)\n"
         RESTARTED=1
       else
@@ -136,7 +136,7 @@ const p=new PrismaClient();
   await p.\$disconnect();
 })();
 " 2>/dev/null
-  pm2 restart leads-worker 2>/dev/null
+  pm2 restart leads-profi 2>/dev/null
   HEALED="${HEALED}✅ Источники: сброшен статус error → active\n"
   RESTARTED=1
 else

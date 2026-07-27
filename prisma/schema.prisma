@@ -245,3 +245,15 @@ model AppConfig {
 
   @@map("app_config")
 }
+
+model CrashLog {
+  id        String   @id @default(uuid())
+  service   String
+  event     String
+  message   String?
+  metadata  Json?
+  createdAt DateTime @default(now()) @map(created_at)
+
+  @@index([service, createdAt])
+  @@map(crash_log)
+}
