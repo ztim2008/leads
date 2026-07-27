@@ -1,4 +1,4 @@
-// Админ-панель — 🩺 Мониторинг + 👥 Пользователи
+import CollectorStatus from "@/components/admin/collector-status";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth/auth";
 import Link from "next/link";
@@ -6,6 +6,7 @@ import { Shield, Users, CreditCard, Activity, UserPlus, Banknote } from "lucide-
 import AddPartnerButton from "@/components/admin/add-partner-button";
 import ClientLoginButton from "@/components/admin/login-as-button";
 import HealthCheckWidget from "@/components/admin/health-check-widget";
+      <CollectorStatus />
 import PartnersList from "@/components/admin/partners-list";
 
 export default async function AdminPage() {
@@ -51,6 +52,7 @@ export default async function AdminPage() {
 
       {/* Проверка системы */}
       <HealthCheckWidget />
+      <CollectorStatus />
 
       {/* Быстрые кнопки */}
       <div style={{ display: "flex", gap: 12, marginBottom: 28, flexWrap: "wrap" }}>

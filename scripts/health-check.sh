@@ -83,13 +83,13 @@ else
   PROBLEM_LINES="${PROBLEM_LINES}🔴 Воркер: НЕ ЗАПУЩЕН\n"
 fi
 
-# 3. Статус воркера из .worker-status.json
-if [ -f "$PROJECT_DIR/.worker-status.json" ]; then
-  WORKER_RUNNING=$(grep -o '"running":true' "$PROJECT_DIR/.worker-status.json" | head -1)
-  TOTAL_ERRORS=$(grep -o '"totalErrors":[0-9]*' "$PROJECT_DIR/.worker-status.json" | head -1 | cut -d: -f2)
-  TOTAL_LEADS=$(grep -o '"totalLeadsCollected":[0-9]*' "$PROJECT_DIR/.worker-status.json" | head -1 | cut -d: -f2)
-  STATUS_REASON=$(grep -o '"statusReason":"[^"]*"' "$PROJECT_DIR/.worker-status.json" | head -1 | cut -d'"' -f4)
-  LAST_CHECK=$(grep -o '"lastCheckAt":"[^"]*"' "$PROJECT_DIR/.worker-status.json" | head -1 | cut -d'"' -f4)
+# 3. Статус воркера из .collector-status.json
+if [ -f "$PROJECT_DIR/.collector-status.json" ]; then
+  WORKER_RUNNING=$(grep -o '"running":true' "$PROJECT_DIR/.collector-status.json" | head -1)
+  TOTAL_ERRORS=$(grep -o '"totalErrors":[0-9]*' "$PROJECT_DIR/.collector-status.json" | head -1 | cut -d: -f2)
+  TOTAL_LEADS=$(grep -o '"totalLeadsCollected":[0-9]*' "$PROJECT_DIR/.collector-status.json" | head -1 | cut -d: -f2)
+  STATUS_REASON=$(grep -o '"statusReason":"[^"]*"' "$PROJECT_DIR/.collector-status.json" | head -1 | cut -d'"' -f4)
+  LAST_CHECK=$(grep -o '"lastCheckAt":"[^"]*"' "$PROJECT_DIR/.collector-status.json" | head -1 | cut -d'"' -f4)
 
   if [ -z "$WORKER_RUNNING" ]; then
     ISSUE_COUNT=$((ISSUE_COUNT+1))
@@ -199,8 +199,8 @@ ${PROBLEM_LINES}"
 ${OK_LINES}"
   fi
 
-  WORKER_MODE=$(grep -o '"mode":"[^"]*"' "$PROJECT_DIR/.worker-status.json" 2>/dev/null | head -1 | cut -d'"' -f4)
-WORKER_REASON=$(grep -o '"statusReason":"[^"]*"' "$PROJECT_DIR/.worker-status.json" 2>/dev/null | head -1 | cut -d'"' -f4)
+  WORKER_MODE=$(grep -o '"mode":"[^"]*"' "$PROJECT_DIR/.collector-status.json" 2>/dev/null | head -1 | cut -d'"' -f4)
+WORKER_REASON=$(grep -o '"statusReason":"[^"]*"' "$PROJECT_DIR/.collector-status.json" 2>/dev/null | head -1 | cut -d'"' -f4)
 if [ "$WORKER_MODE" = "watch" ]; then
   MSG="${MSG}
 👀 Режим: ждун · ${WORKER_REASON:-слежу за заказами}"
