@@ -738,43 +738,12 @@ function makeWatchCallbacks(sourceId: string, platform: string, login: string, w
           return;
         }
 
-        const wsId = (await db.source.findUnique({ where: { id: sourceId } }))?.workspaceId || "";
-        
-        // Проверяем ДО вставки — если уже есть, не шлём Telegram повторно
         const alreadyExists = await db.lead.findUnique({ where: { externalId: lead.externalId! } });
         if (alreadyExists) {
-          console.log(`[worker] 👀 дубль (уже в БД): ${lead.title?.slice(0, 30)}`);
+          console.log("[worker] dup: " + (lead.title || "").slice(0,30));
           return;
         }
-
-        const newLead = await db.lead.upsert({
-          where: { externalId: lead.externalId! },
-          create: {
-            workspaceId: wsId,
-            sourceId,
-            externalId: lead.externalId,
-            title: lead.title,
-            description: lead.description,
-            budgetMin: lead.budgetMin,
-            url: lead.url,
-            createdAt: new Date(lead.createdAt),
-          },
-          update: {},
-        });
-
-        totalLeadsCollected++;
-        lastKnownWatchLeadTime = Date.now();
-        console.log(`[worker] 👀 Новая заявка от ждуна: ${lead.title?.slice(0, 40)}`);
-n        // Telegram сразу (без ожидания deep scan)
-        if (workspaceSettings?.telegramChatId && workspaceSettings?.telegramToken) {
-          sendLeadNotification(workspaceSettings.telegramChatId, {
-            platform, platformColor: "#22c55e", score: 0,
-            title: lead.title || "", budget: lead.budgetMin ? String(lead.budgetMin) + " ₽" : "бюджет не указан",
-            url: lead.url,
-            reasoning: (lead.description || "").slice(0, 200),
-            descriptionLength: (lead.description || "").length,
-          }, workspaceSettings.telegramToken).catch(() => {});
-        }
+        const newLead = await saveLeadAndNotify(lead, { id: sourceId, workspaceId: (await db.source.findUnique({ where: { id: sourceId } }))?.workspaceId || "", platform, color: "#22c55e" }, workspaceSettings || {}, "");
 
         // Deep scan в фоне для rich-данных
         if (lead.url && lead.url.includes("?o=")) {
