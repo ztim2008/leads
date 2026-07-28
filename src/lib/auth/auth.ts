@@ -20,13 +20,12 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Пароль", type: "password" },
       },
       async authorize(credentials) {
-    console.log(">>> AUTH email:", credentials?.email, "hash:", (await db.user.findUnique({where:{email:credentials?.email||""}}))?.passwordHash?.slice(0,10));
         if (!credentials?.email || !credentials?.password) return null;
         const user = await db.user.findUnique({ where: { email: credentials.email } });
         if (!user?.passwordHash) return null;
         const isValid = await compare(credentials.password, user.passwordHash);
         if (!isValid) return null;
-        return { id: user.id, email: user.email, name: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email, image: user.avatar };
+        return { id: user.id, email: user.email, name: [user.firstName, user.lastName].filter(Boolean).join(" ") || user.email };
       },
     }),
   ],
@@ -34,12 +33,7 @@ export const authOptions: NextAuthOptions = {
   cookies: {
     sessionToken: {
       name: "next-auth.session-token",
-      options: {
-        httpOnly: true,
-        sameSite: "lax",
-        path: "/",
-        secure: true,
-      },
+      options: { httpOnly: true, sameSite: "lax", path: "/", secure: true },
     },
   },
   pages: { signIn: "/auth", error: "/auth" },
@@ -48,29 +42,19 @@ export const authOptions: NextAuthOptions = {
       if (account?.provider === "yandex" && user.email) {
         try {
           let dbUser = await db.user.findUnique({ where: { email: user.email } });
-          if (!dbUser) {
-            dbUser = await db.user.create({ data: { email: user.email, firstName: user.name || "", passwordHash: "" } });
-          }
-          // Переопределяем user.id на UUID из БД
+          if (!dbUser) dbUser = await db.user.create({ data: { email: user.email, firstName: user.name || "", passwordHash: "" } });
           user.id = dbUser.id;
-          // Проверяем workspace
           const ws = await db.workspace.findFirst({ where: { userId: dbUser.id } });
           if (!ws) {
-            const newWs = await db.workspace.create({ data: { userId: dbUser.id, name: "Моё пространство", slug: `ws-${dbUser.id.slice(0, 8)}` } });
+            const newWs = await db.workspace.create({ data: { userId: dbUser.id, name: "Моё пространство", slug: "ws-" + dbUser.id.slice(0, 8) } });
             await db.settings.create({ data: { workspaceId: newWs.id } });
           }
-        } catch (e) {
-          console.error("[auth] signIn error:", e);
-        }
+        } catch (e) { console.error("[auth] signIn error:", e); }
       }
       return true;
     },
     async jwt({ token, user }) {
-      if (user) {
-        token.id = user.id;
-        const dbUser = await db.user.findUnique({ where: { email: user.email! } });
-        if (dbUser) token.role = dbUser.role;
-      }
+      if (user) { token.id = user.id; const dbUser = await db.user.findUnique({ where: { email: user.email! } }); if (dbUser) token.role = dbUser.role; }
       return token;
     },
     async session({ session, token }) {

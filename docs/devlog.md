@@ -328,3 +328,12 @@
 - [ ] CrashLog дашборд для админа
 - [ ] Умный доктор с эскалацией
 - [ ] Фильтр по платформам на /dashboard/leads
+
+### 🔑 Вход по email+паролю
+
+- Настя: kapibara231@bk.ru / nastya2025
+- API direct-login отдаёт токен в теле ответа
+- Клиент ставит leads_token куку
+- Dashboard проверяет NextAuth И leads_token
+- Яндекс кнопка убрана
+

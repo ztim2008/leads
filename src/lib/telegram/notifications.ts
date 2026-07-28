@@ -77,7 +77,7 @@ export async function sendLeadNotification(
   // ═══ Собираем карточку ═══════════════════════════════════════════
 
   const lines: string[] = [
-    `${header}${scoreLine}`,
+    `${lead.platform === "profi" ? "══ PROFI.RU ══" : "══ KWORK.RU ══"}    ${scoreLine}`,
     "",
     `<b>${escapeHtml(lead.title)}</b>`,
     "",

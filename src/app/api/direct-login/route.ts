@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     .setExpirationTime("24h")
     .sign(SECRET);
 
-  const resp = NextResponse.json({ ok: true, email: user.email });
+  const resp = NextResponse.json({ ok: true, email: user.email, token });
   resp.cookies.set("leads_token", token, {
     httpOnly: true, secure: true, sameSite: "lax", path: "/", maxAge: 86400,
   });
