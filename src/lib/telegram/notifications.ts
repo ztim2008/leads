@@ -40,7 +40,7 @@ export async function sendLeadNotification(
   else if (score >= 40) header = `💡 <b>Заявка</b> · ${lead.platform}`;
   else header = `📌 <b>Заявка</b> · ${lead.platform}`;
 
-  const scoreLine = score > 0 ? `  <b>${score}/100</b>` : "";
+  const scoreLine = score > 0 ? `  <b>${score}/100</b> ━━━` : "";
 
   // Rich-мета
   const meta: string[] = [];
@@ -61,7 +61,7 @@ export async function sendLeadNotification(
   if (lead.botProbability !== undefined && lead.botProbability !== null) {
     const realness = 100 - lead.botProbability;
     const emoji = realness >= 90 ? "🟢" : realness >= 70 ? "🟡" : "🔴";
-    realnessLine = `${emoji} Реальность: <b>${realness}%</b>`;
+    realnessLine = `${emoji} Реальность: <b>${realness}%</b> ━━━`;
   }
 
   let detailLine = "";
@@ -71,7 +71,7 @@ export async function sendLeadNotification(
 
   let respLine = "";
   if (lead.responsePrice && lead.responsePrice > 0) {
-    respLine = `🎯 <b>Отклик: ${lead.responsePrice} ₽</b>`;
+    respLine = `━━━ 🎯 ЦЕНА ОТКЛИКА: <b> ${lead.responsePrice} ₽</b> ━━━`;
   }
 
   // ═══ Собираем карточку ═══════════════════════════════════════════
@@ -79,10 +79,10 @@ export async function sendLeadNotification(
   const lines: string[] = [
     `${lead.platform === "profi" ? "══ PROFI.RU ══" : "══ KWORK.RU ══"}    ${scoreLine}`,
     "",
-    `<b>${escapeHtml(lead.title)}</b>`,
+    `<b>${escapeHtml(lead.title)}</b> ━━━`,
     "",
     `━━━ 💰 БЮДЖЕТ ━━━`,
-    `<b>${escapeHtml(lead.budget)}</b>`,
+    `<b>${escapeHtml(lead.budget)}</b> ━━━`,
   ];
 
   if (respLine) lines.push(respLine);

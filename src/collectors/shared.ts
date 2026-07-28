@@ -24,6 +24,7 @@ export async function saveAndNotify(lead: any, source: any, s: any, responseText
       url: lead.url || "", reasoning: (lead.description || "").slice(0, 250),
       descriptionLength: (lead.description || "").length,
       responseText: responseText || undefined,
+      responsePrice: lead.responsePrice || 0,
     }, s.telegramToken).catch(() => {});
   }
   return saved;
