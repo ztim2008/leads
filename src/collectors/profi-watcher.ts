@@ -20,7 +20,7 @@ async function main() {
 
     console.log("[profi-watcher] Starting watcher for " + login);
 
-    startWatching(src.id, cfg, s?.keywords || "", {
+    startWatching(src.id, cfg, cfg.keywords || s?.keywords || "", {
       onLead: async (lead: any) => {
         const extId = lead.externalId;
         const exists = extId ? await db.lead.findUnique({ where: { externalId: extId } }) : null;
