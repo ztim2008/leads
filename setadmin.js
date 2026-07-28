@@ -1,0 +1,1 @@
+const p = require("@prisma/client"); const b = require("bcryptjs"); (async () => { const prisma = new p.PrismaClient(); const h = await b.hash("admin2025", 10); await prisma.user.update({ where: { email: "bilariuss@yandex.ru" }, data: { passwordHash: h } }); console.log("OK"); await prisma.disconnect(); })();

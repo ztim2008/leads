@@ -68,5 +68,15 @@ const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };
 
 export async function auth() {
-  return getServerSession(authOptions);
+  const session = await getServerSession(authOptions);
+  if (session?.user) return session;
+  try {
+    const { cookies } = require('next/headers');
+    const token = (await cookies()).get('leads_token')?.value;
+    if (!token) return null;
+    const { jwtVerify } = require('jose');
+    const secret = new TextEncoder().encode(process.env.AUTH_SECRET || '981enFOks++AvBhamoSqvoDPxzCIy8sVKuoZSTjHexQ=');
+    const { payload } = await jwtVerify(token, secret);
+    return { user: { email: payload.email, id: payload.sub || payload.email, role: payload.role } };
+  } catch { return null; }
 }
