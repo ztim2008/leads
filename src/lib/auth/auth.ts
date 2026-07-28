@@ -77,6 +77,6 @@ export async function auth() {
     const { jwtVerify } = require('jose');
     const secret = new TextEncoder().encode(process.env.AUTH_SECRET || '981enFOks++AvBhamoSqvoDPxzCIy8sVKuoZSTjHexQ=');
     const { payload } = await jwtVerify(token, secret);
-    return { user: { email: payload.email, id: payload.sub || payload.email, role: payload.role } };
+    return { user: { email: payload.email, id: payload.id || payload.email, role: payload.role } };
   } catch { return null; }
 }
