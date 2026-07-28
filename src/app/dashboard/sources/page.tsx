@@ -192,6 +192,61 @@ export default async function SourcesPage() {
                   </button>
                 </form>
               )}
+
+              {/* ⚙️ Настройки источника */}
+              {existing && (
+                <form
+                  action={async (formData: FormData) => {
+                    "use server";
+                    const kw = formData.get("keywords") as string;
+                    const mk = formData.get("minusKeywords") as string;
+                    const bmin = formData.get("budgetMin") as string;
+                    const bmax = formData.get("budgetMax") as string;
+                    const whStart = formData.get("workHoursStart") as string;
+                    const whEnd = formData.get("workHoursEnd") as string;
+                    const currentSource = await db.source.findUnique({ where: { id: existing.id } });
+                    const cc = (currentSource?.config as Record<string, unknown>) || {};
+                    await db.source.update({
+                      where: { id: existing.id },
+                      data: { config: { ...cc, keywords: kw, minusKeywords: mk, budgetMin: parseInt(bmin)||0, budgetMax: parseInt(bmax)||0, workHoursStart: whStart||"08:00", workHoursEnd: whEnd||"22:00" } },
+                    });
+                    revalidatePath("/dashboard/sources");
+                  }} style={{ marginTop: 20, borderTop: "1px solid var(--border)", paddingTop: 16 }}
+                >
+                  <p style={{ fontWeight: 650, fontSize: "var(--text-xs)", marginBottom: 12, color: "var(--ink-muted)" }}>⚙️ Настройки {connector.name}</p>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                    <div>
+                      <label style={lbl}>🔑 Ключевые слова</label>
+                      <input name="keywords" defaultValue={(config.keywords as string) || ""} placeholder="дизайн, ремонт..." style={inp} />
+                    </div>
+                    <div>
+                      <label style={lbl}>🚫 Минус-слова</label>
+                      <input name="minusKeywords" defaultValue={(config.minusKeywords as string) || ""} placeholder="игры, 1с..." style={inp} />
+                    </div>
+                    <div>
+                      <label style={lbl}>💰 Бюджет от (₽)</label>
+                      <input name="budgetMin" type="number" defaultValue={(config.budgetMin as number)||0} style={inp} />
+                    </div>
+                    <div>
+                      <label style={lbl}>💰 Бюджет до (₽)</label>
+                      <input name="budgetMax" type="number" defaultValue={(config.budgetMax as number)||(connector.platform==="kwork"?3000:500000)} style={inp} />
+                    </div>
+                    <div>
+                      <label style={lbl}>⏰ Начало работы</label>
+                      <input name="workHoursStart" type="time" defaultValue={(config.workHoursStart as string)||(connector.platform==="kwork"?"00:00":"08:00")} style={inp} />
+                    </div>
+                    <div>
+                      <label style={lbl}>⏰ Конец работы</label>
+                      <input name="workHoursEnd" type="time" defaultValue={(config.workHoursEnd as string)||(connector.platform==="kwork"?"23:59":"22:00")} style={inp} />
+                    </div>
+                  </div>
+                  <button type="submit" style={{
+                    marginTop: 10, padding: "8px 18px", borderRadius: "var(--radius-sm)",
+                    background: "var(--accent)", color: "#fff", border: "none",
+                    fontWeight: 600, fontSize: "var(--text-xs)", cursor: "pointer",
+                  }}>💾 Сохранить настройки</button>
+                </form>
+              )}
             </div>
           );
         })}
