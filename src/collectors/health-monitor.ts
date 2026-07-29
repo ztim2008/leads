@@ -1,7 +1,4 @@
-// Health Monitor v2 — только проверки и пульс партнёрам
-// Рестарты отслеживает cron: /opt/health-check.sh
-// PM2 политики: ecosystem.config.cjs
-
+// Health Monitor v3 — с Telegram-полицейским
 import { db } from "@/lib/db";
 
 const CHECK_MINUTES = 5;
@@ -9,6 +6,9 @@ const CHECK_MS = CHECK_MINUTES * 60 * 1000;
 
 type AlertKey = string;
 const lastAlert: Record<AlertKey, number> = {};
+
+let lastNotifiedLeadTime = 0; // время последней отправленной нотификации
+let notificationFailures = 0; // счётчик ошибок отправки
 
 function cooldown(key: AlertKey, ms: number): boolean {
   const now = Date.now();
@@ -20,12 +20,13 @@ function cooldown(key: AlertKey, ms: number): boolean {
 function mskHour() { return new Date(Date.now() + 3*3600*1000).getUTCHours(); }
 function mskTime() { return new Date(Date.now() + 3*3600*1000).toLocaleTimeString("ru-RU",{hour:"2-digit",minute:"2-digit"}); }
 
-async function tg(token: string, chat: string, text: string) {
-  if (!token || !chat) return;
-  try { await fetch(`https://api.telegram.org/bot${token}/sendMessage`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({chat_id:chat,text,parse_mode:"Markdown"}),signal:AbortSignal.timeout(8000)}); } catch {}
+async function tg(token: string, chat: string, text: string): Promise<boolean> {
+  if (!token || !chat) return false;
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({chat_id:chat,text,parse_mode:"Markdown"}),signal:AbortSignal.timeout(8000)});
+    return ((await res.json()) as any).ok === true;
+  } catch { return false; }
 }
-
-// ─── Проверки ─────────────────────────────────
 
 async function dbOk() { try { await db.$queryRaw`SELECT 1`; return true; } catch { return false; } }
 
@@ -59,8 +60,39 @@ async function getPartners() {
   } catch { return []; }
 }
 
-// ─── Пульс ────────────────────────────────────
+// --- Telegram Policeman ---
+async function telegramPoliceman(admin: {token:string,chat:string}) {
+  const h = mskHour();
+  // 1. Каждые 2 часа в рабочее время — проверка связи себе
+  if (h >= 8 && h <= 20 && h % 2 === 0 && cooldown("tg_self_test", 110*60000)) {
+    const ok = await tg(admin.token, admin.chat,
+      `🟢 *Leads AI — самопроверка* ${mskTime()} МСК\nБот работает, система на связи.`);
+    if (!ok) {
+      notificationFailures++;
+      console.log("[health] ❌ Telegram self-test FAILED");
+    } else {
+      notificationFailures = 0;
+      console.log("[health] ✅ Telegram self-test OK");
+    }
+  }
 
+  // 2. Если 3+ ошибок подряд — алерт
+  if (notificationFailures >= 3 && cooldown("tg_fail_alert", 30*60000)) {
+    await tg(admin.token, admin.chat, "🔴 *Telegram бот не отвечает!*\n3 ошибки подряд. Проверь токен и интернет.");
+  }
+
+  // 3. Если уведомления не уходили >60 мин при наличии лидов — алерт
+  const leads = await leadsInfo();
+  if (leads.count > 0 && lastNotifiedLeadTime > 0) {
+    const gap = Math.floor((Date.now() - lastNotifiedLeadTime) / 60000);
+    if (gap > 60 && cooldown("tg_silent", 60*60000)) {
+      await tg(admin.token, admin.chat,
+        `🔴 *Уведомления не уходят!*\nЛиды есть (${leads.count}/час), но бот молчит >${gap} мин.\nПроверь токены и Telegram API.`);
+    }
+  }
+}
+
+// --- Пульс партнёрам ---
 async function partnerPulse() {
   const h = mskHour();
   if (h < 8 || h > 20 || h % 3 !== 0) return;
@@ -69,12 +101,13 @@ async function partnerPulse() {
   const {lastMin} = await leadsInfo();
   for (const p of partners) {
     if (!p.token || !p.chat) continue;
-    await tg(p.token, p.chat, [
+    const ok = await tg(p.token, p.chat, [
       `💚 *Leads AI — проверка связи* ${mskTime()} МСК`,
       `📥 Сегодня: *${p.today}* · Всего: *${p.total}*`,
       `⏱ Последняя заявка: ${lastMin!=null?lastMin+" мин назад":"—"}`,
       `🟢 Система работает штатно`,
     ].join("\n"));
+    if (!ok) notificationFailures++;
   }
 }
 
@@ -84,19 +117,22 @@ async function partnerHeartbeat() {
   if (!cooldown("hb_"+h, 55*60000)) return;
   for (const p of await getPartners()) {
     if (!p.token || !p.chat) continue;
-    await tg(p.token, p.chat, `🟢 *Leads AI — на связи* ${mskTime()} МСК\nСистема работает, ждун активен.`);
+    const ok = await tg(p.token, p.chat, `🟢 *Leads AI — на связи* ${mskTime()} МСК\nСистема работает, ждун активен.`);
+    if (!ok) notificationFailures++;
   }
 }
 
-// ─── Главный цикл ─────────────────────────────
-
+// --- Главный цикл ---
 async function check() {
   const dbUp = await dbOk();
   const tgUp = await tgOk();
   const leads = await leadsInfo();
   const admin = await getAdmin();
 
-  // Алерты админу
+  // Telegram policeman
+  await telegramPoliceman(admin);
+
+  // Алерты
   if (!dbUp && cooldown("db", 15*60000)) await tg(admin.token, admin.chat, "🔴 *БД недоступна!*");
   if (!tgUp && cooldown("tg", 15*60000)) await tg(admin.token, admin.chat, "🔴 *Telegram API недоступен!*");
   if (leads.lastMin && leads.lastMin > 60 && cooldown("silent", 60*60000)) {
@@ -106,10 +142,10 @@ async function check() {
   await partnerPulse();
   await partnerHeartbeat();
 
-  const s = [dbUp?"DB":"!!DB", tgUp?"TG":"!!TG", "leads:"+leads.count].join(" ");
+  const s = [dbUp?"DB":"!!DB", tgUp?"TG":"!!TG", "leads:"+leads.count, notificationFailures>0?"⚠️tg"+notificationFailures:""].filter(Boolean).join(" ");
   console.log("[health]", s, "next in", CHECK_MINUTES, "min");
 }
 
-console.log("[health] v2 started, interval:", CHECK_MINUTES, "min");
+console.log("[health] v3 with Telegram policeman started, interval:", CHECK_MINUTES, "min");
 check();
 setInterval(check, CHECK_MS);

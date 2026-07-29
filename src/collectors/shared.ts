@@ -41,7 +41,8 @@ function budgetInRange(budgetMin: number | null | undefined, config: any) {
 }
 
 export async function saveAndNotify(lead: any, source: any, s: any, responseText?: string) {
-  const config = s?.config || {};
+  // config: если s.config есть (source config) — берём его, иначе s — это settings напрямую
+  const config = s?.config || s || {};
   const title = (lead.title || "").toLowerCase();
   const desc = (lead.description || "").toLowerCase();
 
@@ -98,7 +99,11 @@ export async function saveAndNotify(lead: any, source: any, s: any, responseText
       descriptionLength: (lead.description || "").length,
       responseText: responseText || undefined,
       responsePrice: lead.responsePrice || 0,
-    }, s.telegramToken).catch(() => {});
+    }, s.telegramToken).then((ok: boolean) => {
+      if (!ok) console.error("[shared] Telegram send FAILED for", lead.title?.slice(0, 40));
+    }).catch((e: any) => {
+      console.error("[shared] Telegram send ERROR:", e?.message || e);
+    });
   }
   return saved;
 }

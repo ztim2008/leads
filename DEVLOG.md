@@ -58,3 +58,16 @@
 ### Fix: мониторинг рестартов PM2
 **Problem:** частые рестарты оставались незамеченными.
 **Fix:** health-monitor отслеживает историю рестартов, алертит при >3 за час.
+
+### Refactor: трёхуровневая система стабильности
+**Problem:** health-monitor имел хрупкий restart tracking в памяти → ложные алерты. Правки через SSH ломались (bash 0xc0000142).
+
+**Solution:** три независимых уровня защиты:
+1. **ecosystem.config.cjs** — все PM2 процессы с политиками: max_restarts, restart_delay, max_memory_restart
+2. **/opt/health-check.sh** — внешний bash-скрипт через cron (каждые 5 мин), не зависит от Node.js. Проверяет: PM2 статус, Docker, диск, память. Алерты через curl в Telegram.
+3. **health-monitor.ts v2** — чистый, без restart tracking. Только: проверка БД/TG/лидов, пульс партнёрам, heartbeat.
+
+**Files:**
+- ecosystem.config.cjs (новый)
+- /opt/health-check.sh (новый)
+- src/collectors/health-monitor.ts (переписан)
