@@ -74,3 +74,6 @@
 
 ### Clarification: VPS location — Russia works
 **Decision:** VPS can be in Russia. Agent sends leads to main server (KZ) via HTTPS, main server sends Telegram from KZ. Russian VPS (~800-1500 RUB/mo) is cheaper than KZ (~2500 RUB/mo). Risk: only if RKN blocks leads.konversus.ru domain (unlikely for small project).
+
+### Decision: VPS per partner (not proxy)
+**Why:** 1 IP = 1 partner = full Profi isolation. Partner pays VPS (800-2500 RUB/mo) + subscription (999 RUB/mo). Auto-install: curl | bash in 2 min. Proxies are risky (Profi detects DC IPs, residential proxies cost 3000-5000 RUB/mo per IP).
