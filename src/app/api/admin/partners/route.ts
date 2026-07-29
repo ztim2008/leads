@@ -33,11 +33,25 @@ export async function GET() {
       subscription: p.subscription ? { plan: p.subscription.plan, status: p.subscription.status } : null,
       workspace: ws ? {
         id: ws.id, name: ws.name,
-        sources: ws.sources.map(s => ({
-          id: s.id, platform: s.platform, enabled: s.enabled,
-          lastCheckAt: s.lastCheckAt, status: s.status || "active",
-          lastError: s.lastError || null,
-        })),
+        sources: ws.sources.map(s => {
+          const cfg = (s.config as any) || {};
+          return {
+            id: s.id, platform: s.platform, enabled: s.enabled,
+            lastCheckAt: s.lastCheckAt, status: s.status || "active",
+            lastError: s.lastError || cfg._lastError || null,
+            agentStatus: {
+              online: cfg._lastHeartbeat ? (Date.now() - new Date(cfg._lastHeartbeat).getTime() < 15*60*1000) : false,
+              lastHeartbeat: cfg._lastHeartbeat || null,
+              uptime: cfg._agentUptime || 0,
+              memory: cfg._agentMemory || 0,
+              leads: cfg._agentLeads || 0,
+              errors: cfg._agentErrors || 0,
+              lastError: cfg._lastError || null,
+              lastErrorTime: cfg._lastErrorTime || null,
+            },
+            setupCommand: s.enabled ? `curl -fsSL https://leads.konversus.ru/agent/setup.sh | bash -s "${s.id}"` : null,
+          };
+        }),
         settings: ws.settings ? {
           keywords: ws.settings.keywords,
           telegramChatId: ws.settings.telegramChatId,

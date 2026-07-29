@@ -8,6 +8,7 @@ import ClientLoginButton from "@/components/admin/login-as-button";
 import HealthCheckWidget from "@/components/admin/health-check-widget";
       <CollectorStatus />
 import PartnersList from "@/components/admin/partners-list";
+import PartnerStatusPanel from "@/components/admin/partner-status-panel";
 
 export default async function AdminPage() {
   const session = await auth();
@@ -53,6 +54,14 @@ export default async function AdminPage() {
       {/* Проверка системы */}
       <HealthCheckWidget />
       <CollectorStatus />
+
+      {/* Статус партнёров */}
+      <div style={{ marginBottom: 32, border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", overflow: "hidden", background: "var(--bg-surface)" }}>
+        <div style={{ padding: "14px 20px", borderBottom: "1px solid var(--border)", fontWeight: 650, fontSize: "var(--text-sm)", display: "flex", alignItems: "center", gap: 8 }}>
+          <span>🔌 Статус партнёров</span>
+        </div>
+        <PartnerStatusPanel />
+      </div>
 
       {/* Быстрые кнопки */}
       <div style={{ display: "flex", gap: 12, marginBottom: 28, flexWrap: "wrap" }}>

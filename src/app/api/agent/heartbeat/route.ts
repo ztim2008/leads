@@ -20,7 +20,8 @@ export async function POST(req: NextRequest) {
       where: { id: sourceId },
       data: {
         lastCheckAt: new Date(),
-        status: status?.error ? "error" : "ok",
+        status: status?.lastError ? "error" : "ok",
+        lastError: status?.lastError || null,
       },
     });
 
@@ -34,6 +35,7 @@ export async function POST(req: NextRequest) {
         cfg._agentMemory = status.memory || 0;
         cfg._agentLeads = status.leads || 0;
         cfg._agentErrors = status.errors || 0;
+        if (status.lastError) { cfg._lastError = status.lastError; cfg._lastErrorTime = status.lastErrorTime || new Date().toISOString(); }
         await db.source.update({
           where: { id: sourceId },
           data: { config: cfg },

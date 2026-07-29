@@ -13,7 +13,7 @@ console.log("[agent] 🚀 Запуск агента");
 console.log("[agent] API:", API);
 console.log("[agent] Source:", SOURCE_ID);
 
-let totalLeads = 0, totalErrors = 0, startTime = Date.now();
+let totalLeads = 0, totalErrors = 0, lastError = "", lastErrorTime = "", startTime = Date.now();
 
 // ─── HTTP-хелперы ─────────────────────────────────
 
@@ -37,7 +37,7 @@ async function heartbeat() {
   const mem = Math.floor(process.memoryUsage().heapUsed / 1024 / 1024);
   await api("heartbeat", {
     secret: SECRET, sourceId: SOURCE_ID,
-    status: { leads: totalLeads, errors: totalErrors, uptime, memory: mem },
+    status: { leads: totalLeads, errors: totalErrors, uptime, memory: mem, lastError, lastErrorTime },
   });
 }
 
@@ -151,6 +151,8 @@ async function startProfiWatcher(config: any) {
       if (newFound > 0) console.log(`[agent] Найдено ${newFound} новых`);
     } catch (e: any) {
       totalErrors++;
+      lastError = e.message || String(e);
+      lastErrorTime = new Date().toISOString();
       console.error("[agent] Ошибка:", e.message);
     }
   }
