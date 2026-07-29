@@ -12,7 +12,8 @@ const SILENT_LEADS_MINUTES = 60; // алерт если нет лидов >60 м
 const TELEGRAM_TIMEOUT = 8000;
 
 // Состояние
-const restartHistory: Map<string, number[]> = new Map(); // process -> timestamps
+const restartHistory: Map<string, number[]> = new Map();
+const lastRestartCount: Map<string, number> = new Map(); // process -> timestamps
 const lastAlertSent: Map<string, number> = new Map(); // alertKey -> lastSent
 
 function mskHour(): number {
