@@ -61,11 +61,18 @@ async function checkPM2(): Promise<{ ok: boolean; processes: any[] }> {
       // Отслеживаем рестарты
       const key = p.name;
       const now = Date.now();
-      const history = restartHistory.get(key) || [];
-      history.push(now);
-      // Оставляем только последний час
-      const recent = history.filter((t: number) => now - t < 60 * 60 * 1000);
-      restartHistory.set(key, recent);
+      const currentCount = p.pm2_env?.restart_time || 0;
+      const prevCount = lastRestartCount.get(key);
+      if (prevCount === undefined) {
+        lastRestartCount.set(key, currentCount);
+      } else if (currentCount > prevCount) {
+        const diff = currentCount - prevCount;
+        const history = restartHistory.get(key) || [];
+        for (let i = 0; i < diff; i++) history.push(now);
+        const recent = history.filter((t: number) => now - t < 60 * 60 * 1000);
+        restartHistory.set(key, recent);
+        lastRestartCount.set(key, currentCount);
+      }
     }
     return { ok: problems.length === 0, processes: list };
   } catch (e) {
