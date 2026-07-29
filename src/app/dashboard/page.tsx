@@ -10,9 +10,17 @@ export default async function DashboardPage() {
 
   let workspace = await db.workspace.findFirst({ where: { userId: session.user.id } });
   if (!workspace) {
+    try {
     workspace = await db.workspace.create({
       data: { userId: session.user.id, name: "Моё пространство", slug: `ws-${session.user.id.slice(0, 8)}` },
     });
+    } catch (e: any) {
+      if (e?.code === 'P2003') {
+        console.warn('[dashboard] FK violation for user ' + session.user.id + ' — user missing in DB');
+        return null;
+      }
+      throw e;
+    }
   }
 
   const settings = await db.settings.findUnique({ where: { workspaceId: workspace.id } });

@@ -216,11 +216,12 @@ async function doEnsureLoggedIn(sourceId: string, login: string, password: strin
   }
 }
 
-function extractBudget(text: string): { min?: number; max?: number } {
+export function extractBudget(text: string): { min?: number; max?: number } {
   const patterns = [
     /(\d[\d\s]*)\s*(?:руб|₽)/i,
     /бюджет[:\s]*(\d[\d\s]*)/i,
     /от\s*(\d[\d\s]*)/i,
+    /до\s*(\d[\d\s]*)/i,
   ];
   for (const pattern of patterns) {
     const match = text.match(pattern);

@@ -77,6 +77,13 @@ export async function auth() {
     const { jwtVerify } = require('jose');
     const secret = new TextEncoder().encode(process.env.AUTH_SECRET || '981enFOks++AvBhamoSqvoDPxzCIy8sVKuoZSTjHexQ=');
     const { payload } = await jwtVerify(token, secret);
-    return { user: { email: payload.email, id: payload.id || payload.email, role: payload.role } };
+    // Ищем реального пользователя по email, а не подставляем email как id
+    let userId = payload.id;
+    if (!userId || userId === payload.email) {
+      const dbUser = await db.user.findUnique({ where: { email: payload.email } });
+      userId = dbUser?.id || null;
+    }
+    if (!userId) return null;
+    return { user: { email: payload.email, id: userId, role: payload.role } };
   } catch { return null; }
 }
