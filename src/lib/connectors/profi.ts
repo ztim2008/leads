@@ -683,7 +683,28 @@ export async function startWatching(
         );
 
         let newFound = 0;
-        for (const link of refreshedLinks) {
+
+        // --- Session health check ---
+        if (typeof (globalThis as any).__lastNewLead === 'undefined') (globalThis as any).__lastNewLead = Date.now();
+        var lastNewLead = (globalThis as any).__lastNewLead;
+        // Detect expired session: 0 links + login page
+        if (refreshedLinks.length === 0) {
+          var bt = await page.locator('body').innerText().catch(function(){return''});
+          if (bt.indexOf('Вход и регистрация') >= 0 || bt.indexOf('Восстановить пароль') >= 0) {
+            console.log('[profi] SESSION EXPIRED ' + config.login + ' — re-logging in');
+            knownHrefs = new Set();
+            var fp = await ensureLoggedIn(sourceId, config.login, config.password);
+            if (fp) { page = fp; await page.goto('https://profi.ru/backoffice/n.php',{waitUntil:'domcontentloaded',timeout:20000}); await sleep(2000); (globalThis as any).__lastNewLead = Date.now(); scheduleNext(); return; }
+          }
+        }
+        // Force re-login if >30 min silent
+        if (Date.now() - lastNewLead > 30 * 60 * 1000) {
+          console.log('[profi] SILENT 30min ' + config.login + ' — re-logging in');
+          knownHrefs = new Set();
+          var fp2 = await ensureLoggedIn(sourceId, config.login, config.password);
+          if (fp2) { page = fp2; await page.goto('https://profi.ru/backoffice/n.php',{waitUntil:'domcontentloaded',timeout:20000}); await sleep(2000); (globalThis as any).__lastNewLead = Date.now(); scheduleNext(); return; }
+        }
+for (const link of refreshedLinks) {
           const cleanHref = link.href.replace(/&analytics_data=.*$/, '');
           if (beforeHrefs.has(cleanHref)) continue;
           if (knownHrefs.has(cleanHref)) continue;
@@ -707,7 +728,8 @@ export async function startWatching(
         }
 
         if (newFound > 0) {
-          console.log(`[profi] 👀 ${config.login}: найдено ${newFound} новых заказов`);
+          console.log("[profi] EYES " + config.login + ": found " + newFound + " new orders");
+          (globalThis as any).__lastNewLead = Date.now();
         }
 
         // Человеческое поведение: скролл
