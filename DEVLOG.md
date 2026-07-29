@@ -71,3 +71,6 @@
 - ecosystem.config.cjs (новый)
 - /opt/health-check.sh (новый)
 - src/collectors/health-monitor.ts (переписан)
+
+### Clarification: VPS location — Russia works
+**Decision:** VPS can be in Russia. Agent sends leads to main server (KZ) via HTTPS, main server sends Telegram from KZ. Russian VPS (~800-1500 RUB/mo) is cheaper than KZ (~2500 RUB/mo). Risk: only if RKN blocks leads.konversus.ru domain (unlikely for small project).
