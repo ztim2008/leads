@@ -26,7 +26,8 @@ async function main() {
         const exists = extId ? await db.lead.findUnique({ where: { externalId: extId } }) : null;
         if (exists) return;
         const respText = respTemplate ? respTemplate.replace(/{имя}/g, lead.author || "").replace(/{задача}/g, lead.title || "").replace(/{город}/g, lead.city || "").replace(/{бюджет}/g, lead.budgetMin ? lead.budgetMin + " ₽" : "") : "";
-        await saveAndNotify(lead, { id: src.id, workspaceId: src.workspaceId, platform: "profi", color: src.color || "#22c55e" }, s, respText);
+        const sWithCfg = { ...s, config: cfg };
+        await saveAndNotify(lead, { id: src.id, workspaceId: src.workspaceId, platform: "profi", color: src.color || "#22c55e" }, sWithCfg, respText);
         totalLeads++;
         saveStatus({ profi: { running: true, totalLeads, lastCheck: new Date().toISOString() } });
       },
