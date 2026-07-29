@@ -80,3 +80,46 @@
 
 ### Idea (deferred): Self-hosted light version
 Partner buys VPS, downloads zip, fills config.json (Profi login/password + Telegram token), runs install.sh. SQLite instead of PostgreSQL. Self-contained. Risks: code theft, no monitoring, single-payment model. Deferred for now.
+
+---
+
+## Итоги дня · 29 июля 2026
+
+### Сделано (12 коммитов)
+
+**Бюджет и фильтры:**
+- budget: извлечение из description (extractBudget export + паттерн до)
+- filters: keywords/minusKeywords/budget в shared.ts
+- titleKeywords/titleMinusKeywords: раздельная фильтрация заголовка и описания
+
+**Стабильность:**
+- fix P2003: auth.ts fallback + try-catch в dashboard
+- ecosystem.config.cjs: все процессы с max_restarts, restart_delay, memory limits
+- cron health-check: /opt/health-check.sh (bash, не зависит от Node)
+- health-monitor v3: Telegram policeman (самопроверка, счётчик ошибок)
+- profi watcher: авто-реанимация при истечении сессии + 30-мин тишине
+
+**Архитектура партнёров:**
+- agent API: POST /api/agent/leads, GET /api/agent/config, POST /api/agent/heartbeat
+- agent.mjs: standalone скрипт для VPS партнёра
+- setup.sh: автоустановка (curl | bash)
+- admin panel: форма + setup-команда + PartnerStatusPanel
+- документация: 4 paths, Path E (zero-touch), LOGISTICS, PARTNER-ONBOARDING
+
+**Баги найдены и починены:**
+- Фильтры читали Settings.keywords вместо Source.keywords → партнёр без заявок
+- health-monitor спамил ложными алертами рестартов (3 раза чинили)
+- Python-патчи через SSH не матчили текст (перешли на sed + scp)
+
+### Конфигурация (зафиксирована в памяти)
+- saveandnotify-config-pattern
+- profi-source-configs
+- onboarding-paths
+- leads-konversus-setup
+
+### Состояние системы
+- Все PM2 процессы online, restarts: 0-4
+- DB: 24 MB, 1544 leads
+- Telegram: работает
+- Profi: ждуны активны, авто-реанимация
+- Диск: 85% (нужна очистка)
