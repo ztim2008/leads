@@ -42,9 +42,29 @@ function budgetInRange(budgetMin: number | null | undefined, config: any) {
 
 export async function saveAndNotify(lead: any, source: any, s: any, responseText?: string) {
   const config = s?.config || {};
-  const textToCheck = (lead.title || "") + " " + (lead.description || "");
-  if (!matchesKeywords(textToCheck, config)) return null;
-  if (hasMinusKeywords(textToCheck, config)) return null;
+  const title = (lead.title || "").toLowerCase();
+  const desc = (lead.description || "").toLowerCase();
+
+  // Title: если есть titleKeywords — проверяем заголовок отдельно
+  if (config.titleKeywords) {
+    if (!matchesKeywords(title, { keywords: config.titleKeywords })) return null;
+  }
+  if (config.titleMinusKeywords) {
+    if (hasMinusKeywords(title, { minusKeywords: config.titleMinusKeywords })) return null;
+  }
+
+  // Description: keywords проверяем по описанию
+  // Если titleKeywords не задан — проверяем keywords по title+description (обратная совместимость)
+  if (config.titleKeywords) {
+    // Раздельный режим: keywords только для описания
+    if (!matchesKeywords(desc, config)) return null;
+    if (hasMinusKeywords(desc, config)) return null;
+  } else {
+    // Старый режим: keywords по title+description
+    const combined = title + " " + desc;
+    if (!matchesKeywords(combined, config)) return null;
+    if (hasMinusKeywords(combined, config)) return null;
+  }
 
   const extId = lead.externalId || source.platform + "-" + Date.now();
 
