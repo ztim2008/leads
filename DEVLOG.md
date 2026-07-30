@@ -123,3 +123,11 @@ Partner buys VPS, downloads zip, fills config.json (Profi login/password + Teleg
 - Telegram: работает
 - Profi: ждуны активны, авто-реанимация
 - Диск: 85% (нужна очистка)
+
+## 30 июля 2026
+
+### Fix: auto-recovery watcher
+**Problem:** watcher died with "Assignment to constant variable". Duplicate const lastNewLead + page reassignment.
+**Fix:** stopWatching/startWatching instead of variable reassignment. Stack trace logging added.
+**Files:** src/lib/connectors/profi.ts
+**Result:** 07:20 found error, 08:00 fixed, 08:05 first leads. Testing auto-recovery today.
