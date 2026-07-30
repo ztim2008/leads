@@ -684,27 +684,31 @@ export async function startWatching(
 
         let newFound = 0;
 
-        // --- Session health check ---
-        if (typeof (globalThis as any).__lastNewLead === 'undefined') (globalThis as any).__lastNewLead = Date.now();
-        var lastNewLead = (globalThis as any).__lastNewLead;
+        // --- Session health check + auto-recovery ---
+        if (typeof (globalThis as any).__lastNewLead === "undefined") {
+          (globalThis as any).__lastNewLead = Date.now();
+        }
+        const lastNewLead = (globalThis as any).__lastNewLead;
+
         // Detect expired session: 0 links + login page
         if (refreshedLinks.length === 0) {
-          var bt = await page.locator('body').innerText().catch(function(){return''});
-          if (bt.indexOf('Вход и регистрация') >= 0 || bt.indexOf('Восстановить пароль') >= 0) {
-            console.log('[profi] SESSION EXPIRED ' + config.login + ' — re-logging in');
-            knownHrefs = new Set();
-            var fp = await ensureLoggedIn(sourceId, config.login, config.password);
-            if (fp) { page = fp; await page.goto('https://profi.ru/backoffice/n.php',{waitUntil:'domcontentloaded',timeout:20000}); await sleep(2000); (globalThis as any).__lastNewLead = Date.now(); scheduleNext(); return; }
+          const bt = await page.locator("body").innerText().catch(() => "");
+          if (bt.includes("Вход и регистрация") || bt.includes("Восстановить пароль")) {
+            console.log("[profi] SESSION EXPIRED " + config.login + " restarting watcher");
+            stopWatching(sourceId);
+            startWatching(sourceId, config, keywords, callbacks, workHoursStart, workHoursEnd);
+            return;
           }
         }
+
         // Force re-login if >30 min silent
         if (Date.now() - lastNewLead > 30 * 60 * 1000) {
-          console.log('[profi] SILENT 30min ' + config.login + ' — re-logging in');
-          knownHrefs = new Set();
-          var fp2 = await ensureLoggedIn(sourceId, config.login, config.password);
-          if (fp2) { page = fp2; await page.goto('https://profi.ru/backoffice/n.php',{waitUntil:'domcontentloaded',timeout:20000}); await sleep(2000); (globalThis as any).__lastNewLead = Date.now(); scheduleNext(); return; }
+          console.log("[profi] SILENT 30min " + config.login + " restarting watcher");
+          stopWatching(sourceId);
+          startWatching(sourceId, config, keywords, callbacks, workHoursStart, workHoursEnd);
+          return;
         }
-for (const link of refreshedLinks) {
+        for (const link of refreshedLinks) {
           const cleanHref = link.href.replace(/&analytics_data=.*$/, '');
           if (beforeHrefs.has(cleanHref)) continue;
           if (knownHrefs.has(cleanHref)) continue;
@@ -755,7 +759,7 @@ for (const link of refreshedLinks) {
 
         callbacks.onStatus(isOutsideWorkHours() ? `🌙 Стоп до ${whStart}:00 (настройки)` : `👀 След. проверка через ~${Math.round(MIN_CHECK)}-${Math.round(MAX_CHECK)} мин`);
       } catch (err) {
-        console.error(`[profi] 🔄 ${config.login}: ошибка: ${err}`);
+        console.error('[profi] ERROR ' + config.login + ': ' + (err && err.stack ? err.stack : String(err)));
         try { await page.goto('https://profi.ru/backoffice/n.php', { waitUntil: 'domcontentloaded', timeout: 20000 }); } catch {
           console.log(`[profi] 🔄 ${config.login}: перезапуск ждуна...`);
           stopWatching(sourceId);
