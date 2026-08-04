@@ -131,3 +131,33 @@ Partner buys VPS, downloads zip, fills config.json (Profi login/password + Teleg
 **Fix:** stopWatching/startWatching instead of variable reassignment. Stack trace logging added.
 **Files:** src/lib/connectors/profi.ts
 **Result:** 07:20 found error, 08:00 fixed, 08:05 first leads. Testing auto-recovery today.
+
+
+---
+
+## Итоги дня · 30 июля 2026
+
+### Инцидент: блокировка Profi
+- 07:20: обнаружено — 0 заявок Profi за ночь
+- 07:45: причина — 3277 рестартов за час (три механизма рестарта без координации)
+- 08:00: фикс v1 (чистая авто-реанимация)
+- 09:00: RysyevVO тоже заблокирован (цикл рестартов)
+- 09:30: остановлены все коллекторы, cooldown logic
+
+### Созданы документы
+- docs/ANTI_BLOCK_PLAN.md — работа над ошибками + план архитектуры v2
+- docs/TZ_LEADS_AI_V2.md — полное ТЗ новой системы (388 строк)
+
+### Ключевые решения
+- Circuit Breaker: 3 ошибки → стоп 60 мин (persistent, в БД)
+- Persistent Profile: куки браузера на диске, переиспользование сессий
+- Один координатор состояний агента (вместо трёх механизмов рестарта)
+- Деплой через GitHub Actions (не через SSH)
+- Ноль блокировок Profi как KPI
+
+### Состояние
+- leads-profi: STOPPED (до разблокировки аккаунтов)
+- leads-kwork: STOPPED
+- leads-health: online
+- leads-konversus: online
+- Ожидает: ручная разблокировка TimofeyevAG11 и RysyevVO на profi.ru

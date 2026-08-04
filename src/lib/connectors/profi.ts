@@ -599,6 +599,11 @@ export interface WatchCallbacks {
   onStatus: (status: string) => void;
 }
 
+
+const loginFailures: Map<string, { count: number; lastFail: number }> = new Map();
+const MAX_LOGIN_FAILURES = 3;
+const LOGIN_COOLDOWN_MS = 60 * 60 * 1000; // 1 час
+
 export async function startWatching(
   sourceId: string,
   config: ProfiConfig,
@@ -818,12 +823,24 @@ export async function startWatching(
     };
     scheduleNext();
 
-    // Health check каждые 10 мин
+    // Health check каждые 10 мин (с защитой от двойного рестарта)
+    let restarting = false;
+    const safeRestart = async () => {
+      if (restarting) return;
+      restarting = true;
+      console.log("[profi] RESTART " + config.login + ": page died, restarting watcher");
+      try {
+        stopWatching(sourceId);
+        await sleep(2000);
+        await startWatching(sourceId, config, keywords, callbacks, workHoursStart, workHoursEnd);
+      } catch (e) {
+        console.error("[profi] RESTART FAILED " + config.login + ": " + (e && e.message ? e.message : e));
+      }
+      restarting = false;
+    };
     healthCheckId = setInterval(async () => {
       try { await page.evaluate(() => document.title); } catch {
-        console.log(`[profi] 🔄 ${config.login}: страница умерла, перезапуск...`);
-        stopWatching(sourceId);
-        startWatching(sourceId, config, keywords, callbacks);
+        safeRestart();
       }
     }, 600000);
 
