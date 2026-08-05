@@ -205,8 +205,16 @@ Partner buys VPS, downloads zip, fills config.json (Profi login/password + Teleg
 - Profi: сбор только через VPS-агент (ещё не развёрнут)
 
 ### Git
-- Первый push на https://github.com/ztim2008/leads
-- Коммит: Phase 0 + план + регламент AGENTS
+- Первый push на https://github.com/ztim2008/leads (ветка `main`, 196+ коммитов)
+- Коммиты: `e62ab5b` Phase 0 + план, `3623c51` AGENTS SSH
+- Тег: `checkpoint/phase0-done`
+- `git status` — clean, `origin/main` up to date
 
-### Следующий шаг
-- Этап 1: `packages/agent-core` — circuit breaker + persistent profile
+### Закрытие дня (финал · 12:16 МСК)
+- `npm run build` — OK (повторная проверка)
+- `curl localhost:3005` — 200
+- `pm2 save` — OK
+- Регламент: AGENTS.md (открытие/закрытие дня), единый DEVLOG.md
+
+### Следующий шаг (06.08)
+- Этап 1, задача 1.1: создать `packages/agent-core/` — circuit breaker + persistent profile
