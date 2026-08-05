@@ -45,29 +45,24 @@ else
   log "ERROR: Server HTTP $HTTP_CODE"
 fi
 
-# 2. PM2 процессы
+# 2. PM2: Next.js + Health (leads-profi удалён — Phase 0)
 NEXTJS_STATUS=$(pm2 jlist 2>/dev/null | python3 -c "
 import sys, json
 procs = json.load(sys.stdin)
 for p in procs:
     if p.get('name') == 'leads-konversus':
         print(p.get('pm2_env',{}).get('status','unknown'))
-        print(p.get('pm2_env',{}).get('restart_time',0))
 " 2>/dev/null)
 
-WORKER_PM_STATUS=$(pm2 jlist 2>/dev/null | python3 -c "
+HEALTH_STATUS=$(pm2 jlist 2>/dev/null | python3 -c "
 import sys, json
 procs = json.load(sys.stdin)
 for p in procs:
-    if p.get('name') == 'leads-profi':
-        s = p.get('pm2_env',{}).get('status','unknown')
-        r = p.get('pm2_env',{}).get('restart_time',0)
-        u = p.get('pm2_env',{}).get('pm_uptime',0)
-        print(f'{s}|{r}|{u}')
+    if p.get('name') == 'leads-health':
+        print(p.get('pm2_env',{}).get('status','unknown'))
 " 2>/dev/null)
 
 NEXTJS_ONLINE=$(echo "$NEXTJS_STATUS" | head -1)
-WORKER_ONLINE=$(echo "$WORKER_PM_STATUS" | cut -d'|' -f1)
 
 if [ "$NEXTJS_ONLINE" = "online" ]; then
   OK_LINES="${OK_LINES}✅ Next.js: запущен\n"
@@ -76,58 +71,13 @@ else
   PROBLEM_LINES="${PROBLEM_LINES}🔴 Next.js: НЕ ЗАПУЩЕН\n"
 fi
 
-if [ "$WORKER_ONLINE" = "online" ]; then
-  OK_LINES="${OK_LINES}✅ Воркер: запущен\n"
+if [ "$HEALTH_STATUS" = "online" ]; then
+  OK_LINES="${OK_LINES}✅ Health monitor: запущен\n"
 else
-  ISSUE_COUNT=$((ISSUE_COUNT+1))
-  PROBLEM_LINES="${PROBLEM_LINES}🔴 Воркер: НЕ ЗАПУЩЕН\n"
+  PROBLEM_LINES="${PROBLEM_LINES}⚠️ Health monitor: не online\n"
 fi
 
-# 3. Статус воркера из .collector-status.json
-if [ -f "$PROJECT_DIR/.collector-status.json" ]; then
-  WORKER_RUNNING=$(grep -o '"running":true' "$PROJECT_DIR/.collector-status.json" | head -1)
-  TOTAL_ERRORS=$(grep -o '"totalErrors":[0-9]*' "$PROJECT_DIR/.collector-status.json" | head -1 | cut -d: -f2)
-  TOTAL_LEADS=$(grep -o '"totalLeadsCollected":[0-9]*' "$PROJECT_DIR/.collector-status.json" | head -1 | cut -d: -f2)
-  STATUS_REASON=$(grep -o '"statusReason":"[^"]*"' "$PROJECT_DIR/.collector-status.json" | head -1 | cut -d'"' -f4)
-  LAST_CHECK=$(grep -o '"lastCheckAt":"[^"]*"' "$PROJECT_DIR/.collector-status.json" | head -1 | cut -d'"' -f4)
-
-  if [ -z "$WORKER_RUNNING" ]; then
-    ISSUE_COUNT=$((ISSUE_COUNT+1))
-    PROBLEM_LINES="${PROBLEM_LINES}🔴 Воркер: ОСТАНОВЛЕН\n"
-  fi
-
-  if [ -n "$TOTAL_ERRORS" ] && [ "$TOTAL_ERRORS" -gt 5 ]; then
-    PROBLEM_LINES="${PROBLEM_LINES}⚠️ Воркер: $TOTAL_ERRORS ошибок. Проверьте логи.\n"
-    log "WARN: Worker has $TOTAL_ERRORS errors"
-  fi
-
-  # Анализируем статус воркера
-  WORKER_REASON="$STATUS_REASON"
-
-  if [ -n "$LAST_CHECK" ]; then
-    LAST_CHECK_EPOCH=$(date -d "$LAST_CHECK" +%s 2>/dev/null)
-    NOW_EPOCH=$(date +%s)
-    if [ -n "$LAST_CHECK_EPOCH" ]; then
-      DIFF=$(( (NOW_EPOCH - LAST_CHECK_EPOCH) / 60 ))
-      WORKER_GAP="${DIFF} мин"
-
-      if [ "$DIFF" -gt "$MAX_GAP_FOR_INFO" ]; then
-        ISSUE_COUNT=$((ISSUE_COUNT+1))
-        PROBLEM_LINES="${PROBLEM_LINES}🔴 Воркер: не собирает > ${DIFF} мин.\n"
-        PROBLEM_LINES="${PROBLEM_LINES}   Причина: ${STATUS_REASON:-неизвестно}\n"
-        log "ERROR: Worker gap ${DIFF}min, reason: $STATUS_REASON"
-      elif [ "$DIFF" -gt 20 ]; then
-        PROBLEM_LINES="${PROBLEM_LINES}⚠️ Последний сбор: ${DIFF} мин назад\n"
-        PROBLEM_LINES="${PROBLEM_LINES}   Причина: ${STATUS_REASON:-ожидание}\n"
-        log "WARN: Worker gap ${DIFF}min, reason: $STATUS_REASON"
-      fi
-    fi
-  fi
-
-  if [ -n "$TOTAL_LEADS" ]; then
-    OK_LINES="${OK_LINES}📊 Собрано всего: $TOTAL_LEADS заявок\n"
-  fi
-fi
+OK_LINES="${OK_LINES}🛡 Profi на хабе: отключён (VPS-агенты)\n"
 
 # 4. База данных
 DB_CHECK=$(cd "$PROJECT_DIR" && npx tsx -e "

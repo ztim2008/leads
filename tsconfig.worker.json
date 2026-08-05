@@ -1,4 +1,0 @@
-{
-  "extends": "./tsconfig.json",
-  "exclude": ["node_modules", ".next", "src/lib/queue/worker.ts", "src/lib/connectors/profi.ts", "scripts/worker-run.ts"]
-}

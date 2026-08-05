@@ -1,8 +1,7 @@
 #!/bin/bash
-# 🩺 Доктор системы — проверяет и ЛЕЧИТ автоматически
-# Запуск: */5 * * * * /path/to/system-doctor.sh
-# Лечит: упавший worker, зависший Next.js, протухший ждун
-# Telegram: только если не смог вылечить
+# 🩺 Доктор системы — проверяет и лечит ТОЛЬКО хаб (Next.js, БД)
+# Phase 0: НЕ перезапускает Profi-коллектор (leads-profi удалён навсегда)
+# См. docs/PHASE0_STABILIZATION.md
 
 PROJECT_DIR="/var/www/www-root/data/www/leads.konversus.ru"
 BOT_TOKEN="8924588782:AAGalvqpkASuXy2ZgmtlApk5W1HRxHKnmrg"
@@ -14,7 +13,6 @@ notify() { curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage
 
 HEALED=""
 FAILED=""
-RESTARTED=0
 
 # ─── 1. Лечим Next.js ──────────────────────────────────────────────────
 
@@ -26,7 +24,6 @@ if [ "$HTTP" != "200" ]; then
   HTTP2=$(curl -s -o /dev/null -w "%{http_code}" --max-time 8 http://localhost:3005/ 2>/dev/null)
   if [ "$HTTP2" = "200" ]; then
     HEALED="${HEALED}✅ Next.js: перезапущен (${HTTP} → 200)\n"
-    RESTARTED=1
   else
     FAILED="${FAILED}🔴 Next.js: НЕ СМОГ ВЫЛЕЧИТЬ (${HTTP} → ${HTTP2})\n"
   fi
@@ -34,69 +31,15 @@ else
   log "✅ Next.js: OK"
 fi
 
-# ─── 2. Лечим воркер ──────────────────────────────────────────────────
+# ─── 2. Profi на хабе — НЕ ТРОГАЕМ ────────────────────────────────────
+# leads-profi удалён. Авто-рестарт Profi запрещён (инцидент 30.07.2026).
+log "ℹ️ Profi hub collector: disabled by policy (Phase 0)"
 
-WORKER_STATUS=$(pm2 jlist 2>/dev/null | python3 -c "
-import sys,json
-for p in json.load(sys.stdin):
-    if p.get('name')=='leads-profi': print(p.get('pm2_env',{}).get('status','?'))
-" 2>/dev/null)
-
-if [ "$WORKER_STATUS" != "online" ]; then
-  log "🔴 Worker не online (${WORKER_STATUS}) — лечу..."
-  pm2 restart leads-profi 2>/dev/null
-  sleep 8
-  WORKER_STATUS2=$(pm2 jlist 2>/dev/null | python3 -c "
-import sys,json
-for p in json.load(sys.stdin):
-    if p.get('name')=='leads-profi': print(p.get('pm2_env',{}).get('status','?'))
-" 2>/dev/null)
-  if [ "$WORKER_STATUS2" = "online" ]; then
-    HEALED="${HEALED}✅ Worker: перезапущен\n"
-    RESTARTED=1
-  else
-    FAILED="${FAILED}🔴 Worker: НЕ СМОГ ВЫЛЕЧИТЬ\n"
-  fi
-else
-  log "✅ Worker: online"
-fi
-
-# ─── 3. Лечим ждуна ──────────────────────────────────────────────────
-
-if [ -f "$PROJECT_DIR/.collector-status.json" ]; then
-  MODE=$(grep -o '"mode":"[^"]*"' "$PROJECT_DIR/.collector-status.json" | cut -d'"' -f4)
-  LAST_CHECK=$(grep -o '"lastCheckAt":"[^"]*"' "$PROJECT_DIR/.collector-status.json" | cut -d'"' -f4)
-  RUNNING=$(grep -o '"running":true' "$PROJECT_DIR/.collector-status.json" | head -1)
-
-  if [ -z "$RUNNING" ]; then
-    log "🔴 Worker stopped (running:false) — лечу..."
-    pm2 restart leads-profi 2>/dev/null
-    HEALED="${HEALED}✅ Worker: перезапущен (был остановлен)\n"
-    RESTARTED=1
-  elif [ "$MODE" = "watch" ] && [ -n "$LAST_CHECK" ]; then
-    LAST_EPOCH=$(date -d "$LAST_CHECK" +%s 2>/dev/null)
-    NOW_EPOCH=$(date +%s)
-    if [ -n "$LAST_EPOCH" ]; then
-      GAP=$(( (NOW_EPOCH - LAST_EPOCH) / 60 ))
-      if [ "$GAP" -gt 15 ]; then
-        log "🟡 Ждун: lastCheckAt ${GAP} мин назад — лечу (рестарт воркера)..."
-        pm2 restart leads-profi 2>/dev/null
-        HEALED="${HEALED}✅ Ждун: перезапущен (lastCheck ${GAP} мин)\n"
-        RESTARTED=1
-      else
-        log "✅ Ждун: lastCheck ${GAP} мин назад"
-      fi
-    fi
-  elif [ "$MODE" != "watch" ]; then
-    log "⚠️ Режим: ${MODE} (не watch)"
-  fi
-fi
-
-# ─── 4. Проверяем БД ──────────────────────────────────────────────────
+# ─── 3. Проверяем БД ──────────────────────────────────────────────────
 
 DB=$(cd "$PROJECT_DIR" && npx tsx -e "
 const {PrismaClient}=require('@prisma/client');
-new PrismaClient().\$connect().then(()=>{console.log('OK');process.exit(0)}).catch((e)=>{console.log('ERR');process.exit(1)})
+new PrismaClient().\$connect().then(()=>{console.log('OK');process.exit(0)}).catch(()=>{console.log('ERR');process.exit(1)})
 " 2>/dev/null)
 
 if [ "$DB" != "OK" ]; then
@@ -106,50 +49,36 @@ else
   log "✅ DB: доступна"
 fi
 
-# ─── 5. Проверяем источники на ошибки ──────────────────────────────────
+# ─── 4. Источники с ошибками — только алерт, БЕЗ рестарта Profi ───────
 
 ERROR_SRC=$(cd "$PROJECT_DIR" && npx tsx -e "
 const {PrismaClient}=require('@prisma/client');
 const p=new PrismaClient();
 (async()=>{
-  const sources=await p.source.findMany({where:{enabled:true,status:'error'},select:{id:true,platform:true,lastError:true}});
+  const sources=await p.source.findMany({where:{enabled:true,status:'error'},select:{platform:true,lastError:true}});
   if(sources.length>0){console.log(JSON.stringify(sources));process.exit(1)}
   process.exit(0)
 })().catch(()=>process.exit(1))
 " 2>/dev/null)
 
-SRC_EXIT=$?
-if [ "$SRC_EXIT" != "0" ] && [ -n "$ERROR_SRC" ]; then
-  # Есть источники с ошибками — сбрасываем статус и перезапускаем воркер
-  log "🟡 Источники с ошибками: $ERROR_SRC — сбрасываю статус..."
-  cd "$PROJECT_DIR" && npx tsx -e "
-const {PrismaClient}=require('@prisma/client');
-const p=new PrismaClient();
-(async()=>{
-  await p.source.updateMany({where:{enabled:true,status:'error'},data:{status:'active',lastError:'Авто-сброс доктором'}});
-  await p.\$disconnect();
-})();
-" 2>/dev/null
-  pm2 restart leads-profi 2>/dev/null
-  HEALED="${HEALED}✅ Источники: сброшен статус error → active\n"
-  RESTARTED=1
-else
-  log "✅ Источники: без ошибок"
+if [ $? != "0" ] && [ -n "$ERROR_SRC" ]; then
+  log "🟡 Источники с ошибками: $ERROR_SRC (без авто-рестарта Profi)"
+  FAILED="${FAILED}🟡 Источники с ошибками: ${ERROR_SRC}\n   Profi: проверьте VPS-агент вручную\n"
 fi
 
 # ─── Отчёт ────────────────────────────────────────────────────────────
 
 if [ -n "$FAILED" ]; then
-  notify "🛑 *Доктор: НЕ ВСЁ ВЫЛЕЧИЛ*
+  notify "🛑 *Доктор: требуется внимание*
 ${FAILED}
 ${HEALED}"
-  log "CRITICAL: есть невылеченные проблемы"
+  log "WARN: issues detected"
 elif [ -n "$HEALED" ]; then
-  notify "💊 *Доктор: вылечил систему*
+  notify "💊 *Доктор: вылечил хаб*
 ${HEALED}"
-  log "HEALED: автоматическое лечение применено"
+  log "HEALED: hub recovered"
 else
-  log "✅ Всё в порядке"
+  log "✅ Хаб в порядке"
 fi
 
 tail -500 "$LOG" > "${LOG}.tmp" 2>/dev/null && mv "${LOG}.tmp" "$LOG" 2>/dev/null

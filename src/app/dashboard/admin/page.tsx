@@ -6,7 +6,6 @@ import { Shield, Users, CreditCard, Activity, UserPlus, Banknote } from "lucide-
 import AddPartnerButton from "@/components/admin/add-partner-button";
 import ClientLoginButton from "@/components/admin/login-as-button";
 import HealthCheckWidget from "@/components/admin/health-check-widget";
-      <CollectorStatus />
 import PartnersList from "@/components/admin/partners-list";
 import PartnerStatusPanel from "@/components/admin/partner-status-panel";
 

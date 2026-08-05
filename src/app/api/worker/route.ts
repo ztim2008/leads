@@ -3,18 +3,17 @@ import { auth } from "@/lib/auth/auth";
 import { db } from "@/lib/db";
 import { readFileSync, existsSync } from "fs";
 import { join } from "path";
+import { HUB_COLLECTOR_POLICY } from "@/config/hub";
 
 export async function GET() {
-  // Читаем глобальный статус воркера
-  let worker: any = { running: false, statusReason: "Воркер не запущен" };
+  let collectors: any = {};
   try {
-    const statusPath = join(process.cwd(), ".worker-status.json");
+    const statusPath = join(process.cwd(), ".collector-status.json");
     if (existsSync(statusPath)) {
-      worker = JSON.parse(readFileSync(statusPath, "utf-8"));
+      collectors = JSON.parse(readFileSync(statusPath, "utf-8"));
     }
   } catch {}
 
-  // Пытаемся получить workspace-specific статистику
   let workspaceStats = null;
   try {
     const session = await auth();
@@ -26,15 +25,13 @@ export async function GET() {
           include: { _count: { select: { leads: true } } },
         });
         if (ws) {
-          // Приоритетные = score >= 70 через leadAnalysis
           const priorityCount = await db.leadAnalysis.count({
             where: { lead: { workspaceId: ws.id }, score: { gte: 70 } },
           });
-          // От живых людей = botProbability <= 30
           const humanCount = await db.leadAnalysis.count({
             where: { lead: { workspaceId: ws.id }, botProbability: { lte: 30 } },
           });
-          
+
           workspaceStats = {
             totalLeads: ws._count.leads,
             priorityLeads: priorityCount,
@@ -45,24 +42,25 @@ export async function GET() {
     }
   } catch {}
 
-  return NextResponse.json({ ...worker, workspace: workspaceStats });
+  const kwork = collectors.kwork || {};
+  return NextResponse.json({
+    running: kwork.running === true,
+    statusReason: HUB_COLLECTOR_POLICY.profiOnHub
+      ? kwork.status || "Kwork collector"
+      : "Profi на хабе отключён · Kwork: " + (kwork.running ? "активен" : "остановлен"),
+    hubPolicy: HUB_COLLECTOR_POLICY,
+    collectors,
+    lastCheckAt: kwork.lastCheck || collectors.updatedAt || null,
+    workspace: workspaceStats,
+  });
 }
 
-export async function POST(req: Request) {
-  const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const user = await db.user.findUnique({ where: { email: (session.user as any).email } });
-  if (!user || user.role !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-
-  const body = await req.json().catch(() => ({}));
-  const { exec } = require("child_process");
-  if (body.action === "start") {
-    exec("pm2 start leads-worker", () => {});
-    return NextResponse.json({ ok: true });
-  }
-  if (body.action === "stop") {
-    exec("pm2 stop leads-worker", () => {});
-    return NextResponse.json({ ok: true });
-  }
-  return NextResponse.json({ error: "action must be 'start' or 'stop'" }, { status: 400 });
+export async function POST() {
+  return NextResponse.json(
+    {
+      error:
+        "Управление центральным воркером отключено (Phase 0). Profi собирается только через VPS-агент.",
+    },
+    { status: 400 },
+  );
 }

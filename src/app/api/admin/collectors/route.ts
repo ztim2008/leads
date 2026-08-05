@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth";
 import { db } from "@/lib/db";
+import { HUB_COLLECTOR_POLICY } from "@/config/hub";
 import { readFileSync, existsSync } from "fs";
 import { join } from "path";
 
@@ -47,5 +48,10 @@ export async function GET() {
     db.lead.count({ where: { source: { platform: "kwork" } } }),
   ]);
 
-  return NextResponse.json({ collectors, pm2, stats: { total, today: todayLeads, profi: profiCount, kwork: kworkCount } });
+  return NextResponse.json({
+    hub: HUB_COLLECTOR_POLICY,
+    collectors,
+    pm2,
+    stats: { total, today: todayLeads, profi: profiCount, kwork: kworkCount },
+  });
 }

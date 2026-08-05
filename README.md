@@ -2,6 +2,10 @@
 
 **AI-отбор заказов с фриланс-бирж. Не скорость, а качество.**
 
+> **Агентам:** главный план → **[docs/PLAN_2026-08-10.md](docs/PLAN_2026-08-10.md)**  
+> **Git:** https://github.com/ztim2008/leads  
+> Phase 0 (05.08): Profi на хабе отключён. Сбор только через VPS-агент v2.
+
 ## Что это
 
 Система подключается к Profi.ru, анализирует заказы через ИИ и присылает в Telegram **только горячие лиды** — с оценкой реальности заказчика, вероятностью сделки и готовым откликом.
@@ -58,16 +62,19 @@ src/
 
 | Имя | Порт | Роль | Статус |
 |-----|------|------|--------|
-| `leads-konversus` | 3005 | Next.js сервер | online |
-| `leads-worker` | — | Воркер сбора заявок | online |
+| `leads-konversus` | 3005 | Next.js сервер (хаб) | online |
+| `leads-health` | — | Health monitor | online |
+| `leads-kwork` | — | Kwork-коллектор (опционально) | stopped |
+| ~~`leads-profi`~~ | — | **УДАЛЁН** (Phase 0) | Profi только на VPS |
 
 **Управление:**
 ```bash
 pm2 restart leads-konversus   # перезапустить Next.js
-pm2 restart leads-worker      # перезапустить воркер
+pm2 restart leads-health      # перезапустить мониторинг
 pm2 logs leads-konversus      # логи Next.js
-pm2 logs leads-worker         # логи воркера
 ```
+
+**План разработки:** [docs/PLAN_2026-08-10.md](docs/PLAN_2026-08-10.md)
 
 ### Nginx
 

@@ -160,4 +160,53 @@ Partner buys VPS, downloads zip, fills config.json (Profi login/password + Teleg
 - leads-kwork: STOPPED
 - leads-health: online
 - leads-konversus: online
-- Ожидает: ручная разблокировка TimofeyevAG11 и RysyevVO на profi.ru
+- Ожидает: agent v2 на VPS (аккаунты Profi не восстанавливаются)
+
+## 2026-08-05
+
+### Phase 0: Стабилизация после блокировки Profi
+- `pm2 delete leads-profi` — удалён навсегда (было 3277 рестартов)
+- Удалены: worker.ts (1024 LOC), worker-run.ts, pulse.ts, 17 test-profi скриптов
+- `src/config/hub.ts` — политика profiOnHub: false
+- profi-watcher.ts — guard, не запускается на хабе
+- system-doctor.sh, health-check.sh — убраны авто-рестарты Profi
+- Админка: обновлены health-check и collector-status
+- docs/PHASE0_STABILIZATION.md — отчёт
+
+### Plan: PLAN_2026-08-10.md
+- Подробный план к 10 августа: боль, философия, 6 этапов (0–5) со статусами ✅🟡⚪
+- AGENTS.md, README.md, ROADMAP.md — ссылки на план для других агентов
+
+### Git & процесс
+- Remote: `git@github.com:ztim2008/leads.git`
+- AGENTS.md: регламент открытия/закрытия дня, git workflow
+- `docs/devlog.md`, `docs/DEVELOPMENT.md` — помечены как архив
+
+---
+
+## Итоги дня · 5 августа 2026
+
+### Сделано
+- **Phase 0:** Profi на хабе отключён навсегда (`pm2 delete leads-profi`, guard, hub policy)
+- Удалён опасный код: `worker.ts` (1024 LOC), 17 test-скриптов, авто-рестарты в doctor/health-check
+- План agent v2: `docs/PLAN_2026-08-10.md` (боль, философия, этапы 0–5)
+- Процесс: AGENTS.md с чеклистом закрытия дня, единый DEVLOG.md, GitHub remote
+
+### Проверки
+- `npm run build` — OK
+- `curl localhost:3005` — 200
+- `profi-watcher.ts` — BLOCKED на хабе (exit 0)
+
+### Production
+- `leads-konversus` — online
+- `leads-health` — online
+- `leads-kwork` — stopped
+- `leads-profi` — удалён из PM2
+- Profi: сбор только через VPS-агент (ещё не развёрнут)
+
+### Git
+- Первый push на https://github.com/ztim2008/leads
+- Коммит: Phase 0 + план + регламент AGENTS
+
+### Следующий шаг
+- Этап 1: `packages/agent-core` — circuit breaker + persistent profile
