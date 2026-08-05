@@ -73,6 +73,7 @@ git push origin main
 |---|---|
 | Remote | `origin` → `git@github.com:ztim2008/leads.git` |
 | Ветка | `main` (единственная рабочая) |
+| SSH на сервере | Ключ `id_ed25519_github_nordicbuilder` (настроен в `core.sshCommand` репозитория) |
 | Push | После каждого логического блока работы, минимум — в конце дня |
 | Теги | `checkpoint/*` — вехи; `rollback-*` — точки отката |
 | Секреты | `.env` в `.gitignore` — **никогда** в коммит |
