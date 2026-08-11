@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
     login: cfg.login || "?",
     platform: source.platform,
     enabled: source.enabled,
-    command: `curl -fsSL ${API_URL}/agent/setup.sh | bash -s "${source.id}"`,
+    command: `curl -fsSL ${API_URL}/agent/v2/install.sh | bash -s "${source.id}"`,
     status: source.status || "pending",
     lastCheckAt: source.lastCheckAt,
     lastHeartbeat: cfg._lastHeartbeat || null,

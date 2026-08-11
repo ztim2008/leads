@@ -1,7 +1,8 @@
 #!/bin/bash
 # Установщик Leads Agent на VPS партнёра
 # Запуск одной командой:
-# curl -fsSL https://leads.konversus.ru/agent/setup.sh | bash -s SOURCE_ID
+# Leads Agent v1 — DEPRECATED, use v2:
+# curl -fsSL https://leads.konversus.ru/agent/v2/install.sh | bash -s SOURCE_ID
 
 set -e
 

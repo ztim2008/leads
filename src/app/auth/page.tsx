@@ -5,30 +5,29 @@ import Link from "next/link";
 import { useState, useEffect } from "react";
 
 export default function AuthPage() {
-  const [isRegister, setIsRegister] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const p = new URLSearchParams(window.location.search);
-    setIsRegister(p.get("tab") === "register");
     const err = p.get("error");
     if (err) setError(err === "CredentialsSignin" ? "Неверный email или пароль" : err);
   }, []);
 
   async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    setLoading(true); setError(null);
+    setLoading(true);
+    setError(null);
     const form = new FormData(e.currentTarget);
     const email = form.get("email") as string;
     const password = form.get("password") as string;
-    
-    // Direct API login (bypass NextAuth cookie domain issue)
+
     const apiRes = await fetch("/api/direct-login", {
-      method: "POST", headers: { "Content-Type": "application/json" },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email, password }),
     });
-    
+
     if (apiRes.ok) {
       const data = await apiRes.json();
       document.cookie = "leads_token=" + data.token + "; path=/; max-age=86400; secure; samesite=lax";
@@ -36,28 +35,6 @@ export default function AuthPage() {
     } else {
       setError("Неверный email или пароль");
     }
-    setLoading(false);
-  }
-
-  async function handleRegister(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    setLoading(true); setError(null);
-    const form = new FormData(e.currentTarget);
-    const email = (form.get("email") as string).trim();
-    const password = form.get("password") as string;
-    const name = (form.get("name") as string).trim();
-    if (password.length < 6) { setError("Пароль: минимум 6 символов"); setLoading(false); return; }
-
-    const res = await fetch("/api/auth/register", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, name }),
-    });
-    const data = await res.json();
-    if (!res.ok) { setError(data.error || "Ошибка"); setLoading(false); return; }
-
-    const signRes = await signIn("credentials", { email, password, redirect: false });
-    if (signRes?.error) setError("Аккаунт создан, но не удалось войти");
-    else window.location.href="/dashboard";
     setLoading(false);
   }
 
@@ -71,30 +48,27 @@ export default function AuthPage() {
           </Link>
         </div>
 
-        {/* Табы */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", border: "1px solid var(--border)", borderRadius: "var(--radius-lg) var(--radius-lg) 0 0", overflow: "hidden", marginBottom: -1, position: "relative", zIndex: 1 }}>
-          <button onClick={() => { setIsRegister(false); setError(null); }} style={tabStyle(!isRegister)}>Вход</button>
-          <button onClick={() => { setIsRegister(true); setError(null); }} style={tabStyle(isRegister)}>Регистрация</button>
-        </div>
+        <div style={{ background: "var(--bg-surface)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", padding: "28px 24px" }}>
+          <h1 style={{ fontSize: "var(--text-lg)", fontWeight: 700, marginBottom: 8, color: "var(--ink-heading)" }}>Вход</h1>
+          <p style={{ fontSize: "var(--text-xs)", color: "var(--ink-muted)", marginBottom: 20 }}>
+            Аккаунты создаёт администратор. Саморегистрация отключена.
+          </p>
 
-        <div style={{ background: "var(--bg-surface)", border: "1px solid var(--border)", borderTop: "none", borderRadius: "0 0 var(--radius-lg) var(--radius-lg)", padding: "28px 24px" }}>
           {error && (
             <div style={{ padding: "10px 14px", borderRadius: "var(--radius-sm)", background: "var(--red-soft)", color: "var(--red)", fontSize: "var(--text-xs)", fontWeight: 600, marginBottom: 16 }}>{error}</div>
           )}
 
-          <form key={isRegister ? "reg" : "login"} onSubmit={isRegister ? handleRegister : handleLogin} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-            {isRegister && <InputField label="Имя" name="name" type="text" placeholder="Алексей" />}
+          <form onSubmit={handleLogin} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
             <InputField label="Email" name="email" type="email" placeholder="ваш@email.ru" />
-            <InputField label="Пароль" name="password" type="password" placeholder={isRegister ? "Минимум 6 символов" : "••••••••"} />
+            <InputField label="Пароль" name="password" type="password" placeholder="••••••••" />
             <button type="submit" disabled={loading} style={btnStyle(loading)}>
-              {loading ? "Загрузка..." : isRegister ? "Зарегистрироваться" : "Войти"}
+              {loading ? "Загрузка..." : "Войти"}
             </button>
           </form>
 
-          {/* Яндекс */}
           <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid var(--border)" }}>
             <p style={{ textAlign: "center", fontSize: "var(--text-xs)", color: "var(--ink-muted)", marginBottom: 12 }}>
-              или {isRegister ? "зарегистрируйтесь" : "войдите"} через
+              или войдите через
             </p>
             <button onClick={() => signIn("yandex", { callbackUrl: "/dashboard" })} style={yandexBtnStyle}>
               <span style={{ fontSize: 18, fontWeight: 700 }}>Я</span>
@@ -102,13 +76,6 @@ export default function AuthPage() {
             </button>
           </div>
         </div>
-
-        <p style={{ textAlign: "center", marginTop: 16, fontSize: "var(--text-xs)", color: "var(--ink-muted)" }}>
-          {isRegister ? "Уже есть аккаунт? " : "Нет аккаунта? "}
-          <button onClick={() => { setIsRegister(!isRegister); setError(null); }} style={{ background: "none", border: "none", color: "var(--accent)", fontWeight: 600, cursor: "pointer", fontSize: "var(--text-xs)", padding: 0, textDecoration: "underline" }}>
-            {isRegister ? "Войти" : "Зарегистрироваться"}
-          </button>
-        </p>
       </div>
     </div>
   );
@@ -122,14 +89,6 @@ function InputField({ label, name, type, placeholder }: { label: string; name: s
     </div>
   );
 }
-
-const tabStyle = (active: boolean): React.CSSProperties => ({
-  padding: "12px", textAlign: "center", fontWeight: 600, fontSize: "var(--text-sm)",
-  background: active ? "var(--bg-surface)" : "var(--bg-layer)",
-  color: active ? "var(--ink-heading)" : "var(--ink-muted)",
-  borderBottom: active ? "2px solid var(--accent)" : "1px solid var(--border)",
-  border: "none", cursor: "pointer",
-});
 
 const btnStyle = (loading: boolean): React.CSSProperties => ({
   width: "100%", padding: "11px 14px", borderRadius: "var(--radius-sm)",

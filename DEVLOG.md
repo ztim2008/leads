@@ -244,3 +244,23 @@ Partner buys VPS, downloads zip, fills config.json (Profi login/password + Teleg
 
 ### Следующий шаг
 - Этап 2: `public/agent/v2` на отдельном VPS (обёртка над agent-core)
+
+---
+
+## 2026-08-11 (продолжение)
+
+### Модель «не SaaS» + Этап 2 (код)
+- PLAN: блок «3 роли, подключение только админ»
+- `/auth` — только вход; `/api/auth/register` → 403
+- Agent v2: `src/agent-core/vps-agent.ts` → `public/agent/v2/agent.bundle.mjs`
+- API v2: config, heartbeat (+ CB), leads (фильтры), alert (TG админу)
+- `public/agent/v2/install.sh` — PM2 `leads-agent-v2`, max_restarts 3
+- v1 `agent.mjs` — deprecated stub
+- Setup-команды в админке → v2 install.sh
+
+### Проверки
+- `npm run build:agent-v2` + `npm run build` — OK
+- `npm run test:agent-core` — 6/6
+
+### Осталось (Этап 2 DoD)
+- 2.8: тест на отдельном VPS (не хаб)

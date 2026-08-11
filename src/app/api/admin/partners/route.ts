@@ -8,6 +8,8 @@ import { hash } from "bcryptjs";
 
 const AGENT_SECRET = process.env.AGENT_SECRET || "leads-agent-secret-2026";
 const API_URL = process.env.NEXT_PUBLIC_URL || "https://leads.konversus.ru";
+const V2_SETUP = `${API_URL}/agent/v2/install.sh`;
+
 
 // GET — список партнёров
 export async function GET() {
@@ -48,8 +50,13 @@ export async function GET() {
               errors: cfg._agentErrors || 0,
               lastError: cfg._lastError || null,
               lastErrorTime: cfg._lastErrorTime || null,
+              lifecycle: cfg._agentState || "pending",
+              circuitBreaker: cfg._circuitBreaker || null,
+              version: cfg._agentVersion || 1,
             },
-            setupCommand: s.enabled ? `curl -fsSL https://leads.konversus.ru/agent/setup.sh | bash -s "${s.id}"` : null,
+            setupCommand: s.enabled
+              ? `curl -fsSL ${API_URL}/agent/v2/install.sh | bash -s "${s.id}"`
+              : null,
           };
         }),
         settings: ws.settings ? {
@@ -154,7 +161,7 @@ export async function POST(req: NextRequest) {
   // Формируем команду для VPS
   let setupCommand = "";
   if (sourceId) {
-    setupCommand = `curl -fsSL ${API_URL}/agent/setup.sh | bash -s "${sourceId}"`;
+    setupCommand = `curl -fsSL ${V2_SETUP} | bash -s "${sourceId}"`;
   }
 
   return NextResponse.json({

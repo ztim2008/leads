@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build:agent-v2": "esbuild src/agent-core/vps-agent.ts --bundle --platform=node --format=esm --outfile=public/agent/v2/agent.bundle.mjs --external:playwright --packages=external",
+    "build": "npm run build:agent-v2 && next build",
     "start": "next start",
     "lint": "eslint",
     "test:agent-core": "tsx --test src/agent-core/circuit-breaker.test.ts"
@@ -36,6 +37,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "esbuild": "^0.25.12",
     "eslint": "^9",
     "eslint-config-next": "16.2.9",
     "tailwindcss": "^4",
