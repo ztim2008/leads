@@ -113,6 +113,7 @@ pm2 save
 
 | Файл | Назначение |
 |------|------------|
+| [.cursor/skills/leads-konversus-connect/SKILL.md](.cursor/skills/leads-konversus-connect/SKILL.md) | **Быстрый старт** — SSH, открытие сессии |
 | [docs/PLAN_2026-08-10.md](docs/PLAN_2026-08-10.md) | Главный план — этапы, статусы, DoD |
 | [DEVLOG.md](DEVLOG.md) | **Единственный** активный девлог |
 | [docs/PHASE0_STABILIZATION.md](docs/PHASE0_STABILIZATION.md) | Отчёт Phase 0 |
