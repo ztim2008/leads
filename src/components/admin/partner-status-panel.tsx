@@ -10,6 +10,9 @@ interface AgentStatus {
   errors: number;
   lastError: string | null;
   lastErrorTime: string | null;
+  lifecycle?: string;
+  circuitBreaker?: { state?: string } | null;
+  version?: number;
 }
 
 interface PartnerSource {
@@ -46,6 +49,9 @@ function timeAgo(iso: string | null): string {
 
 function statusBadge(s: PartnerSource) {
   const a = s.agentStatus;
+  const cb = a.circuitBreaker?.state;
+  if (cb === "BLOCKED") return { text: "🔴 BLOCKED", color: "var(--red)", bg: "#ef444415" };
+  if (cb === "OPEN") return { text: "🟠 CB OPEN", color: "var(--amber)", bg: "#f59e0b15" };
   if (!a.online) return { text: "⚫ Нет связи", color: "var(--ink-muted)", bg: "var(--bg-hover)" };
   if (a.lastError) return { text: "🟡 Ошибка", color: "var(--amber)", bg: "#f59e0b15" };
   if (!s.enabled) return { text: "⏸ Пауза", color: "var(--ink-muted)", bg: "var(--bg-hover)" };
@@ -61,11 +67,20 @@ export default function PartnerStatusPanel() {
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState<string>("");
 
-  useEffect(() => {
+  const refresh = () => {
     fetch("/api/admin/partners")
-      .then(r => r.json())
-      .then(d => { setPartners(d.partners || []); setLoading(false); })
+      .then((r) => r.json())
+      .then((d) => {
+        setPartners(d.partners || []);
+        setLoading(false);
+      })
       .catch(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    refresh();
+    const t = setInterval(refresh, 60_000);
+    return () => clearInterval(t);
   }, []);
 
   if (loading) return <div style={{ padding: 20, color: "var(--ink-muted)", fontSize: "var(--text-sm)" }}>Загрузка...</div>;
@@ -76,6 +91,15 @@ export default function PartnerStatusPanel() {
 
   return (
     <div style={{ overflowX: "auto" }}>
+      <div style={{ padding: "8px 14px", display: "flex", justifyContent: "flex-end" }}>
+        <button
+          type="button"
+          onClick={() => { setLoading(true); refresh(); }}
+          style={{ padding: "4px 10px", fontSize: "0.65rem", borderRadius: 4, border: "1px solid var(--border)", cursor: "pointer", background: "var(--bg-root)" }}
+        >
+          🔄 Обновить
+        </button>
+      </div>
       <table style={{ width: "100%", borderCollapse: "collapse" }}>
         <thead>
           <tr>

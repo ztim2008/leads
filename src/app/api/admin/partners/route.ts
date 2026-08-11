@@ -41,6 +41,14 @@ export async function GET() {
             id: s.id, platform: s.platform, enabled: s.enabled,
             lastCheckAt: s.lastCheckAt, status: s.status || "active",
             lastError: s.lastError || cfg._lastError || null,
+            config: {
+              login: cfg.login || null,
+              password: cfg.password ? "●●●●" : null,
+              _profiConfigured: !!(cfg.login && cfg.password),
+              _vpsIp: cfg._vpsIp || null,
+              _onboardingVpsReady: cfg._onboardingVpsReady || false,
+              _onboardingNotes: cfg._onboardingNotes || null,
+            },
             agentStatus: {
               online: cfg._lastHeartbeat ? (Date.now() - new Date(cfg._lastHeartbeat).getTime() < 15*60*1000) : false,
               lastHeartbeat: cfg._lastHeartbeat || null,

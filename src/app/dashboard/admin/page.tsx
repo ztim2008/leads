@@ -1,3 +1,4 @@
+import PartnerOnboardingHub from "@/components/admin/partner-onboarding-hub";
 import CollectorStatus from "@/components/admin/collector-status";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth/auth";
@@ -49,6 +50,9 @@ export default async function AdminPage() {
         <span style={{ fontWeight: 700, fontSize: "var(--text-sm)", color: "var(--accent)", borderBottom: "2px solid var(--accent)", padding: "10px 16px", marginBottom: -1 }}>🩺 Мониторинг</span>
         <Link href="/dashboard/admin/billing" style={{ fontWeight: 500, fontSize: "var(--text-sm)", color: "var(--ink-muted)", padding: "10px 16px", textDecoration: "none" }}>💰 Биллинг</Link>
       </div>
+
+      {/* Подключение партнёров — мануал + чеклист */}
+      <PartnerOnboardingHub />
 
       {/* Проверка системы */}
       <HealthCheckWidget />
