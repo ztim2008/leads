@@ -61,7 +61,7 @@ export default function PartnersList() {
   async function loginAs(email: string) {
     const res = await fetch("/api/admin/login-as", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) });
     const d = await res.json();
-    if (d.ok) window.open(d.url, "_blank");
+    if (d.ok) window.location.href = "/dashboard";
     else alert("Ошибка: " + (d.error || "Неизвестно"));
   }
 

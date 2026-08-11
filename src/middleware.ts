@@ -1,29 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
-import { jwtVerify } from "jose";
-
-const SECRET = new TextEncoder().encode(process.env.AUTH_SECRET || "981enFOks++AvBhamoSqvoDPxzCIy8sVKuoZSTjHexQ=");
+import { LEADS_TOKEN_COOKIE, verifyLeadsToken } from "@/lib/auth/session";
 
 export default async function middleware(req: NextRequest) {
-  const token = req.cookies.get("leads_token")?.value;
+  const token = req.cookies.get(LEADS_TOKEN_COOKIE)?.value;
+  const path = req.nextUrl.pathname;
+
   if (!token) {
-    if (req.nextUrl.pathname.startsWith("/dashboard") || req.nextUrl.pathname.startsWith("/api/admin")) {
+    if (path.startsWith("/dashboard") || path.startsWith("/api/admin")) {
       return NextResponse.redirect(new URL("/auth", req.url));
     }
     return NextResponse.next();
   }
 
-  try {
-    const { payload } = await jwtVerify(token, SECRET);
-    const path = req.nextUrl.pathname;
-    if ((path.startsWith("/dashboard/admin") || path.startsWith("/api/admin")) && payload.role !== "admin") {
-      return NextResponse.redirect(new URL("/dashboard", req.url));
-    }
-    return NextResponse.next();
-  } catch {
+  const payload = await verifyLeadsToken(token);
+  if (!payload) {
     const resp = NextResponse.redirect(new URL("/auth", req.url));
-    resp.cookies.delete("leads_token");
+    resp.cookies.set(LEADS_TOKEN_COOKIE, "", { path: "/", maxAge: 0 });
     return resp;
   }
+
+  const isAdminRoute = path.startsWith("/dashboard/admin") || path.startsWith("/api/admin");
+  const isAdmin = payload.role === "admin" && !payload.impersonatorId;
+
+  if (isAdminRoute && !isAdmin) {
+    return NextResponse.redirect(new URL("/dashboard", req.url));
+  }
+
+  // Партнёр не настраивает источники — только админ
+  if (payload.role !== "admin" && path.startsWith("/dashboard/sources")) {
+    return NextResponse.redirect(new URL("/dashboard/leads", req.url));
+  }
+
+  return NextResponse.next();
 }
 
 export const config = {

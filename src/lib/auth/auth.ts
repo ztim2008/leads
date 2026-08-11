@@ -5,6 +5,12 @@ import { db } from "@/lib/db";
 import { compare } from "bcryptjs";
 import type { NextAuthOptions } from "next-auth";
 import { getServerSession } from "next-auth";
+import { cookies } from "next/headers";
+import {
+  LEADS_TOKEN_COOKIE,
+  signLeadsToken,
+  verifyLeadsToken,
+} from "@/lib/auth/session";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -54,11 +60,22 @@ export const authOptions: NextAuthOptions = {
       return true;
     },
     async jwt({ token, user }) {
-      if (user) { token.id = user.id; const dbUser = await db.user.findUnique({ where: { email: user.email! } }); if (dbUser) token.role = dbUser.role; }
+      if (user?.email) {
+        token.id = user.id;
+        const dbUser = await db.user.findUnique({ where: { email: user.email } });
+        if (dbUser) {
+          token.role = dbUser.role;
+          token.email = dbUser.email;
+        }
+      }
       return token;
     },
     async session({ session, token }) {
-      if (session.user) (session.user as any).id = token.id;
+      if (session.user) {
+        (session.user as { id?: string }).id = token.id as string;
+        (session.user as { role?: string }).role = token.role as string;
+        if (token.email) session.user.email = token.email as string;
+      }
       return session;
     },
   },
@@ -68,22 +85,44 @@ const handler = NextAuth(authOptions);
 export { handler as GET, handler as POST };
 
 export async function auth() {
-  const session = await getServerSession(authOptions);
-  if (session?.user) return session;
-  try {
-    const { cookies } = require('next/headers');
-    const token = (await cookies()).get('leads_token')?.value;
-    if (!token) return null;
-    const { jwtVerify } = require('jose');
-    const secret = new TextEncoder().encode(process.env.AUTH_SECRET || '981enFOks++AvBhamoSqvoDPxzCIy8sVKuoZSTjHexQ=');
-    const { payload } = await jwtVerify(token, secret);
-    // Ищем реального пользователя по email, а не подставляем email как id
-    let userId = payload.id;
-    if (!userId || userId === payload.email) {
-      const dbUser = await db.user.findUnique({ where: { email: payload.email } });
-      userId = dbUser?.id || null;
+  const cookieStore = await cookies();
+  const leadsRaw = cookieStore.get(LEADS_TOKEN_COOKIE)?.value;
+  if (leadsRaw) {
+    const payload = await verifyLeadsToken(leadsRaw);
+    if (payload) {
+      return {
+        user: {
+          id: payload.id,
+          email: payload.email,
+          role: payload.role,
+          impersonatorId: payload.impersonatorId,
+          impersonatorEmail: payload.impersonatorEmail,
+        },
+      };
     }
-    if (!userId) return null;
-    return { user: { email: payload.email, id: userId, role: payload.role } };
-  } catch { return null; }
+  }
+
+  const session = await getServerSession(authOptions);
+  if (session?.user?.email) {
+    const dbUser = await db.user.findUnique({ where: { email: session.user.email } });
+    if (dbUser) {
+      return {
+        user: {
+          id: dbUser.id,
+          email: dbUser.email,
+          role: dbUser.role,
+        },
+      };
+    }
+  }
+
+  return null;
 }
+
+export type AuthUser = {
+  id: string;
+  email: string;
+  role: string;
+  impersonatorId?: string;
+  impersonatorEmail?: string;
+};

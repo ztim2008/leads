@@ -1,122 +1,178 @@
 "use client";
-import { useState, useEffect } from "react";
-import { CreditCard, Settings } from "lucide-react";
 
-export default function BillingAdminPage() {
-  const [data, setData] = useState<any>(null);
-  const [config, setConfig] = useState<any>(null);
+import { useEffect, useState } from "react";
+
+interface PartnerRow {
+  userId: string;
+  email: string;
+  name: string;
+  workspaceId: string;
+  profiLogin: string | null;
+  sourceEnabled: boolean;
+  agentOnline: boolean;
+  quota: {
+    used: number;
+    limit: number;
+    remaining: number;
+    collectionEnabled: boolean;
+    expiresAt: string | null;
+    expired: boolean;
+  } | null;
+}
+
+export default function BillingLimitsPage() {
+  const [data, setData] = useState<{ partners: PartnerRow[]; summary: Record<string, number> } | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState("");
 
   async function load() {
     setLoading(true);
     try {
-      const [bRes, cRes] = await Promise.all([fetch("/api/admin/billing"), fetch("/api/admin/app-config")]);
-      if (bRes.ok) setData(await bRes.json());
-      if (cRes.ok) setConfig(await cRes.json());
-    } catch {}
+      const r = await fetch("/api/admin/billing");
+      if (r.ok) setData(await r.json());
+    } catch {
+      /* ignore */
+    }
     setLoading(false);
   }
 
-  async function saveConfig(e: React.FormEvent) {
-    e.preventDefault(); setSaving(true);
-    const fd = new FormData(e.target as HTMLFormElement);
-    const body: any = { proPrice: parseInt(fd.get("proPrice") as string) || 999, trialDays: parseInt(fd.get("trialDays") as string) || 7, supportTelegram: fd.get("supportTelegram") || "", supportEmail: fd.get("supportEmail") || "" };
-    try {
-      const res = await fetch("/api/admin/app-config", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-      if (res.ok) { setConfig(await res.json()); setMsg("✅ Сохранено"); }
-    } catch {}
-    setSaving(false); setTimeout(() => setMsg(""), 3000);
+  useEffect(() => {
+    load();
+  }, []);
+
+  async function action(workspaceId: string, action: string, extra?: Record<string, unknown>) {
+    await fetch("/api/admin/billing", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ workspaceId, action, ...extra }),
+    });
+    setMsg("✅ Обновлено");
+    load();
+    setTimeout(() => setMsg(""), 2500);
   }
 
-  async function manageSub(action: string, workspaceId: string) {
-    await fetch("/api/admin/billing", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, workspaceId }) });
-    load(); setMsg(action === "extend" ? "✅ Продлено на 30 дней" : "❌ Отменено");
-  }
+  if (loading) return <p style={{ padding: 24, color: "var(--ink-muted)" }}>Загрузка…</p>;
 
-  useEffect(() => { load(); }, []);
-
-  if (loading) return <div style={{ padding: 40, textAlign: "center", color: "var(--ink-muted)" }}>Загрузка...</div>;
-  const subs = data?.subscriptions || [];
-  const payments = data?.payments || [];
-  const rev = data?.revenue || { today: 0, month: 0, total: 0 };
+  const partners = data?.partners || [];
+  const summary = data?.summary || { total: 0, active: 0, paused: 0, nearLimit: 0 };
 
   return (
     <div>
-      <h1 style={{ fontSize: "var(--text-2xl)", fontWeight: 700, marginBottom: 24 }}>💰 Биллинг</h1>
+      <p style={{ fontSize: "var(--text-sm)", color: "var(--ink-muted)", marginBottom: 20, lineHeight: 1.5 }}>
+        Управление лимитами заявок на месяц. Нет фиксированной цены — вы вручную продлеваете период и задаёте лимит.
+        При исчерпании лимита сбор останавливается, уведомление уходит в Telegram админу и партнёру.
+      </p>
 
-      {/* Доходы */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", overflow: "hidden", marginBottom: 24 }}>
-        {[rev.today+" ₽", rev.month+" ₽", rev.total+" ₽"].map((val, i) => {
-          const labels = ["Сегодня","За месяц","Всего"];
-          const colors = ["var(--green)","var(--accent)","var(--purple)"];
-          return (
-          <div key={i} style={{ padding: "20px 24px", background: "var(--bg-surface)", borderRight: i < 2 ? "1px solid var(--border)" : "none" }}>
-            <p style={{ fontSize: "var(--text-xs)", color: "var(--ink-muted)", marginBottom: 4 }}>{labels[i]}</p>
-            <p style={{ fontSize: "var(--text-xl)", fontWeight: 800, color: colors[i] }}>{val}</p>
-          </div>
-        );})}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 24 }}>
+        <SummaryCard label="Всего" value={summary.total} />
+        <SummaryCard label="Сбор активен" value={summary.active} color="var(--green)" />
+        <SummaryCard label="Остановлено" value={summary.paused} color="var(--red)" />
+        <SummaryCard label="Близко к лимиту" value={summary.nearLimit} color="var(--amber)" />
       </div>
 
-      {/* Настройки цен */}
-      <div style={{ border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", background: "var(--bg-surface)", padding: 24, marginBottom: 24 }}>
-        <h2 style={{ fontSize: "var(--text-base)", fontWeight: 650, marginBottom: 16 }}><Settings size={18} /> Настройки цен</h2>
-        <form onSubmit={saveConfig}>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-            <div><label style={lbl}>💰 Цена Pro (₽/мес)</label><input name="proPrice" type="number" defaultValue={config?.proPrice || 2900} style={inp} /></div>
-            <div><label style={lbl}>🎁 Пробный период (отключён)</label><input name="trialDays" type="number" defaultValue={config?.trialDays || 0} style={inp} /></div>
-            <div><label style={lbl}>📞 Telegram поддержки</label><input name="supportTelegram" defaultValue={config?.supportTelegram || ""} placeholder="@username" style={inp} /></div>
-            <div><label style={lbl}>📧 Email поддержки</label><input name="supportEmail" defaultValue={config?.supportEmail || ""} placeholder="info@..." style={inp} /></div>
-          </div>
-          <button type="submit" disabled={saving} style={{ marginTop: 16, padding: "8px 20px", borderRadius: "var(--radius-sm)", background: "var(--accent)", color: "#fff", border: "none", fontWeight: 600, cursor: "pointer" }}>{saving ? "..." : "💾 Сохранить"}</button>
-          {msg && <span style={{ marginLeft: 12, fontSize: "var(--text-xs)", color: "var(--green)" }}>{msg}</span>}
-        </form>
-      </div>
+      {msg && <p style={{ color: "var(--green)", fontSize: "var(--text-sm)", marginBottom: 12 }}>{msg}</p>}
 
-      {/* Подписки */}
-      <div style={{ border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", overflow: "hidden", background: "var(--bg-surface)", marginBottom: 24 }}>
-        <div style={{ padding: "14px 20px", borderBottom: "1px solid var(--border)", fontWeight: 650 }}>📋 Подписки ({subs.length})</div>
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead><tr style={{ borderBottom: "1px solid var(--border)" }}><th style={th}>Пользователь</th><th style={th}>Тариф</th><th style={th}>Статус</th><th style={th}>Действует до</th><th style={th}>Платежей</th><th style={th}>Управление</th></tr></thead>
-          <tbody>
-            {subs.map((s: any, i: number) => (
-              <tr key={i} style={{ borderBottom: "1px solid var(--border-light)" }}>
-                <td style={td}>{s.email || "?"}</td>
-                <td style={td}><span style={{ padding: "2px 8px", borderRadius: 100, fontSize: "var(--text-xs)", fontWeight: 600, background: s.plan === "pro" ? "var(--green-soft)" : "var(--bg-hover)", color: s.plan === "pro" ? "var(--green)" : "var(--ink-muted)" }}>{s.plan === "pro" ? "Pro" : "Free"}</span></td>
-                <td style={td}>{s.status === "active" ? "🟢 Активна" : "🔴 Истекла"}</td>
-                <td style={td}>{s.expiresAt ? new Date(s.expiresAt).toLocaleDateString("ru-RU") : "—"}</td>
-                <td style={td}>{s.paymentCount || 0}</td>
-                <td style={td}><button onClick={() => manageSub("extend", s.workspaceId)} style={btn}>+30 дн</button> <button onClick={() => manageSub("cancel", s.workspaceId)} style={{ ...btn, background: "var(--red-soft)", color: "var(--red)", border: "1px solid var(--red)" }}>Отменить</button></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Платежи */}
       <div style={{ border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", overflow: "hidden", background: "var(--bg-surface)" }}>
-        <div style={{ padding: "14px 20px", borderBottom: "1px solid var(--border)", fontWeight: 650 }}>💳 История платежей ({payments.length})</div>
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead><tr style={{ borderBottom: "1px solid var(--border)" }}><th style={th}>Дата</th><th style={th}>Email</th><th style={th}>Сумма</th><th style={th}>Тариф</th><th style={th}>ID</th></tr></thead>
+          <thead>
+            <tr style={{ borderBottom: "1px solid var(--border)" }}>
+              <th style={th}>Партнёр</th>
+              <th style={th}>Использовано</th>
+              <th style={th}>Лимит</th>
+              <th style={th}>До</th>
+              <th style={th}>Сбор</th>
+              <th style={th}>Действия</th>
+            </tr>
+          </thead>
           <tbody>
-            {payments.slice(0, 20).map((p: any, i: number) => (
-              <tr key={i} style={{ borderBottom: "1px solid var(--border-light)" }}>
-                <td style={td}>{new Date(p.createdAt).toLocaleString("ru-RU")}</td>
-                <td style={td}>{p.email || "?"}</td>
-                <td style={td}><b>{p.amount} ₽</b></td>
-                <td style={td}>{p.plan === "pro" ? "Pro" : p.plan}</td>
-                <td style={{ fontFamily: "monospace", fontSize: "var(--text-xs)", color: "var(--ink-muted)" }}>{p.paymentId?.slice(0, 16)}...</td>
-              </tr>
-            ))}
+            {partners.map((p) => {
+              const q = p.quota;
+              const pct = q && q.limit > 0 ? (q.used / q.limit) * 100 : 0;
+              return (
+                <tr key={p.workspaceId} style={{ borderBottom: "1px solid var(--border-light)" }}>
+                  <td style={td}>
+                    <div style={{ fontWeight: 650 }}>{p.name}</div>
+                    <div style={{ fontSize: "var(--text-xs)", color: "var(--ink-muted)" }}>{p.email}</div>
+                    {p.profiLogin && <div style={{ fontSize: "0.65rem", color: "var(--ink-muted)" }}>Profi: {p.profiLogin}</div>}
+                  </td>
+                  <td style={td}>
+                    <span style={{ fontWeight: 700, color: pct >= 100 ? "var(--red)" : pct >= 80 ? "var(--amber)" : "var(--ink-heading)" }}>
+                      {q?.used ?? "—"}
+                    </span>
+                  </td>
+                  <td style={td}>
+                    <input
+                      type="number"
+                      defaultValue={q?.limit ?? 500}
+                      style={inp}
+                      onBlur={(e) => {
+                        const v = parseInt(e.target.value) || 500;
+                        if (v !== q?.limit) action(p.workspaceId, "set_limit", { leadsPerMonth: v });
+                      }}
+                    />
+                  </td>
+                  <td style={{ ...td, fontSize: "var(--text-xs)" }}>
+                    {q?.expiresAt
+                      ? new Date(q.expiresAt).toLocaleDateString("ru")
+                      : "—"}
+                    {q?.expired && <span style={{ color: "var(--red)" }}> истёк</span>}
+                  </td>
+                  <td style={td}>
+                    <button
+                      type="button"
+                      onClick={() => action(p.workspaceId, "toggle", { enabled: !q?.collectionEnabled })}
+                      style={{
+                        padding: "4px 12px",
+                        borderRadius: 100,
+                        border: "none",
+                        fontWeight: 600,
+                        fontSize: "var(--text-xs)",
+                        cursor: "pointer",
+                        background: q?.collectionEnabled && !q?.expired ? "var(--green-soft)" : "var(--red-soft)",
+                        color: q?.collectionEnabled && !q?.expired ? "var(--green)" : "var(--red)",
+                      }}
+                    >
+                      {q?.collectionEnabled && !q?.expired ? "ВКЛ" : "СТОП"}
+                    </button>
+                  </td>
+                  <td style={td}>
+                    <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                      <button type="button" onClick={() => action(p.workspaceId, "renew")} style={actBtn}>
+                        Продлить месяц
+                      </button>
+                      <button type="button" onClick={() => action(p.workspaceId, "reset_counter")} style={actBtn}>
+                        Сброс счётчика
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
     </div>
   );
 }
-const th: any = { padding: "10px 16px", textAlign: "left", fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--ink-muted)" };
-const td: any = { padding: "10px 16px", fontSize: "var(--text-sm)" };
-const btn: any = { padding: "4px 10px", borderRadius: "var(--radius-sm)", border: "1px solid var(--accent)", background: "var(--accent-soft)", color: "var(--accent)", fontWeight: 600, fontSize: "var(--text-xs)", cursor: "pointer" };
-const lbl: any = { display: "block", fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--ink-muted)", marginBottom: 4 };
-const inp: any = { width: "100%", padding: "8px 12px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", background: "var(--bg-root)", color: "var(--ink-body)", fontSize: "var(--text-sm)", boxSizing: "border-box" };
+
+function SummaryCard({ label, value, color }: { label: string; value: number; color?: string }) {
+  return (
+    <div style={{ padding: "16px 20px", borderRadius: "var(--radius-lg)", border: "1px solid var(--border)", background: "var(--bg-surface)" }}>
+      <p style={{ fontSize: "var(--text-xs)", color: "var(--ink-muted)" }}>{label}</p>
+      <p style={{ fontSize: "var(--text-2xl)", fontWeight: 800, color: color || "var(--ink-heading)" }}>{value}</p>
+    </div>
+  );
+}
+
+const th: React.CSSProperties = { padding: "10px 16px", textAlign: "left", fontSize: "var(--text-xs)", fontWeight: 600, color: "var(--ink-muted)" };
+const td: React.CSSProperties = { padding: "12px 16px", fontSize: "var(--text-sm)" };
+const inp: React.CSSProperties = { width: 80, padding: "6px 8px", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)", fontSize: "var(--text-sm)" };
+const actBtn: React.CSSProperties = {
+  padding: "6px 10px",
+  borderRadius: "var(--radius-sm)",
+  border: "1px solid var(--border)",
+  background: "var(--bg-layer)",
+  fontSize: "var(--text-xs)",
+  fontWeight: 600,
+  cursor: "pointer",
+};

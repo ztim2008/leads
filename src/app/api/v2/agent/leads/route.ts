@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { saveAndNotify } from "@/collectors/shared";
 import { agentUnauthorized, verifyAgentSecret } from "@/lib/agent/auth";
+import { assertCollectionAllowed } from "@/lib/billing/quota";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
@@ -15,8 +16,20 @@ export async function POST(req: NextRequest) {
       include: { workspace: { include: { settings: true } } },
     });
 
-    if (!source || !source.enabled) {
-      return NextResponse.json({ error: "source not found or disabled" }, { status: 404 });
+    if (!source) {
+      return NextResponse.json({ error: "source not found" }, { status: 404 });
+    }
+
+    const quota = await assertCollectionAllowed(source.workspaceId);
+    if (!quota.allowed) {
+      return NextResponse.json({
+        ok: false,
+        saved: 0,
+        skipped: (leads || []).length,
+        quotaExceeded: true,
+        reason: quota.reason,
+        version: 2,
+      });
     }
 
     const settings = source.workspace.settings;

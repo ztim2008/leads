@@ -9,8 +9,20 @@ import { SettingsFormWrapper } from "./settings-form";
 export default async function SettingsPage() {
   const session = await auth();
   if (!session?.user) return null;
+  const authUser = session.user as { id?: string; role?: string };
+  if (authUser.role !== "admin") {
+    return (
+      <div>
+        <h1 style={{ fontSize: "var(--text-2xl)", fontWeight: 700, marginBottom: 8 }}>Настройки</h1>
+        <p style={{ color: "var(--ink-muted)", fontSize: "var(--text-sm)" }}>
+          Настройки Profi, фильтры и Telegram настраивает администратор сервиса.
+          Вы видите заявки в разделе «Заявки».
+        </p>
+      </div>
+    );
+  }
 
-  const workspace = await db.workspace.findFirst({ where: { userId: (session.user as any).id } });
+  const workspace = await db.workspace.findFirst({ where: { userId: authUser.id! } });
   if (!workspace) return null;
 
   let s = await db.settings.findUnique({ where: { workspaceId: workspace.id } });
@@ -96,7 +108,7 @@ export default async function SettingsPage() {
           bodyCode: s.bodyCode || "",
         }}
         systemEnabled={s.systemEnabled}
-        isAdmin={(session.user as any)?.email === "bilariuss@yandex.ru"}
+        isAdmin={authUser.role === "admin"}
       />
 
       {/* ═══ Опасная зона ═══ */}

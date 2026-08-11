@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { agentUnauthorized, verifyAgentSecret } from "@/lib/agent/auth";
+import { getQuotaStatus } from "@/lib/billing/quota";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
@@ -15,9 +16,12 @@ export async function GET(req: NextRequest) {
     include: { workspace: { include: { settings: true } } },
   });
 
-  if (!source || !source.enabled) {
+  if (!source) {
     return NextResponse.json({ error: "source not found" }, { status: 404 });
   }
+
+  const quota = await getQuotaStatus(source.workspaceId);
+  const collectionPaused = !source.enabled || !quota.allowed;
 
   const cfg = (source.config as Record<string, unknown>) || {};
   const s = source.workspace.settings;
@@ -41,6 +45,8 @@ export async function GET(req: NextRequest) {
     telegramChatId: s?.telegramChatId || null,
     telegramToken: s?.telegramToken || null,
     telegramAlerts: s?.telegramAlerts !== false,
+    collectionPaused,
+    quota: { used: quota.used, limit: quota.limit, reason: quota.reason },
     apiUrl: process.env.NEXT_PUBLIC_URL || "https://leads.konversus.ru",
   });
 }

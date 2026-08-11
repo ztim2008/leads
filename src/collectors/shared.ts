@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { sendLeadNotification } from "@/lib/telegram/notifications";
 import { extractBudget } from "@/lib/connectors/profi";
+import { assertCollectionAllowed, recordNewLead } from "@/lib/billing/quota";
 import { writeFileSync } from "fs";
 import { join } from "path";
 
@@ -80,16 +81,22 @@ export async function saveAndNotify(lead: any, source: any, s: any, responseText
 
   if (!budgetInRange(budgetMin, config)) return null;
 
-  const saved = await db.lead.upsert({
-    where: { externalId: extId },
-    create: {
+  const exists = await db.lead.findUnique({ where: { externalId: extId } });
+  if (exists) return null;
+
+  const quota = await assertCollectionAllowed(source.workspaceId);
+  if (!quota.allowed) return null;
+
+  const saved = await db.lead.create({
+    data: {
       workspaceId: source.workspaceId, sourceId: source.id,
       externalId: extId, title: lead.title, description: lead.description,
       budgetMin, budgetMax,
       url: lead.url, createdAt: new Date(lead.createdAt || Date.now()),
     },
-    update: {},
   });
+
+  await recordNewLead(source.workspaceId);
   if (s?.telegramChatId && s?.telegramToken && s?.telegramAlerts !== false) {
     const budgetStr = fmtBudget(budgetMin) || "не указан";
     sendLeadNotification(s.telegramChatId, {

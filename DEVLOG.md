@@ -264,3 +264,72 @@ Partner buys VPS, downloads zip, fills config.json (Profi login/password + Teleg
 
 ### Осталось (Этап 2 DoD)
 - 2.8: тест на отдельном VPS (не хаб)
+
+### Операторская админка + лимиты + помощник
+- Auth: единый `leads_token`, impersonation с возвратом
+- Админка: Партнёры / + Подключить / Лимиты / Помощник / Система
+- Monthly quota: `leadsPerMonth`, стоп сбора + TG admin + partner
+- Помощник: `/dashboard/admin/assistant`, whitelist API, confirm-карточки
+- ИИ опционально: `OPENAI_API_KEY` + `OPENAI_MODEL` в `.env`
+
+### Файлы
+- `src/lib/billing/quota.ts`, `src/lib/assistant/*`
+- `src/components/admin/partners-admin-table.tsx`, `operator-assistant.tsx`
+- `src/app/dashboard/admin/{new,billing,system,assistant}/`
+
+### Проверки
+- `npm run build` — OK
+- `pm2 restart leads-konversus`
+
+### Следующий шаг
+- Install agent на leads-pilot-1 + Profi-аккаунт для пилота
+- `OPENAI_API_KEY` в `.env` для умного парсинга команд (опционально)
+
+### Operator CLI (агент + валидатор)
+- `scripts/operator/` — parse, onboard, verify
+- `docs/OPERATOR_AGENT.md` — playbook для Cursor-агентов
+- `npm run operator:onboard` / `operator:verify`
+
+### PLAN: этап 4.9
+- Единый Telegram-бот партнёра (DoD, 8 подзадач)
+- 4.8 ⏸️ → ⚪ (ТЗ/UX без BotFather)
+
+---
+
+## Итоги дня · 11 августа 2026
+
+### Сделано
+
+1. **Auth unified** — один cookie `leads_token`, role + impersonation, middleware, logout API
+2. **Админка оператора** — вкладки: Партнёры, + Подключить, Лимиты, Помощник, Система
+3. **Monthly quota** — `leadsPerMonth`, счётчик, стоп сбора + TG админу и партнёру при лимите
+4. **Помощник оператора** — чат в админке, whitelist API, подтверждение действий, опциональный OpenAI
+5. **Operator CLI** — `npm run operator:{parse,onboard,verify}`, валидатор, `docs/OPERATOR_AGENT.md`
+6. **Agent v2** — `collectionPaused` при лимите, bundle пересобран
+7. **План** — этап 2½ ✅, этап 4.9 (единый TG-бот), `docs/NEXT_SESSION_2026-08-12.md`
+
+### Файлы (ключевые)
+
+- `src/lib/auth/session.ts`, `src/lib/billing/quota.ts`, `src/lib/assistant/*`
+- `src/app/dashboard/admin/{layout,new,billing,system,assistant}/`
+- `scripts/operator/*`, `docs/OPERATOR_AGENT.md`, `docs/NEXT_SESSION_2026-08-12.md`
+- `prisma/schema.prisma` + migration monthly quota
+- `docs/PLAN_2026-08-10.md`, `AGENTS.md`, `DEVLOG.md`
+
+### Production
+
+- PM2 `leads-konversus` — online, порт 3005
+- `npm run build` — OK
+- `curl localhost:3005` — 200
+- Profi на хабе — **запрещён** (`profiOnHub: false`)
+- `leads-profi` — не запущен
+
+### Не закрыто (перенос на 12.08)
+
+- Этап 2.8 / 4.5: install agent на `leads-pilot-1` (159.194.213.198)
+- Этап 4.4 🔴: новый Profi-аккаунт для пилота
+- Этап 4.6: 24ч наблюдение без блокировок
+
+### Завтра
+
+См. **`docs/NEXT_SESSION_2026-08-12.md`** — пилот VPS, verify, первая заявка в TG.

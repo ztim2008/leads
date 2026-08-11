@@ -183,6 +183,10 @@ model Subscription {
   plan            String    @default("free")
   status          String    @default("active")
   leadsPerDay     Int       @default(50) @map("leads_per_day")
+  leadsPerMonth   Int       @default(500) @map("leads_per_month")
+  leadsUsedMonth  Int       @default(0) @map("leads_used_month")
+  quotaPeriodStart DateTime? @map("quota_period_start")
+  collectionEnabled Boolean @default(true) @map("collection_enabled")
   sourcesLimit    Int       @default(1) @map("sources_limit")
   aiAnalysis      Boolean   @default(false) @map("ai_analysis_enabled")
   aiResponses     Boolean   @default(false) @map("ai_responses_enabled")
@@ -252,8 +256,8 @@ model CrashLog {
   event     String
   message   String?
   metadata  Json?
-  createdAt DateTime @default(now()) @map(created_at)
+  createdAt DateTime @default(now()) @map("created_at")
 
   @@index([service, createdAt])
-  @@map(crash_log)
+  @@map("crash_log")
 }

@@ -3,6 +3,7 @@
 
 import { db } from "@/lib/db";
 import { sendLeadNotification } from "@/lib/telegram/notifications";
+import { assertCollectionAllowed, recordNewLead } from "@/lib/billing/quota";
 import { NextRequest, NextResponse } from "next/server";
 
 const AGENT_SECRET = process.env.AGENT_SECRET || "leads-agent-secret-2026";
@@ -25,6 +26,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "source not found or disabled" }, { status: 404 });
     }
 
+    const quota = await assertCollectionAllowed(source.workspaceId);
+    if (!quota.allowed) {
+      return NextResponse.json({ ok: false, saved: 0, skipped: leads?.length || 0, quotaExceeded: true, reason: quota.reason });
+    }
+
     const settings = source.workspace.settings;
     let saved = 0;
     let skipped = 0;
@@ -36,6 +42,9 @@ export async function POST(req: NextRequest) {
       // Проверка дубля
       const exists = await db.lead.findUnique({ where: { externalId: extId } });
       if (exists) { skipped++; continue; }
+
+      const leadQuota = await assertCollectionAllowed(source.workspaceId);
+      if (!leadQuota.allowed) { skipped++; continue; }
 
       // Сохраняем
       await db.lead.create({
@@ -51,6 +60,8 @@ export async function POST(req: NextRequest) {
           createdAt: new Date(lead.createdAt || Date.now()),
         },
       });
+
+      await recordNewLead(source.workspaceId);
 
       // Telegram-уведомление
       if (settings?.telegramChatId && settings?.telegramToken && settings?.telegramAlerts !== false) {

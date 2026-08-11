@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth/auth";
 import { hash } from "bcryptjs";
+import { createPartnerSubscription } from "@/lib/billing/quota";
 
 const AGENT_SECRET = process.env.AGENT_SECRET || "leads-agent-secret-2026";
 const API_URL = process.env.NEXT_PUBLIC_URL || "https://leads.konversus.ru";
@@ -32,7 +33,14 @@ export async function GET() {
     return {
       id: p.id, email: p.email, name: p.firstName,
       role: p.role, createdAt: p.createdAt,
-      subscription: p.subscription ? { plan: p.subscription.plan, status: p.subscription.status } : null,
+      subscription: p.subscription ? {
+        plan: p.subscription.plan,
+        status: p.subscription.status,
+        leadsPerMonth: p.subscription.leadsPerMonth,
+        leadsUsedMonth: p.subscription.leadsUsedMonth,
+        collectionEnabled: p.subscription.collectionEnabled,
+        expiresAt: p.subscription.expiresAt?.toISOString() || null,
+      } : null,
       workspace: ws ? {
         id: ws.id, name: ws.name,
         sources: ws.sources.map(s => {
@@ -99,6 +107,8 @@ export async function POST(req: NextRequest) {
     antiDetectMode, workHoursStart, workHoursEnd,
     // Telegram
     telegramChatId, telegramToken,
+    // Billing
+    leadsPerMonth,
   } = body;
 
   if (!email || !password) return NextResponse.json({ error: "email and password required" }, { status: 400 });
@@ -130,6 +140,8 @@ export async function POST(req: NextRequest) {
       telegramToken: telegramToken || null,
     },
   });
+
+  await createPartnerSubscription(ws.id, partner.id, parseInt(String(leadsPerMonth)) || 500);
 
   let sourceId: string | null = null;
 

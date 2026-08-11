@@ -29,8 +29,6 @@ export default function AuthPage() {
     });
 
     if (apiRes.ok) {
-      const data = await apiRes.json();
-      document.cookie = "leads_token=" + data.token + "; path=/; max-age=86400; secure; samesite=lax";
       window.location.href = "/dashboard";
     } else {
       setError("Неверный email или пароль");

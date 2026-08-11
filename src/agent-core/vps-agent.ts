@@ -25,6 +25,7 @@ let agentState: string = "installing";
 interface HubConfig {
   login: string;
   password: string;
+  collectionPaused?: boolean;
   keywords?: string;
   workHoursStart?: string;
   workHoursEnd?: string;
@@ -84,6 +85,19 @@ async function main(): Promise<void> {
 
   agentState = "init";
   const config = await loadConfig();
+
+  if (config.collectionPaused) {
+    console.log("[agent-v2] ⏸ Сбор остановлен (лимит или админ). Heartbeat only.");
+    agentState = "paused";
+    setInterval(() => {
+      heartbeat().catch((e) =>
+        console.error("[agent-v2] heartbeat:", e instanceof Error ? e.message : e),
+      );
+    }, 5 * 60 * 1000);
+    await heartbeat();
+    return;
+  }
+
   console.log("[agent-v2] ✅ Конфиг:", config.login);
 
   const collector = new ProfiCollector({

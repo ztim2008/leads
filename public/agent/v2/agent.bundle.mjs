@@ -787,6 +787,17 @@ async function main() {
   console.log("[agent-v2] API:", API);
   agentState = "init";
   const config = await loadConfig();
+  if (config.collectionPaused) {
+    console.log("[agent-v2] \u23F8 \u0421\u0431\u043E\u0440 \u043E\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D (\u043B\u0438\u043C\u0438\u0442 \u0438\u043B\u0438 \u0430\u0434\u043C\u0438\u043D). Heartbeat only.");
+    agentState = "paused";
+    setInterval(() => {
+      heartbeat().catch(
+        (e) => console.error("[agent-v2] heartbeat:", e instanceof Error ? e.message : e)
+      );
+    }, 5 * 60 * 1e3);
+    await heartbeat();
+    return;
+  }
   console.log("[agent-v2] \u2705 \u041A\u043E\u043D\u0444\u0438\u0433:", config.login);
   const collector = new ProfiCollector({
     sourceId: SOURCE_ID,
