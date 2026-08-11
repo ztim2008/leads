@@ -218,3 +218,29 @@ Partner buys VPS, downloads zip, fills config.json (Profi login/password + Teleg
 
 ### Следующий шаг (06.08)
 - Этап 1, задача 1.1: создать `packages/agent-core/` — circuit breaker + persistent profile
+
+---
+
+## 2026-08-11
+
+### Этап 1: agent-core
+- Создан `src/agent-core/`: CircuitBreaker, ProfileStore, ProfiCollector, human/profiles
+- CB: CLOSED → OPEN (3/10min → 60min) → HALF_OPEN → BLOCKED (5 циклов); state на диске
+- Profile: `~/.leads-agent/profiles/{sourceId}/` (cookies, state.json, chromium/)
+- `profi.ts`: убраны `globalThis.__lastNewLead`, SILENT 30min restart, health/session auto-restart → только STOP
+- DoD: `npm run test:agent-core` — 6/6 pass
+- Документ: `docs/AGENT_CORE.md`
+- План: Этап 1 задачи 1.1–1.9 ✅
+
+### Проверки
+- `npm run test:agent-core` — OK
+- `npm run build` — OK
+- `curl localhost:3005` — 200
+- `profiOnHub: false` — без изменений
+
+### Production
+- `leads-konversus` / `leads-health` — online
+- Profi на хабе — по-прежнему запрещён
+
+### Следующий шаг
+- Этап 2: `public/agent/v2` на отдельном VPS (обёртка над agent-core)

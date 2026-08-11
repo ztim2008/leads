@@ -689,29 +689,16 @@ export async function startWatching(
 
         let newFound = 0;
 
-        // --- Session health check + auto-recovery ---
-        if (typeof (globalThis as any).__lastNewLead === "undefined") {
-          (globalThis as any).__lastNewLead = Date.now();
-        }
-        const lastNewLead = (globalThis as any).__lastNewLead;
-
-        // Detect expired session: 0 links + login page
+        // Session expired → STOP (no auto-restart). Restart storms caused Profi bans 30.07.2026.
+        // New path: agent-core CircuitBreaker + ProfiCollector on VPS.
         if (refreshedLinks.length === 0) {
           const bt = await page.locator("body").innerText().catch(() => "");
           if (bt.includes("Вход и регистрация") || bt.includes("Восстановить пароль")) {
-            console.log("[profi] SESSION EXPIRED " + config.login + " restarting watcher");
+            console.error("[profi] SESSION EXPIRED " + config.login + " — STOP (no auto-restart)");
+            callbacks.onError("SESSION EXPIRED — watcher stopped, no auto-restart");
             stopWatching(sourceId);
-            startWatching(sourceId, config, keywords, callbacks, workHoursStart, workHoursEnd);
             return;
           }
-        }
-
-        // Force re-login if >30 min silent
-        if (Date.now() - lastNewLead > 30 * 60 * 1000) {
-          console.log("[profi] SILENT 30min " + config.login + " restarting watcher");
-          stopWatching(sourceId);
-          startWatching(sourceId, config, keywords, callbacks, workHoursStart, workHoursEnd);
-          return;
         }
         for (const link of refreshedLinks) {
           const cleanHref = link.href.replace(/&analytics_data=.*$/, '');
@@ -738,7 +725,6 @@ export async function startWatching(
 
         if (newFound > 0) {
           console.log("[profi] EYES " + config.login + ": found " + newFound + " new orders");
-          (globalThis as any).__lastNewLead = Date.now();
         }
 
         // Человеческое поведение: скролл
@@ -765,10 +751,13 @@ export async function startWatching(
         callbacks.onStatus(isOutsideWorkHours() ? `🌙 Стоп до ${whStart}:00 (настройки)` : `👀 След. проверка через ~${Math.round(MIN_CHECK)}-${Math.round(MAX_CHECK)} мин`);
       } catch (err) {
         console.error('[profi] ERROR ' + config.login + ': ' + (err && err.stack ? err.stack : String(err)));
-        try { await page.goto('https://profi.ru/backoffice/n.php', { waitUntil: 'domcontentloaded', timeout: 20000 }); } catch {
-          console.log(`[profi] 🔄 ${config.login}: перезапуск ждуна...`);
+        try {
+          await page.goto('https://profi.ru/backoffice/n.php', { waitUntil: 'domcontentloaded', timeout: 20000 });
+        } catch {
+          // No auto-restart — soft recover only by soft reload above. Hard stop if page dead.
+          console.error(`[profi] ${config.login}: page dead — STOP (no auto-restart, use agent-core CB)`);
+          callbacks.onError("page dead — watcher stopped");
           stopWatching(sourceId);
-          startWatching(sourceId, config, keywords, callbacks);
         }
       }
     };
@@ -823,24 +812,14 @@ export async function startWatching(
     };
     scheduleNext();
 
-    // Health check каждые 10 мин (с защитой от двойного рестарта)
-    let restarting = false;
-    const safeRestart = async () => {
-      if (restarting) return;
-      restarting = true;
-      console.log("[profi] RESTART " + config.login + ": page died, restarting watcher");
-      try {
-        stopWatching(sourceId);
-        await sleep(2000);
-        await startWatching(sourceId, config, keywords, callbacks, workHoursStart, workHoursEnd);
-      } catch (e) {
-        console.error("[profi] RESTART FAILED " + config.login + ": " + (e && e.message ? e.message : e));
-      }
-      restarting = false;
-    };
+    // Health check: только стоп при мёртвой странице (без рестарта).
     healthCheckId = setInterval(async () => {
-      try { await page.evaluate(() => document.title); } catch {
-        safeRestart();
+      try {
+        await page.evaluate(() => document.title);
+      } catch {
+        console.error("[profi] HEALTH " + config.login + ": page died — STOP (no auto-restart)");
+        callbacks.onError("health: page died — watcher stopped");
+        stopWatching(sourceId);
       }
     }, 600000);
 
