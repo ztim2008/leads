@@ -6,6 +6,8 @@ import {
   computeOnboardingSteps,
   onboardingProgress,
 } from "@/lib/agent/onboarding-steps";
+import PartnerAccessCardModal from "@/components/admin/partner-access-card";
+import type { PartnerAccessCard } from "@/lib/admin/access-card";
 
 function QuotaBar({ used, limit }: { used: number; limit: number }) {
   const pct = limit > 0 ? Math.min(100, (used / limit) * 100) : 0;
@@ -27,6 +29,7 @@ export default function PartnersAdminTable() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [vpsIp, setVpsIp] = useState("");
   const [loading, setLoading] = useState(true);
+  const [accessCard, setAccessCard] = useState<PartnerAccessCard | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -72,6 +75,13 @@ export default function PartnersAdminTable() {
       body: JSON.stringify({ sourceId, vpsIp }),
     });
     load();
+  }
+
+  async function openAccess(partnerId: string) {
+    const r = await fetch(`/api/admin/partners/${partnerId}/secrets`);
+    const d = await r.json();
+    if (d.ok && d.accessCard) setAccessCard(d.accessCard);
+    else alert(d.error || "Не удалось загрузить карточку");
   }
 
   if (loading) {
@@ -181,6 +191,9 @@ export default function PartnersAdminTable() {
                   </td>
                   <td style={td}>
                     <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                      <button type="button" onClick={() => openAccess(p.id)} style={btn("var(--bg-hover)", "var(--ink-body)")}>
+                        Доступ
+                      </button>
                       <button type="button" onClick={() => loginAs(p.email)} style={btn("var(--accent-soft)", "var(--accent)")}>
                         Просмотр
                       </button>
@@ -246,6 +259,9 @@ export default function PartnersAdminTable() {
           })}
         </tbody>
       </table>
+      {accessCard && (
+        <PartnerAccessCardModal card={accessCard} onClose={() => setAccessCard(null)} />
+      )}
     </div>
   );
 }

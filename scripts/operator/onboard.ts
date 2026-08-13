@@ -3,8 +3,7 @@ import { db } from "../../src/lib/db";
 import { createPartnerSubscription } from "../../src/lib/billing/quota";
 import type { Prisma } from "@prisma/client";
 import type { PartnerInput } from "./types";
-
-const API_URL = process.env.NEXT_PUBLIC_URL || "https://leads.konversus.ru";
+import { buildAccessCard, setupCommandFor, type PartnerAccessCard } from "../../src/lib/admin/access-card";
 
 export interface OnboardResult {
   ok: boolean;
@@ -13,6 +12,7 @@ export interface OnboardResult {
   sourceId?: string;
   setupCommand?: string;
   partnerPassword?: string;
+  accessCard?: PartnerAccessCard;
   error?: string;
 }
 
@@ -51,6 +51,7 @@ export async function onboardPartner(input: PartnerInput): Promise<OnboardResult
     mode: "watch",
     login: input.profiLogin,
     password: input.profiPassword,
+    _hubPassword: input.password,
     keywords: input.keywords || "",
     minusKeywords: input.minusKeywords || "",
     budgetMin: input.budgetMin ?? 3000,
@@ -77,7 +78,7 @@ export async function onboardPartner(input: PartnerInput): Promise<OnboardResult
     },
   });
 
-  const setupCommand = `curl -fsSL ${API_URL}/agent/v2/install.sh | bash -s "${source.id}"`;
+  const setupCommand = setupCommandFor(source.id) || "";
 
   return {
     ok: true,
@@ -86,5 +87,15 @@ export async function onboardPartner(input: PartnerInput): Promise<OnboardResult
     sourceId: source.id,
     setupCommand,
     partnerPassword: input.password,
+    accessCard: buildAccessCard({
+      partnerId: partner.id,
+      email: input.email,
+      name,
+      hubPassword: input.password,
+      sourceId: source.id,
+      sourceConfig: cfg,
+      telegramChatId: input.telegramChatId || null,
+      leadsPerMonth: input.leadsPerMonth,
+    }),
   };
 }

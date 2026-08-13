@@ -58,7 +58,12 @@ async function loadConfig(): Promise<HubConfig> {
   return cfg;
 }
 
-async function heartbeat(cb?: CircuitBreakerSnapshot): Promise<void> {
+function clearLastError(): void {
+  lastError = "";
+  lastErrorTime = "";
+}
+
+async function heartbeat(cb?: CircuitBreakerSnapshot, lastLoginAt?: string | null): Promise<void> {
   const uptime = Math.floor((Date.now() - startTime) / 1000);
   const mem = Math.floor(process.memoryUsage().heapUsed / 1024 / 1024);
   await apiPost("heartbeat", {
@@ -69,6 +74,7 @@ async function heartbeat(cb?: CircuitBreakerSnapshot): Promise<void> {
       memory: mem,
       lastError,
       lastErrorTime,
+      lastLoginAt: lastLoginAt || null,
       agentState,
       circuitBreaker: cb || null,
     },
@@ -114,13 +120,18 @@ async function main(): Promise<void> {
 
   agentState = "running";
 
+  const loginAtIso = (): string | null => {
+    const ts = collector.profiles.getMeta().lastLoginAt;
+    return ts ? new Date(ts).toISOString() : null;
+  };
+
   setInterval(() => {
-    heartbeat(collector.breaker.getState()).catch((e) =>
+    heartbeat(collector.breaker.getState(), loginAtIso()).catch((e) =>
       console.error("[agent-v2] heartbeat:", e instanceof Error ? e.message : e),
     );
   }, 5 * 60 * 1000);
 
-  await heartbeat(collector.breaker.getState());
+  await heartbeat(collector.breaker.getState(), loginAtIso());
 
   await collector.start({
     onLead: async (lead) => {
@@ -138,18 +149,27 @@ async function main(): Promise<void> {
       lastError = err;
       lastErrorTime = new Date().toISOString();
       console.error("[agent-v2] ❌", err);
+      if (/login_failed/i.test(err)) {
+        sendAlert("login_failed", err, collector.breaker.getState()).catch(() => {});
+      }
     },
-    onStatus: (s) => console.log("[agent-v2]", s),
+    onStatus: (s) => {
+      console.log("[agent-v2]", s);
+      if (/вход выполнен|сессия восстановлена|проверка:/.test(s)) clearLastError();
+    },
     onCircuitChange: async (snap) => {
       const next = snap.state;
       if (next === "OPEN") agentState = "cooldown";
       else if (next === "BLOCKED") agentState = "blocked";
-      else if (next === "CLOSED") agentState = "running";
+      else if (next === "CLOSED") {
+        agentState = "running";
+        clearLastError();
+      }
 
       if (next === "OPEN" || next === "BLOCKED") {
         await sendAlert(`cb_${next.toLowerCase()}`, snap.lastReason || next, snap);
       }
-      await heartbeat(snap);
+      await heartbeat(snap, loginAtIso());
     },
   });
 }

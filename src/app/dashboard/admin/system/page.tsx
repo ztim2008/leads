@@ -1,5 +1,4 @@
-import HealthCheckWidget from "@/components/admin/health-check-widget";
-import CollectorStatus from "@/components/admin/collector-status";
+import HubStatus from "@/components/admin/hub-status";
 import { db } from "@/lib/db";
 
 export default async function AdminSystemPage() {
@@ -11,10 +10,9 @@ export default async function AdminSystemPage() {
   return (
     <div>
       <p style={{ fontSize: "var(--text-sm)", color: "var(--ink-muted)", marginBottom: 20 }}>
-        Состояние хаба, коллекторы Kwork и журнал событий. Profi на хабе отключён — сбор только на VPS партнёров.
+        Процессы хаба. Сбор заявок — только VPS-агенты партнёров (Пульт). Kwork/Profi на этом сервере не запускаем.
       </p>
-      <HealthCheckWidget />
-      <CollectorStatus />
+      <HubStatus />
 
       <div
         style={{

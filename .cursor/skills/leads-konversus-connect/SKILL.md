@@ -93,9 +93,13 @@ pm2 list | grep leads
 
 ```
 Подключись к leads.konversus.ru по skill leads-konversus-connect.
-Прочитай AGENTS.md и PLAN_2026-08-10.md.
-Продолжаем Этап 1: agent-core (circuit breaker + persistent profile).
+Прочитай AGENTS.md, PLAN_2026-08-10.md и docs/NEXT_SESSION_2026-08-14.md.
+Пилот RysyevIV online — наблюдение 4.6, не рестартить агент.
 ```
+
+Подключение **нового партнёра** — отдельный skill:  
+`.cursor/skills/leads-partner-onboard/SKILL.md`  
+(«подключи партнёра» + блок Email / Profi / VPS / TG).
 
 ---
 

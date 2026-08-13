@@ -3,21 +3,18 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { auth } from "@/lib/auth/auth";
 import { hash } from "bcryptjs";
 import { createPartnerSubscription } from "@/lib/billing/quota";
+import { requireAdminUser } from "@/lib/admin/guard";
+import { buildAccessCard, setupCommandFor } from "@/lib/admin/access-card";
+import { isActiveAgentError } from "@/lib/agent/stale-error";
+import type { Prisma } from "@prisma/client";
 
-const AGENT_SECRET = process.env.AGENT_SECRET || "leads-agent-secret-2026";
-const API_URL = process.env.NEXT_PUBLIC_URL || "https://leads.konversus.ru";
-const V2_SETUP = `${API_URL}/agent/v2/install.sh`;
 
-
-// GET — список партнёров
+// GET — список партнёров (пароли не отдаём)
 export async function GET() {
-  const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const user = await db.user.findUnique({ where: { email: (session.user as any).email } });
-  if (!user || user.role !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const guard = await requireAdminUser();
+  if (guard.error) return guard.error;
 
   const partners = await db.user.findMany({
     where: { role: { not: "admin" } },
@@ -27,6 +24,17 @@ export async function GET() {
     },
     orderBy: { createdAt: "desc" },
   });
+
+  const todayMsk = new Date(Date.now() + 3 * 3600 * 1000);
+  todayMsk.setUTCHours(0, 0, 0, 0);
+  const todayStart = new Date(todayMsk.getTime() - 3 * 3600 * 1000);
+
+  const todayCounts = await db.lead.groupBy({
+    by: ["workspaceId"],
+    where: { createdAt: { gte: todayStart } },
+    _count: { _all: true },
+  });
+  const todayMap = new Map(todayCounts.map((c) => [c.workspaceId, c._count._all]));
 
   return NextResponse.json({ partners: partners.map(p => {
     const ws = p.workspaces[0];
@@ -45,10 +53,20 @@ export async function GET() {
         id: ws.id, name: ws.name,
         sources: ws.sources.map(s => {
           const cfg = (s.config as any) || {};
+          const liveError = s.lastError || cfg._lastError || null;
+          const archivedStored = cfg._lastErrorArchived || null;
+          const errorActive = isActiveAgentError({
+            lastError: liveError,
+            lastErrorTime: cfg._lastErrorTime || null,
+            circuitBreakerState: cfg._circuitBreaker?.state || null,
+            lastLoginAt: cfg._lastLoginAt || null,
+            leadsCollected: (cfg._agentLeads || 0) || todayMap.get(ws.id) || 0,
+          });
           return {
             id: s.id, platform: s.platform, enabled: s.enabled,
             lastCheckAt: s.lastCheckAt, status: s.status || "active",
-            lastError: s.lastError || cfg._lastError || null,
+            lastError: errorActive ? liveError : null,
+            lastErrorArchived: errorActive ? null : liveError || archivedStored || null,
             config: {
               login: cfg.login || null,
               password: cfg.password ? "●●●●" : null,
@@ -56,6 +74,9 @@ export async function GET() {
               _vpsIp: cfg._vpsIp || null,
               _onboardingVpsReady: cfg._onboardingVpsReady || false,
               _onboardingNotes: cfg._onboardingNotes || null,
+              workHoursStart: cfg.workHoursStart || "08:00",
+              workHoursEnd: cfg.workHoursEnd || "22:00",
+              _lastLoginAt: cfg._lastLoginAt || null,
             },
             agentStatus: {
               online: cfg._lastHeartbeat ? (Date.now() - new Date(cfg._lastHeartbeat).getTime() < 15*60*1000) : false,
@@ -64,15 +85,15 @@ export async function GET() {
               memory: cfg._agentMemory || 0,
               leads: cfg._agentLeads || 0,
               errors: cfg._agentErrors || 0,
-              lastError: cfg._lastError || null,
+              lastError: errorActive ? liveError : null,
+              lastErrorArchived: errorActive ? null : liveError || archivedStored || null,
               lastErrorTime: cfg._lastErrorTime || null,
               lifecycle: cfg._agentState || "pending",
               circuitBreaker: cfg._circuitBreaker || null,
               version: cfg._agentVersion || 1,
+              checkIntervalLabel: "3–7 мин",
             },
-            setupCommand: s.enabled
-              ? `curl -fsSL ${API_URL}/agent/v2/install.sh | bash -s "${s.id}"`
-              : null,
+            setupCommand: setupCommandFor(s.id),
           };
         }),
         settings: ws.settings ? {
@@ -81,17 +102,16 @@ export async function GET() {
           telegramToken: ws.settings.telegramToken,
         } : null,
         leadsCount: ws._count.leads,
+        leadsToday: todayMap.get(ws.id) || 0,
       } : null,
     };
   }) });
 }
 
-// POST — создать партнёра + source + вернуть команду для VPS
+// POST — создать партнёра + source + вернуть карточку доступа
 export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  const user = await db.user.findUnique({ where: { email: (session.user as any).email } });
-  if (!user || user.role !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const guard = await requireAdminUser();
+  if (guard.error) return guard.error;
 
   const body = await req.json();
   const {
@@ -107,8 +127,8 @@ export async function POST(req: NextRequest) {
     antiDetectMode, workHoursStart, workHoursEnd,
     // Telegram
     telegramChatId, telegramToken,
-    // Billing
-    leadsPerMonth,
+    // Billing + VPS
+    leadsPerMonth, vpsIp,
   } = body;
 
   if (!email || !password) return NextResponse.json({ error: "email and password required" }, { status: 400 });
@@ -153,36 +173,55 @@ export async function POST(req: NextRequest) {
       ? { mode: "balanced", delayMultiplier: 1.0, disableDeepScan: false, extraSkipPercent: 0 }
       : { mode: "light" };
 
+    const sourceConfig: Record<string, unknown> = {
+      mode: "watch",
+      login: profiLogin,
+      password: profiPassword,
+      _hubPassword: password,
+      keywords: keywords || "",
+      minusKeywords: minusKeywords || "",
+      titleKeywords: titleKeywords || "",
+      titleMinusKeywords: titleMinusKeywords || "",
+      budgetMin: budgetMin || null,
+      budgetMax: budgetMax || null,
+      antiDetect,
+      workHoursStart: workHoursStart || "08:00",
+      workHoursEnd: workHoursEnd || "22:00",
+      proxy: null,
+    };
+    if (vpsIp) {
+      sourceConfig._vpsIp = vpsIp;
+      sourceConfig._onboardingVpsReady = true;
+    }
+
     const source = await db.source.create({
       data: {
         workspaceId: ws.id,
         platform: "profi", name: "Profi.ru",
         enabled: true, color: "#22c55e", status: "pending",
-        config: {
-          mode: "watch",
-          login: profiLogin,
-          password: profiPassword,
-          keywords: keywords || "",
-          minusKeywords: minusKeywords || "",
-          titleKeywords: titleKeywords || "",
-          titleMinusKeywords: titleMinusKeywords || "",
-          budgetMin: budgetMin || null,
-          budgetMax: budgetMax || null,
-          antiDetect,
-          workHoursStart: workHoursStart || "08:00",
-          workHoursEnd: workHoursEnd || "22:00",
-          proxy: null,
-        },
+        config: sourceConfig as Prisma.InputJsonValue,
       },
     });
     sourceId = source.id;
   }
 
-  // Формируем команду для VPS
-  let setupCommand = "";
-  if (sourceId) {
-    setupCommand = `curl -fsSL ${V2_SETUP} | bash -s "${sourceId}"`;
-  }
+  const setupCommand = setupCommandFor(sourceId);
+  const accessCard = buildAccessCard({
+    partnerId: partner.id,
+    email,
+    name: name || email.split("@")[0],
+    hubPassword: password,
+    sourceId,
+    sourceConfig: {
+      login: profiLogin || null,
+      password: profiPassword || null,
+      _vpsIp: vpsIp || null,
+      workHoursStart: workHoursStart || "08:00",
+      workHoursEnd: workHoursEnd || "22:00",
+    },
+    telegramChatId: telegramChatId || null,
+    leadsPerMonth: parseInt(String(leadsPerMonth)) || 500,
+  });
 
   return NextResponse.json({
     ok: true,
@@ -190,13 +229,15 @@ export async function POST(req: NextRequest) {
     workspaceId: ws.id,
     sourceId,
     setupCommand,
+    partnerPassword: password,
+    accessCard,
     setupInstructions: sourceId ? {
-      title: "🚀 Команда для VPS партнёра",
+      title: "Команда для VPS партнёра",
       command: setupCommand,
       steps: [
         "1. Подключись к VPS: ssh root@IP_ПАРТНЁРА",
         "2. Выполни команду ниже",
-        "3. Проверь: pm2 status (должен быть leads-agent online)",
+        "3. Проверь: pm2 status (должен быть leads-agent-v2 online)",
       ],
     } : null,
   });

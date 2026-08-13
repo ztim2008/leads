@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { agentUnauthorized, verifyAgentSecret } from "@/lib/agent/auth";
 import { deriveAgentLifecycle, patchSourceAgentMeta } from "@/lib/agent/source-config";
+import { isActiveAgentError } from "@/lib/agent/stale-error";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
@@ -10,11 +11,23 @@ export async function POST(req: NextRequest) {
 
     if (!verifyAgentSecret(secret)) return agentUnauthorized();
 
+    const cbState = status?.circuitBreaker?.state || "";
+    const lastError = String(status?.lastError || "").trim();
+    const lastErrorTime = status?.lastErrorTime || null;
+    const lastLoginAt = status?.lastLoginAt || null;
+    const errorActive = isActiveAgentError({
+      lastError,
+      lastErrorTime,
+      circuitBreakerState: cbState,
+      lastLoginAt,
+      leadsCollected: status?.leads || 0,
+    });
+
     const lifecycle =
       status?.agentState ||
-      (status?.circuitBreaker?.state === "OPEN"
+      (cbState === "OPEN"
         ? "cooldown"
-        : status?.circuitBreaker?.state === "BLOCKED"
+        : cbState === "BLOCKED"
           ? "blocked"
           : "running");
 
@@ -22,8 +35,8 @@ export async function POST(req: NextRequest) {
       where: { id: sourceId },
       data: {
         lastCheckAt: new Date(),
-        status: status?.lastError || status?.circuitBreaker?.state === "OPEN" ? "error" : "ok",
-        lastError: status?.lastError || status?.circuitBreaker?.lastReason || null,
+        status: errorActive || cbState === "OPEN" || cbState === "BLOCKED" ? "error" : "ok",
+        lastError: errorActive ? lastError : null,
       },
     });
 
@@ -37,9 +50,10 @@ export async function POST(req: NextRequest) {
         _agentState: lifecycle,
         _circuitBreaker: status.circuitBreaker || null,
         _agentVersion: 2,
-        ...(status.lastError
-          ? { _lastError: status.lastError, _lastErrorTime: status.lastErrorTime || new Date().toISOString() }
-          : {}),
+        ...(lastLoginAt ? { _lastLoginAt: lastLoginAt } : {}),
+        ...(errorActive
+          ? { _lastError: lastError, _lastErrorTime: lastErrorTime || new Date().toISOString() }
+          : { _lastError: null, _lastErrorArchived: lastError || null, _lastErrorTime: lastErrorTime || null }),
       });
     }
 

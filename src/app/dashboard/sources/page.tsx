@@ -3,7 +3,6 @@ import { db } from "@/lib/db";
 import { auth } from "@/lib/auth/auth";
 import { listConnectors } from "@/lib/connectors/types";
 import { revalidatePath } from "next/cache";
-import ProfiTestButton from "@/components/profi-test-button";
 
 import "@/lib/connectors/profi";
 import "@/lib/connectors/kwork";
@@ -145,11 +144,6 @@ export default async function SourcesPage() {
                       }}>
                         💾 Сохранить
                       </button>
-                      <ProfiTestButton
-                        sourceId={existing.id}
-                        currentLogin={(config.login as string) || ""}
-                        currentPassword={(config.password as string) || ""}
-                      />
                     </div>
                   </div>
                 </form>

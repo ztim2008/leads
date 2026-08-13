@@ -100,10 +100,10 @@ export async function POST(req: Request) {
   const { action } = body;
 
   if (action === "restart-kwork") {
-    exec("pm2 restart leads-kwork", (err) => {
-      if (err) console.error("[admin] restart kwork error:", err);
-    });
-    return NextResponse.json({ ok: true, message: "Kwork-коллектор перезапускается..." });
+    return NextResponse.json(
+      { error: "Kwork на хабе отключён. Админ не сборщик. Подключись как партнёр, если нужны заявки." },
+      { status: 400 },
+    );
   }
 
   if (action === "restart-server") {

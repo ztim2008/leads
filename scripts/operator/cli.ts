@@ -124,6 +124,11 @@ async function cmdOnboard(args: Record<string, string>) {
   console.log(`   Пароль:   ${result.partnerPassword}`);
   console.log(`   Workspace: ${result.workspaceId}`);
   console.log(`   Source:   ${result.sourceId}`);
+  if (result.accessCard) {
+    console.log(`   Profi:    ${result.accessCard.profiLogin}`);
+    console.log(`   TG chat:  ${result.accessCard.telegramChatId || "—"}`);
+    console.log(`   Лимит:    ${result.accessCard.leadsPerMonth}`);
+  }
   console.log(`\n🚀 VPS install:\n   ${result.setupCommand}`);
   if (input.vpsIp) {
     console.log(`\n📡 SSH: ssh root@${input.vpsIp}`);

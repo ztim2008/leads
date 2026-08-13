@@ -1,9 +1,11 @@
 import { db } from "@/lib/db";
 import { sendLeadNotification } from "@/lib/telegram/notifications";
 import { extractBudget } from "@/lib/connectors/profi";
+import { matchedKeyword, parseFeedCard } from "@/lib/leads/parse-feed-card";
 import { assertCollectionAllowed, recordNewLead } from "@/lib/billing/quota";
 import { writeFileSync } from "fs";
 import { join } from "path";
+import type { Prisma } from "@prisma/client";
 
 const STATUS_FILE = join(process.cwd(), ".collector-status.json");
 
@@ -70,14 +72,15 @@ export async function saveAndNotify(lead: any, source: any, s: any, responseText
 
   const extId = lead.externalId || source.platform + "-" + Date.now();
 
-  // Если budgetMin отсутствует — пробуем извлечь из description
-  let budgetMin = lead.budgetMin;
-  let budgetMax = lead.budgetMax;
+  const parsed = parseFeedCard(String(lead.description || ""), String(lead.title || ""));
+  let budgetMin = lead.budgetMin ?? parsed.budgetMin;
+  let budgetMax = lead.budgetMax ?? parsed.budgetMax;
   if (!budgetMin && lead.description) {
     const extracted = extractBudget(lead.description);
-    budgetMin = extracted.min;
-    budgetMax = extracted.max;
+    budgetMin = extracted.min ?? budgetMin;
+    budgetMax = extracted.max ?? budgetMax;
   }
+  const city = lead.city || parsed.city || null;
 
   if (!budgetInRange(budgetMin, config)) return null;
 
@@ -91,21 +94,36 @@ export async function saveAndNotify(lead: any, source: any, s: any, responseText
     data: {
       workspaceId: source.workspaceId, sourceId: source.id,
       externalId: extId, title: lead.title, description: lead.description,
-      budgetMin, budgetMax,
+      budgetMin, budgetMax, city,
       url: lead.url, createdAt: new Date(lead.createdAt || Date.now()),
+      metadata: {
+        feed: {
+          responses: parsed.responses ?? null,
+          remote: parsed.remote ?? false,
+          ageLabel: parsed.ageLabel ?? null,
+          responsePrice: lead.responsePrice || parsed.responsePrice || null,
+          clientHint: parsed.clientHint ?? null,
+        },
+      } as Prisma.InputJsonValue,
     },
   });
 
   await recordNewLead(source.workspaceId);
   if (s?.telegramChatId && s?.telegramToken && s?.telegramAlerts !== false) {
-    const budgetStr = fmtBudget(budgetMin) || "не указан";
+    const budgetStr = parsed.budgetLabel || fmtBudget(budgetMin) || fmtBudget(budgetMax) || "не указан";
+    const blob = `${lead.title || ""} ${lead.description || ""}`;
     sendLeadNotification(s.telegramChatId, {
-      platform: source.platform, platformColor: source.color || "#22c55e", score: 0,
-      title: lead.title || "", budget: budgetStr,
-      url: lead.url || "", reasoning: (lead.description || "").slice(0, 250),
-      descriptionLength: (lead.description || "").length,
-      responseText: responseText || undefined,
-      responsePrice: lead.responsePrice || 0,
+      platform: source.platform,
+      title: lead.title || "",
+      budget: budgetStr,
+      url: lead.url || "",
+      city: city || undefined,
+      remote: parsed.remote,
+      responses: parsed.responses,
+      responsePrice: lead.responsePrice || parsed.responsePrice,
+      ageLabel: parsed.ageLabel,
+      matchedKeyword: matchedKeyword(blob, config.keywords || s?.keywords),
+      clientHint: parsed.clientHint,
     }, s.telegramToken).then((ok: boolean) => {
       if (!ok) console.error("[shared] Telegram send FAILED for", lead.title?.slice(0, 40));
     }).catch((e: any) => {

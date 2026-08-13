@@ -60,7 +60,14 @@ EOF
 echo "📦 Playwright + Chromium..."
 npm init -y 2>/dev/null
 npm install playwright 2>/dev/null
+npx playwright install-deps chromium 2>/dev/null || true
 npx playwright install chromium 2>/dev/null
+
+# PM2 не читает .env сам — экспортируем в окружение процесса + launcher грузит .env
+set -a
+# shellcheck disable=SC1091
+source "$AGENT_DIR/.env"
+set +a
 
 pm2 delete leads-agent-v2 2>/dev/null || true
 pm2 start agent.mjs --name leads-agent-v2 --interpreter node \

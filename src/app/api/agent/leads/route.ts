@@ -3,6 +3,7 @@
 
 import { db } from "@/lib/db";
 import { sendLeadNotification } from "@/lib/telegram/notifications";
+import { matchedKeyword, parseFeedCard } from "@/lib/leads/parse-feed-card";
 import { assertCollectionAllowed, recordNewLead } from "@/lib/billing/quota";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -63,22 +64,21 @@ export async function POST(req: NextRequest) {
 
       await recordNewLead(source.workspaceId);
 
-      // Telegram-уведомление
       if (settings?.telegramChatId && settings?.telegramToken && settings?.telegramAlerts !== false) {
-        const budgetStr = lead.budgetMin
-          ? Number(lead.budgetMin).toLocaleString("ru-RU") + " ₽"
-          : "не указан";
-
+        const parsed = parseFeedCard(String(lead.description || ""), String(lead.title || ""));
+        const blob = `${lead.title || ""} ${lead.description || ""}`;
         sendLeadNotification(settings.telegramChatId, {
           platform: source.platform,
-          platformColor: source.color || "#22c55e",
-          score: 0,
           title: lead.title || "",
-          budget: budgetStr,
+          budget: parsed.budgetLabel || (lead.budgetMin ? Number(lead.budgetMin).toLocaleString("ru-RU") + " ₽" : "не указан"),
           url: lead.url || "",
-          reasoning: (lead.description || "").slice(0, 250),
-          descriptionLength: (lead.description || "").length,
-          responsePrice: lead.responsePrice || 0,
+          city: lead.city || parsed.city,
+          remote: parsed.remote,
+          responses: parsed.responses,
+          responsePrice: lead.responsePrice || parsed.responsePrice,
+          ageLabel: parsed.ageLabel,
+          matchedKeyword: matchedKeyword(blob, settings.keywords),
+          clientHint: parsed.clientHint,
         }, settings.telegramToken).catch(() => {});
       }
 

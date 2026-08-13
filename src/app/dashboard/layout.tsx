@@ -8,6 +8,7 @@ import {
   Sparkles,
   CreditCard,
   Activity,
+  Radio,
 } from "lucide-react";
 import ThemeToggle from "@/components/layout/theme-toggle";
 import StatusIndicator from "@/components/layout/status-indicator";
@@ -50,10 +51,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
   ];
 
   const ADMIN_OPERATOR_NAV = [
+    { href: "/dashboard/admin/ops", label: "Пульт", icon: Radio },
     { href: "/dashboard/admin", label: "Партнёры", icon: Shield },
     { href: "/dashboard/admin/billing", label: "Лимиты", icon: CreditCard },
     { href: "/dashboard/admin/assistant", label: "Помощник", icon: Sparkles },
-    { href: "/dashboard/admin/system", label: "Система", icon: Activity },
+    { href: "/dashboard/admin/system", label: "Хаб", icon: Activity },
   ];
 
   const roleLabel = isImpersonating
@@ -80,7 +82,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       >
         <div style={{ padding: "20px 20px 16px" }}>
           <Link
-            href={isAdmin ? "/dashboard/admin" : "/dashboard"}
+            href={isAdmin ? "/dashboard/admin/ops" : "/dashboard"}
             style={{
               display: "flex",
               alignItems: "center",
@@ -211,9 +213,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </div>
       </aside>
       <main style={{ flex: 1, minWidth: 0, padding: "32px 36px" }}>
-        <div style={{ marginBottom: 24, display: "flex", justifyContent: "flex-end" }}>
-          <StatusIndicator />
-        </div>
+        {!isAdmin && (
+          <div style={{ marginBottom: 24, display: "flex", justifyContent: "flex-end" }}>
+            <StatusIndicator />
+          </div>
+        )}
         {children}
       </main>
     </div>

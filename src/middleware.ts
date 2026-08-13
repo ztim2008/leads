@@ -26,7 +26,19 @@ export default async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", req.url));
   }
 
-  // Партнёр не настраивает источники — только админ
+  // Админ — оператор, не сборщик. Свои заявки только через impersonation / партнёра.
+  const partnerUi = [
+    "/dashboard/leads",
+    "/dashboard/sources",
+    "/dashboard/settings",
+    "/dashboard/analytics",
+    "/dashboard/billing",
+  ];
+  if (isAdmin && (path === "/dashboard" || partnerUi.some((p) => path === p || path.startsWith(p + "/")))) {
+    return NextResponse.redirect(new URL("/dashboard/admin/ops", req.url));
+  }
+
+  // Партнёр не настраивает источники
   if (payload.role !== "admin" && path.startsWith("/dashboard/sources")) {
     return NextResponse.redirect(new URL("/dashboard/leads", req.url));
   }

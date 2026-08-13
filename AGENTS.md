@@ -12,7 +12,7 @@
 3. **Политика:** `src/config/hub.ts` → `profiOnHub: false` — **нельзя нарушать**.
 4. **Git:** `git pull origin main` → `git status` — не затирай чужие изменения.
 5. **Лог:** прочитай последний блок в [DEVLOG.md](DEVLOG.md) (единственный канонический девлог).
-6. **Подключение партнёра:** [docs/OPERATOR_AGENT.md](docs/OPERATOR_AGENT.md) + `npm run operator:onboard`.
+6. **Подключение партнёра:** skill [`.cursor/skills/leads-partner-onboard/SKILL.md`](.cursor/skills/leads-partner-onboard/SKILL.md) → [docs/OPERATOR_AGENT.md](docs/OPERATOR_AGENT.md) + `npm run operator:onboard`.
 
 ---
 

@@ -17,11 +17,21 @@ export async function POST(req: NextRequest) {
     const cfg = (source?.config as Record<string, unknown>) || {};
     const login = cfg.login || sourceId?.slice(0, 8);
 
+    const dedupMs = type === "login_failed" ? 4 * 60 * 60 * 1000 : 15 * 60 * 1000;
+    const lastAt = cfg._lastAlert ? new Date(String(cfg._lastAlert)).getTime() : 0;
+    const sameType = cfg._lastAlertType === type;
+    const skipTelegram = sameType && lastAt && Date.now() - lastAt < dedupMs;
+
     await patchSourceAgentMeta(sourceId, {
       _lastAlert: new Date().toISOString(),
       _lastAlertType: type,
       _circuitBreaker: circuitBreaker || cfg._circuitBreaker,
     });
+
+    if (skipTelegram) {
+      console.warn("[v2/agent/alert] dedup", login, type);
+      return NextResponse.json({ ok: true, deduped: true });
+    }
 
     const text = [
       `🔴 Agent v2 alert`,

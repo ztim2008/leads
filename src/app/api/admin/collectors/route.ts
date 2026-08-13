@@ -41,11 +41,12 @@ export async function GET() {
 
   // Lead stats
   const today = new Date(); today.setHours(0,0,0,0);
+  const partnerWs = { workspace: { user: { role: { not: "admin" as const } } } };
   const [total, todayLeads, profiCount, kworkCount] = await Promise.all([
-    db.lead.count(),
-    db.lead.count({ where: { createdAt: { gte: today } } }),
-    db.lead.count({ where: { source: { platform: "profi" } } }),
-    db.lead.count({ where: { source: { platform: "kwork" } } }),
+    db.lead.count({ where: partnerWs }),
+    db.lead.count({ where: { createdAt: { gte: today }, ...partnerWs } }),
+    db.lead.count({ where: { source: { platform: "profi" }, ...partnerWs } }),
+    db.lead.count({ where: { source: { platform: "kwork" }, ...partnerWs } }),
   ]);
 
   return NextResponse.json({

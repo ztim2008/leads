@@ -333,3 +333,99 @@ Partner buys VPS, downloads zip, fills config.json (Profi login/password + Teleg
 ### Завтра
 
 См. **`docs/NEXT_SESSION_2026-08-12.md`** — пилот VPS, verify, первая заявка в TG.
+
+---
+
+## 2026-08-13
+
+### Пилот + админ-пульт
+- `leads-pilot-1`: agent v2 online, Profi `RysyevIV`, вход ок, 9 заявок, TG партнёра `1600729589` (@leadskonversus_bot)
+- Карточка доступа: `GET /api/admin/partners/[id]/secrets`, модалка после создания и кнопка «Доступ»
+- Пульт: `/dashboard/admin/ops` (светофоры флота, автообновление 30 с)
+- `health-monitor` v5: offline >15 мин + сводка 21:00 МСК только админу; дедуп `login_failed` в `/api/v2/agent/alert`
+- Пилотный `leads-agent-v2` **не** рестартили
+- PLAN: 4.9 safe-фильтры партнёра уточнены; добавлен **5.8** — админ видит, сколько заявок ушло каждому партнёру в Telegram (пульт + вечерняя сводка, не копии заявок)
+- Skill **leads-partner-onboard**: любой агент подключает партнёра (parse → onboard → VPS install → verify → отчёт); PLAN 2½.10
+
+### Файлы
+- `src/lib/admin/{guard,access-card}.ts`, `src/components/admin/{partner-access-card,ops-console}.tsx`
+- `src/app/dashboard/admin/ops/page.tsx`, `src/app/api/admin/partners/[id]/secrets/route.ts`
+- `src/collectors/health-monitor.ts`, `src/app/api/v2/agent/alert/route.ts`, `src/agent-core/vps-agent.ts`
+
+### Production
+- `npm run build` + `pm2 restart leads-konversus` + `pm2 restart leads-health`
+- `profiOnHub: false`, пилот на VPS без рестарта
+
+### Визуал потока (не n8n)
+- Пульт: карта VPS → Agent v2 → Profi → Хаб → Telegram + лента времени/ошибок, данные с `GET /api/admin/partners`
+- Дашборд партнёра: «Как работает сбор» + светофор (без IP/CB/паролей)
+- Сборщик остаётся agent v2; n8n-сервер не поднимаем
+- Файлы: `src/components/admin/collector-flow-map.tsx`, `src/components/admin/ops-console.tsx`, `src/components/dashboard/how-collector-works.tsx`, `src/app/dashboard/page.tsx`
+- PLAN 5.9 ✅
+
+### login_failed на пульте — архив, не сейчас
+- Было: после утреннего SMS/пароля `_lastError` липнул, хотя вход ок и заявки шли
+- Пульт: активная ошибка только если CB OPEN/BLOCKED/HALF_OPEN или свежий fail <15 мин; иначе «Архив … (не сейчас)»
+- Heartbeat v2 сбрасывает `source.lastError`, если ошибка уже не активна
+- Agent v2 (bundle) чистит lastError после «вход выполнен» / CB CLOSED — на пилоте не рестартили
+- Файлы: `src/lib/agent/stale-error.ts`, heartbeat, partners API, ops-console, vps-agent.ts
+
+### Доктор системы
+- Пульт: живой вердикт ОК / внимание / зови агента (хаб, БД, TG, PM2, флот, CB, offline в рабочие часы)
+- «Вылечить безопасное»: архивные login_failed + рестарт `leads-health` если упал
+- Авто каждые 5 мин в health v6 (без рестарта самого себя)
+- Запрещено лечить: Profi на хабе, VPS-агент, сброс CB
+- API: `GET/POST /api/admin/doctor`
+- PLAN 5.10 ✅
+
+### Админ ≠ сборщик
+- Вход админа → Пульт; `/dashboard`, заявки, источники, настройки закрыты (кроме impersonation)
+- Источники Profi+Kwork у `bilariuss@yandex.ru` выключены, история заявок в БД сохранена
+- Вкладка «Система» → «Хаб»: только leads-konversus + leads-health, без рестарта Kwork
+- `POST /api/sources/test-profi` → 403 (Playwright на хабе)
+- Доктор и health не смотрят источники admin-user
+- Свои заявки админу — только онбординг как партнёру
+- PLAN 5.11 ✅
+
+### Telegram: ложная тревога доктора
+- В `.env` не было `TELEGRAM_BOT_TOKEN` — доктор смотрел только env, заявки шли токеном из БД партнёра
+- Доктор теперь проверяет env **или** токен из settings + `getMe`
+- В `.env` записан рабочий токен (не в git) + `TELEGRAM_ADMIN_CHAT_ID`; health грузит `.env` сам
+
+### TG-карточка v5 (услуги)
+- Парсер ленты на хабе: бюджет «до/от», город, дистант, отклики, «только что»
+- Пуш: 🔥 заголовок + чипы + одна кнопка «Открыть на Profi». Без простыни ТЗ и без второй кнопки на тот же URL
+- Пилот не рестартили — следующий лид уже в новом шаблоне
+- Файлы: `src/lib/leads/parse-feed-card.ts`, `src/lib/telegram/notifications.ts`, `src/collectors/shared.ts`
+- PLAN 5.12 ✅
+
+---
+
+## Итоги дня · 13 августа 2026
+
+### Сделано
+- Пилот **RysyevIV** на VPS `159.194.213.198`: agent v2 online, CB `CLOSED`, вход ок, **13 заявок** за день, TG партнёра `1600729589`
+- Админ-пульт `/dashboard/admin/ops`: флот, карта потока, архив stale `login_failed`
+- Доктор системы: вердикт + безопасное лечение (не Profi / не VPS / не CB)
+- Админ ≠ сборщик: редирект на Пульт, источники admin выкл, `test-profi` 403
+- TG-карточка **v5** на хабе: бюджет/город/отклики из текста ленты, одна кнопка; без deep scan
+- Токен бота в `.env` (не в git) — доктор больше не врёт «Telegram не отвечает»
+- Продуктовое решение: **одна труба, две вертикали** — пилот = сайты, рынок = услуги (ремонт/стройка). Шаблоны разные, коллектор один. Сегодня не кодили вертикаль `sites`
+- Наблюдение объёма: 13 для сайтов на Profi — норма; ускорять скан **нельзя**; расширять keywords — только если завтра к обеду живых <3–4
+
+### Файлы
+- Пульт/доктор: `src/lib/admin/*`, `src/components/admin/{ops-console,collector-flow-map,system-doctor,hub-status,partner-access-card}*`, `src/app/dashboard/admin/ops/`, `src/app/api/admin/doctor/`
+- TG v5: `src/lib/leads/parse-feed-card.ts`, `src/lib/telegram/notifications.ts`, `src/collectors/shared.ts`, `src/app/api/agent/leads/route.ts`
+- Health/heartbeat: `src/collectors/health-monitor.ts`, `src/app/api/v2/agent/{heartbeat,alert}/route.ts`, `src/lib/telegram/bot-token.ts`, `src/lib/agent/stale-error.ts`
+- Онбординг: `.cursor/skills/leads-partner-onboard/`, `scripts/operator/*`
+- План завтра: `docs/NEXT_SESSION_2026-08-14.md`
+
+### Production
+- `leads-konversus` online, `localhost:3005` → **200**
+- `leads-health` online
+- `profiOnHub: false`, `leads-profi` не запущен
+- Пилот `leads-agent-v2` **не** рестартили (v5 подхватится на следующем лиде без рестарта)
+- Часы пилота 08:00–22:00 МСК → ночь тишина до 08:00 — это норма
+
+### Осталось / завтра
+См. **`docs/NEXT_SESSION_2026-08-14.md`**: дожать 4.6 (утро после сна), не трогать интервал Profi, при необходимости только keywords; затем 5.8 (БД vs TG на пульте). 4.9 бот — после 4.6.

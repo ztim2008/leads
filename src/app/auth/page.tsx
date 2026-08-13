@@ -29,7 +29,8 @@ export default function AuthPage() {
     });
 
     if (apiRes.ok) {
-      window.location.href = "/dashboard";
+      const d = await apiRes.json().catch(() => ({}));
+      window.location.href = d.role === "admin" ? "/dashboard/admin/ops" : "/dashboard";
     } else {
       setError("Неверный email или пароль");
     }
@@ -68,7 +69,7 @@ export default function AuthPage() {
             <p style={{ textAlign: "center", fontSize: "var(--text-xs)", color: "var(--ink-muted)", marginBottom: 12 }}>
               или войдите через
             </p>
-            <button onClick={() => signIn("yandex", { callbackUrl: "/dashboard" })} style={yandexBtnStyle}>
+            <button onClick={() => signIn("yandex", { callbackUrl: "/dashboard/admin/ops" })} style={yandexBtnStyle}>
               <span style={{ fontSize: 18, fontWeight: 700 }}>Я</span>
               Войти с Яндекс ID
             </button>

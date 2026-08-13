@@ -1,12 +1,18 @@
 // Панель управления — обзор
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth/auth";
+import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Inbox, Brain, Plug, TrendingUp, Plus, ExternalLink } from "lucide-react";
+import HowCollectorWorks from "@/components/dashboard/how-collector-works";
 
 export default async function DashboardPage() {
   const session = await auth();
   if (!session?.user) return null;
+  const u = session.user as { role?: string; impersonatorId?: string };
+  if (u.role === "admin" && !u.impersonatorId) {
+    redirect("/dashboard/admin/ops");
+  }
 
   let workspace = await db.workspace.findFirst({ where: { userId: session.user.id } });
   if (!workspace) {
@@ -43,6 +49,12 @@ export default async function DashboardPage() {
     db.source.findMany({ where: { workspaceId: workspace.id } }),
   ]);
 
+  const profi = sources.find((s) => s.platform === "profi") || sources[0];
+  const hbAge = profi?.lastCheckAt ? Date.now() - new Date(profi.lastCheckAt).getTime() : null;
+  const collecting = !!profi?.enabled && hbAge != null && hbAge < 20 * 60 * 1000;
+  const hasError = !!profi?.lastError && (hbAge == null || hbAge >= 20 * 60 * 1000);
+  const lastLeadAt = recentLeads[0]?.createdAt ? new Date(recentLeads[0].createdAt).toISOString() : null;
+
   const stats = [
     { label: "Всего заявок", value: totalLeads, icon: Inbox, color: "var(--accent)" },
     { label: "С AI-оценкой", value: analyzedCount, icon: Brain, color: "var(--purple)" },
@@ -61,6 +73,14 @@ export default async function DashboardPage() {
           {workspace.name}
         </p>
       </div>
+
+      <HowCollectorWorks
+        collecting={collecting}
+        paused={!profi?.enabled}
+        hasError={hasError}
+        lastLeadAt={lastLeadAt}
+        todayCount={todayLeads}
+      />
 
       {/* Статистика — сетка 0px */}
       <div style={{
