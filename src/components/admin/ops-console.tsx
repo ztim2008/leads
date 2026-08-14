@@ -26,6 +26,13 @@ type PartnerRow = {
   workspace?: {
     leadsCount?: number;
     leadsToday?: number;
+    leadsYesterday?: number;
+    lastLead?: {
+      title?: string | null;
+      createdAt?: string | null;
+    } | null;
+    telegramAttemptedToday?: number;
+    telegramDeliveredToday?: number;
     settings?: { telegramChatId?: string | null };
     sources?: Array<{
       id: string;
@@ -80,12 +87,17 @@ function buildFlow(p: PartnerRow | undefined): { nodes: FlowNode[]; events: Flow
   const cbBad = cb === "OPEN" || cb === "BLOCKED";
   const online = !!a?.online;
   const hasTg = !!p.workspace?.settings?.telegramChatId;
+  const leadsToday = p.workspace?.leadsToday ?? 0;
+  const tgAttempted = p.workspace?.telegramAttemptedToday ?? 0;
+  const tgToday = p.workspace?.telegramDeliveredToday ?? 0;
+  const tgMismatch = hasTg && tgToday < tgAttempted;
+  const tgTrackingPartial = tgAttempted < leadsToday;
   const err = a?.lastError || src?.lastError || null;
   const archived = a?.lastErrorArchived || src?.lastErrorArchived || null;
 
   const agentTone: FlowTone = !src ? "off" : cbBad ? "bad" : !src.enabled ? "off" : online ? "ok" : "warn";
   const profiTone: FlowTone = cbBad ? "bad" : err && /login_failed/i.test(err) ? "bad" : online ? "ok" : "warn";
-  const tgTone: FlowTone = hasTg ? "ok" : "warn";
+  const tgTone: FlowTone = !hasTg ? "warn" : tgMismatch ? "warn" : "ok";
   const vpsTone: FlowTone = src?.config?._vpsIp ? (online ? "ok" : "warn") : "off";
 
   return {
@@ -114,15 +126,21 @@ function buildFlow(p: PartnerRow | undefined): { nodes: FlowNode[]; events: Flow
       {
         id: "hub",
         title: "Хаб",
-        subtitle: `сегодня ${p.workspace?.leadsToday ?? 0}`,
+        subtitle: `сегодня ${leadsToday}`,
         meta: `квота ${p.subscription?.leadsUsedMonth ?? 0}/${p.subscription?.leadsPerMonth ?? "—"}`,
         tone: "ok",
       },
       {
         id: "tg",
         title: "Telegram",
-        subtitle: hasTg ? `chat ${p.workspace?.settings?.telegramChatId}` : "не привязан",
-        meta: hasTg ? "заявки партнёру" : "нужен /start",
+        subtitle: hasTg ? `${tgToday} из ${tgAttempted} попыток` : "не привязан",
+        meta: !hasTg
+          ? "нужен /start"
+          : tgMismatch
+            ? "есть ошибка доставки"
+            : tgTrackingPartial
+              ? "учёт включён сегодня"
+              : "доставка подтверждена",
         tone: tgTone,
       },
     ],
@@ -144,8 +162,8 @@ function buildFlow(p: PartnerRow | undefined): { nodes: FlowNode[]; events: Flow
       },
       {
         at: "сегодня",
-        label: `Заявок в БД: ${p.workspace?.leadsToday ?? 0} · интервал ${a?.checkIntervalLabel || "3–7 мин"} · часы ${src?.config?.workHoursStart || "08:00"}–${src?.config?.workHoursEnd || "22:00"} МСК`,
-        tone: "ok",
+        label: `Заявок: ${leadsToday} в БД · ${tgToday}/${tgAttempted} доставлено в TG${tgTrackingPartial ? " (учёт включён сегодня)" : ""} · интервал ${a?.checkIntervalLabel || "3–7 мин"} · часы ${src?.config?.workHoursStart || "08:00"}–${src?.config?.workHoursEnd || "22:00"} МСК`,
+        tone: tgMismatch ? "warn" : "ok",
       },
     ],
   };
@@ -184,6 +202,9 @@ export default function OpsConsole() {
     let offline = 0;
     let cbOpen = 0;
     let leadsToday = 0;
+    let leadsYesterday = 0;
+    let telegramAttemptedToday = 0;
+    let telegramDeliveredToday = 0;
     let errors = 0;
     for (const p of partners) {
       const src = p.workspace?.sources?.[0];
@@ -193,9 +214,12 @@ export default function OpsConsole() {
       const cb = a?.circuitBreaker?.state;
       if (cb && cb !== "CLOSED") cbOpen += 1;
       leadsToday += p.workspace?.leadsToday || 0;
+      leadsYesterday += p.workspace?.leadsYesterday || 0;
+      telegramAttemptedToday += p.workspace?.telegramAttemptedToday || 0;
+      telegramDeliveredToday += p.workspace?.telegramDeliveredToday || 0;
       if (a?.lastError || src?.lastError) errors += 1;
     }
-    return { online, offline, cbOpen, leadsToday, errors, total: partners.length };
+    return { online, offline, cbOpen, leadsToday, leadsYesterday, telegramAttemptedToday, telegramDeliveredToday, errors, total: partners.length };
   }, [partners]);
 
   const focus = partners.find((p) => p.id === selected) || partners[0];
@@ -225,8 +249,16 @@ export default function OpsConsole() {
         <Stat label="Offline" value={String(fleet.offline)} color={fleet.offline ? "var(--amber)" : undefined} />
         <Stat label="CB ≠ CLOSED" value={String(fleet.cbOpen)} color={fleet.cbOpen ? "var(--red)" : undefined} />
         <Stat label="Заявок сегодня" value={String(fleet.leadsToday)} />
+        <Stat label="Заявок вчера" value={String(fleet.leadsYesterday)} />
+        <Stat
+          label="Доставлено в TG"
+          value={String(fleet.telegramDeliveredToday)}
+          color={fleet.telegramDeliveredToday < fleet.telegramAttemptedToday ? "var(--amber)" : "var(--green)"}
+        />
         <Stat label="Ошибки агентов" value={String(fleet.errors)} color={fleet.errors ? "var(--amber)" : undefined} />
       </div>
+
+      {focus && <DailyProduction partner={focus} />}
 
       {focus && (
         <div
@@ -261,7 +293,7 @@ export default function OpsConsole() {
               <th style={th}>Агент</th>
               <th style={th}>CB</th>
               <th style={th}>Heartbeat</th>
-              <th style={th}>Сегодня / квота</th>
+              <th style={th}>Сегодня / вчера / TG</th>
               <th style={th}>Интервал</th>
               <th style={th}>Часы / IP</th>
             </tr>
@@ -275,6 +307,12 @@ export default function OpsConsole() {
               const open = selected === p.id;
               const used = p.subscription?.leadsUsedMonth ?? 0;
               const limit = p.subscription?.leadsPerMonth ?? 0;
+              const dbToday = p.workspace?.leadsToday ?? 0;
+              const dbYesterday = p.workspace?.leadsYesterday ?? 0;
+              const tgAttempted = p.workspace?.telegramAttemptedToday ?? 0;
+              const tgToday = p.workspace?.telegramDeliveredToday ?? 0;
+              const tgMismatch = tgToday < tgAttempted;
+              const tgTrackingPartial = tgAttempted < dbToday;
               return (
                 <tbody key={p.id} style={{ display: "table-row-group" }}>
                   <tr
@@ -308,8 +346,22 @@ export default function OpsConsole() {
                     </td>
                     <td style={{ ...td, fontSize: "var(--text-xs)" }}>{ageLabel(a?.lastHeartbeat)}</td>
                     <td style={td}>
-                      <span style={{ fontWeight: 650 }}>{p.workspace?.leadsToday ?? 0}</span>
-                      <span style={{ color: "var(--ink-muted)", fontSize: "var(--text-xs)" }}> / {used}/{limit || "—"}</span>
+                      <span style={{ fontWeight: 650 }}>{dbToday}</span>
+                      <span style={{ color: "var(--ink-muted)" }}> / {dbYesterday}</span>
+                      <span style={{ color: tgMismatch ? "var(--amber)" : "var(--green)", fontWeight: 650 }}>
+                        {" "}/ {tgToday}
+                      </span>
+                      <div style={{ color: "var(--ink-muted)", fontSize: "0.65rem" }}>
+                        квота {used}/{limit || "—"} · последняя {ageLabel(p.workspace?.lastLead?.createdAt)}
+                      </div>
+                      {tgMismatch && (
+                        <div style={{ color: "var(--amber)", fontSize: "0.65rem" }}>⚠ TG не дошло</div>
+                      )}
+                      {!tgMismatch && tgTrackingPartial && (
+                        <div style={{ color: "var(--ink-muted)", fontSize: "0.65rem" }}>
+                          TG {tgToday}/{tgAttempted}, учёт включён сегодня
+                        </div>
+                      )}
                     </td>
                     <td style={{ ...td, fontSize: "var(--text-xs)" }}>{a?.checkIntervalLabel || "3–7 мин"}</td>
                     <td style={{ ...td, fontSize: "var(--text-xs)" }}>
@@ -377,6 +429,92 @@ export default function OpsConsole() {
       {accessCard && (
         <PartnerAccessCardModal card={accessCard} onClose={() => setAccessCard(null)} />
       )}
+    </div>
+  );
+}
+
+function DailyProduction({ partner }: { partner: PartnerRow }) {
+  const today = partner.workspace?.leadsToday ?? 0;
+  const yesterday = partner.workspace?.leadsYesterday ?? 0;
+  const delivered = partner.workspace?.telegramDeliveredToday ?? 0;
+  const attempted = partner.workspace?.telegramAttemptedToday ?? 0;
+  const last = partner.workspace?.lastLead;
+  const diff = today - yesterday;
+  const lastTime = last?.createdAt
+    ? new Date(last.createdAt).toLocaleTimeString("ru-RU", {
+        timeZone: "Europe/Moscow",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "—";
+  const progress = Math.min(100, Math.round((today / 15) * 100));
+
+  return (
+    <div
+      style={{
+        border: "1px solid var(--border)",
+        borderRadius: "var(--radius-lg)",
+        background: "var(--bg-surface)",
+        padding: 16,
+        marginBottom: 20,
+      }}
+    >
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap", marginBottom: 14 }}>
+        <div>
+          <strong style={{ fontSize: "var(--text-sm)" }}>
+            Выработка дня: {partner.name || partner.email}
+          </strong>
+          <div style={{ fontSize: "var(--text-xs)", color: "var(--ink-muted)", marginTop: 3 }}>
+            Счётчик автоматически с 00:00 МСК, история не удаляется
+          </div>
+        </div>
+        <span
+          style={{
+            fontSize: "var(--text-xs)",
+            fontWeight: 650,
+            color: diff >= 0 ? "var(--green)" : "var(--amber)",
+          }}
+        >
+          к вчера: {diff > 0 ? "+" : ""}{diff}
+        </span>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))", gap: 10 }}>
+        <MiniMetric label="Собрано сегодня" value={String(today)} />
+        <MiniMetric label="Вчера за день" value={String(yesterday)} />
+        <MiniMetric
+          label="Доставлено в TG"
+          value={`${delivered}/${attempted}`}
+          color={delivered < attempted ? "var(--amber)" : "var(--green)"}
+        />
+        <MiniMetric label="Последняя заявка" value={lastTime} />
+      </div>
+
+      <div style={{ marginTop: 14 }}>
+        <div style={{ height: 7, borderRadius: 999, background: "var(--bg-layer)", overflow: "hidden" }}>
+          <div
+            style={{
+              width: `${progress}%`,
+              height: "100%",
+              background: today >= 8 ? "var(--green)" : "var(--accent)",
+              borderRadius: 999,
+            }}
+          />
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, marginTop: 6, fontSize: "0.65rem", color: "var(--ink-muted)" }}>
+          <span>Ориентир пилота «сайты»: 8–15/день, не алерт</span>
+          <span>{last?.title ? `${lastTime} · ${last.title.slice(0, 70)}` : "заявок ещё нет"}</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MiniMetric({ label, value, color }: { label: string; value: string; color?: string }) {
+  return (
+    <div style={{ padding: 12, borderRadius: "var(--radius-sm)", background: "var(--bg-layer)" }}>
+      <div style={{ fontSize: "0.65rem", color: "var(--ink-muted)", marginBottom: 4 }}>{label}</div>
+      <div style={{ fontSize: "var(--text-lg)", fontWeight: 800, color: color || "var(--ink-heading)" }}>{value}</div>
     </div>
   );
 }

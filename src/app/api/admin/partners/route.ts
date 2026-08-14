@@ -8,6 +8,10 @@ import { createPartnerSubscription } from "@/lib/billing/quota";
 import { requireAdminUser } from "@/lib/admin/guard";
 import { buildAccessCard, setupCommandFor } from "@/lib/admin/access-card";
 import { isActiveAgentError } from "@/lib/agent/stale-error";
+import {
+  TELEGRAM_ATTEMPT_ACTIVITY,
+  TELEGRAM_DELIVERY_ACTIVITY,
+} from "@/lib/telegram/delivery";
 import type { Prisma } from "@prisma/client";
 
 
@@ -28,13 +32,57 @@ export async function GET() {
   const todayMsk = new Date(Date.now() + 3 * 3600 * 1000);
   todayMsk.setUTCHours(0, 0, 0, 0);
   const todayStart = new Date(todayMsk.getTime() - 3 * 3600 * 1000);
+  const yesterdayStart = new Date(todayStart.getTime() - 24 * 3600 * 1000);
 
-  const todayCounts = await db.lead.groupBy({
-    by: ["workspaceId"],
-    where: { createdAt: { gte: todayStart } },
+  const [todayCounts, yesterdayCounts, lastLeads] = await Promise.all([
+    db.lead.groupBy({
+      by: ["workspaceId"],
+      where: { createdAt: { gte: todayStart } },
+      _count: { _all: true },
+    }),
+    db.lead.groupBy({
+      by: ["workspaceId"],
+      where: { createdAt: { gte: yesterdayStart, lt: todayStart } },
+      _count: { _all: true },
+    }),
+    db.lead.findMany({
+      where: {
+        workspaceId: {
+          in: partners.flatMap((p) => p.workspaces.map((w) => w.id)),
+        },
+      },
+      orderBy: { createdAt: "desc" },
+      distinct: ["workspaceId"],
+      select: {
+        workspaceId: true,
+        createdAt: true,
+        title: true,
+      },
+    }),
+  ]);
+  const todayMap = new Map(todayCounts.map((c) => [c.workspaceId, c._count._all]));
+  const yesterdayMap = new Map(
+    yesterdayCounts.map((c) => [c.workspaceId, c._count._all]),
+  );
+  const lastLeadMap = new Map(lastLeads.map((lead) => [lead.workspaceId, lead]));
+  const tgCounts = await db.activityLog.groupBy({
+    by: ["workspaceId", "type"],
+    where: {
+      type: { in: [TELEGRAM_ATTEMPT_ACTIVITY, TELEGRAM_DELIVERY_ACTIVITY] },
+      createdAt: { gte: todayStart },
+    },
     _count: { _all: true },
   });
-  const todayMap = new Map(todayCounts.map((c) => [c.workspaceId, c._count._all]));
+  const tgDeliveredMap = new Map(
+    tgCounts
+      .filter((c) => c.type === TELEGRAM_DELIVERY_ACTIVITY)
+      .map((c) => [c.workspaceId, c._count._all]),
+  );
+  const tgAttemptedMap = new Map(
+    tgCounts
+      .filter((c) => c.type === TELEGRAM_ATTEMPT_ACTIVITY)
+      .map((c) => [c.workspaceId, c._count._all]),
+  );
 
   return NextResponse.json({ partners: partners.map(p => {
     const ws = p.workspaces[0];
@@ -103,6 +151,15 @@ export async function GET() {
         } : null,
         leadsCount: ws._count.leads,
         leadsToday: todayMap.get(ws.id) || 0,
+        leadsYesterday: yesterdayMap.get(ws.id) || 0,
+        lastLead: lastLeadMap.get(ws.id)
+          ? {
+              title: lastLeadMap.get(ws.id)?.title || "Без названия",
+              createdAt: lastLeadMap.get(ws.id)?.createdAt.toISOString(),
+            }
+          : null,
+        telegramDeliveredToday: tgDeliveredMap.get(ws.id) || 0,
+        telegramAttemptedToday: tgAttemptedMap.get(ws.id) || 0,
       } : null,
     };
   }) });

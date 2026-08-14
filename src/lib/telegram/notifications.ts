@@ -1,4 +1,4 @@
-// Telegram-уведомления v5 — услуги: бюджет / город / отклики, одна кнопка
+// Telegram-уведомления v5.1 — заголовок + чипы + суть задачи + сигнал по заказчику
 
 export interface LeadNotification {
   platform: string;
@@ -14,7 +14,13 @@ export interface LeadNotification {
   ageLabel?: string;
   matchedKeyword?: string;
   clientHint?: string;
-  /** @deprecated v5 не показывает простыню */
+  /** Суть задачи из ленты (без простыни deep scan). */
+  taskSnippet?: string;
+  author?: string;
+  reviewCount?: number;
+  newbie?: boolean;
+  riskHint?: string;
+  /** @deprecated */
   reasoning?: string;
   responseText?: string;
 }
@@ -28,22 +34,38 @@ export function formatLeadTelegram(lead: LeadNotification): string {
   const emoji = hot ? "🔥" : lead.responsePrice ? "⚡" : "📌";
   const title = escapeHtml((lead.title || "Новый заказ").trim().slice(0, 120));
 
-  const chips: string[] = [];
-  if (lead.budget && lead.budget !== "не указан") chips.push(`💰 ${escapeHtml(lead.budget)}`);
-  else chips.push("💰 бюджет не указан");
-  if (lead.city) chips.push(`📍 ${escapeHtml(lead.city)}${lead.remote ? " · дистант" : ""}`);
-  else if (lead.remote) chips.push("📍 дистанционно");
-  if (lead.responses != null) chips.push(`👥 ${lead.responses} откл.`);
-  if (lead.responsePrice && lead.responsePrice > 0) chips.push(`💳 отклик ${lead.responsePrice} ₽`);
+  const lines = [`${emoji} <b>${title}</b>`];
+  if (lead.budget && lead.budget !== "не указан") lines.push(`💰 ${escapeHtml(lead.budget)}`);
+  else lines.push("💰 бюджет не указан");
+  if (lead.city) lines.push(`📍 ${escapeHtml(lead.city)}${lead.remote ? " · дистант" : ""}`);
+  else if (lead.remote) lines.push("📍 дистанционно");
+  if (lead.responses != null) lines.push(`👥 ${lead.responses} откл.${lead.responses <= 1 ? " · мало конкурентов" : ""}`);
+  if (lead.responsePrice && lead.responsePrice > 0) {
+    lines.push(`💳 Цена отклика: ${lead.responsePrice} ₽`);
+  } else if (/profi/i.test(lead.platform)) {
+    lines.push("💳 Цена отклика: не показана в ленте");
+  }
+  if (lead.ageLabel) lines.push(`⏱ ${escapeHtml(lead.ageLabel)}`);
+  if (lead.matchedKeyword) lines.push(`🎯 Совпало: ${escapeHtml(lead.matchedKeyword)}`);
+  if (lead.clientHint) lines.push(`ℹ️ ${escapeHtml(lead.clientHint)}`);
 
-  const meta: string[] = [];
-  if (lead.ageLabel) meta.push(`⏱ ${escapeHtml(lead.ageLabel)}`);
-  if (lead.matchedKeyword) meta.push(`совпало: ${escapeHtml(lead.matchedKeyword)}`);
-  if (lead.clientHint) meta.push(escapeHtml(lead.clientHint));
-  if (lead.responses != null && lead.responses <= 1) meta.push("мало конкурентов");
+  if (lead.taskSnippet?.trim()) {
+    lines.push("");
+    lines.push("📝 <b>Задача</b>");
+    lines.push(formatTask(lead.taskSnippet));
+  }
 
-  const lines = [`${emoji} <b>${title}</b>`, chips.join("    ")];
-  if (meta.length) lines.push(meta.join(" · "));
+  const clientBits: string[] = [];
+  if (lead.author) clientBits.push(`👤 ${escapeHtml(lead.author)}`);
+  if (lead.reviewCount != null && lead.reviewCount > 0) {
+    clientBits.push(`⭐ ${lead.reviewCount} отз.`);
+  } else if (lead.newbie) {
+    clientBits.push("🆕 новичок / без отзывов");
+  }
+  if (clientBits.length) lines.push(clientBits.join(" · "));
+
+  if (lead.riskHint) lines.push(`⚠ ${escapeHtml(lead.riskHint)}`);
+
   return lines.join("\n");
 }
 
@@ -99,4 +121,14 @@ export async function sendLeadNotification(
 
 function escapeHtml(text: string): string {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function formatTask(text: string): string {
+  return text
+    .trim()
+    .split(/\s*(?:·|\n)\s*/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map(escapeHtml)
+    .join("\n");
 }

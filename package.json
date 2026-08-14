@@ -8,7 +8,7 @@
     "build": "npm run build:agent-v2 && next build",
     "start": "next start",
     "lint": "eslint",
-    "test:agent-core": "tsx --test src/agent-core/circuit-breaker.test.ts src/lib/agent/stale-error.test.ts src/lib/admin/doctor.test.ts src/lib/leads/parse-feed-card.test.ts",
+    "test:agent-core": "tsx --test src/agent-core/circuit-breaker.test.ts src/lib/agent/stale-error.test.ts src/lib/admin/doctor.test.ts src/lib/leads/parse-feed-card.test.ts src/lib/leads/name-gender.test.ts",
     "operator": "tsx scripts/operator/cli.ts",
     "operator:parse": "tsx scripts/operator/cli.ts parse",
     "operator:onboard": "tsx scripts/operator/cli.ts onboard",

@@ -9,6 +9,7 @@ import {
   CreditCard,
   Activity,
   Radio,
+  SlidersHorizontal,
 } from "lucide-react";
 import ThemeToggle from "@/components/layout/theme-toggle";
 import StatusIndicator from "@/components/layout/status-indicator";
@@ -48,6 +49,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const PARTNER_NAV = [
     { href: "/dashboard", label: "Обзор", icon: LayoutDashboard },
     { href: "/dashboard/leads", label: "Заявки", icon: Inbox },
+    { href: "/dashboard/settings", label: "Фильтры", icon: SlidersHorizontal },
   ];
 
   const ADMIN_OPERATOR_NAV = [
@@ -175,7 +177,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
               </ul>
               {isPartner && !isImpersonating && (
                 <p style={{ margin: "12px 14px", fontSize: "0.65rem", color: "var(--ink-muted)", lineHeight: 1.4 }}>
-                  Настройки и Profi управляет администратор. Вопросы — к оператору сервиса.
+                  Фильтры заявок — в разделе «Фильтры». Profi и VPS настраивает администратор.
                 </p>
               )}
             </>

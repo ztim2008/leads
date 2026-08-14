@@ -10,6 +10,10 @@ import { patchSourceAgentMeta } from "@/lib/agent/source-config";
 import { isActiveAgentError } from "@/lib/agent/stale-error";
 import { diagnose, healSafe } from "@/lib/admin/doctor";
 import { loadHubEnv, resolveServiceBotToken } from "@/lib/telegram/bot-token";
+import {
+  TELEGRAM_ATTEMPT_ACTIVITY,
+  TELEGRAM_DELIVERY_ACTIVITY,
+} from "@/lib/telegram/delivery";
 
 loadHubEnv();
 
@@ -130,6 +134,8 @@ type FleetRow = {
   cb: string;
   lastError: string | null;
   leadsToday: number;
+  telegramAttemptedToday: number;
+  telegramDeliveredToday: number;
 };
 
 async function fleetSnapshot(): Promise<FleetRow[]> {
@@ -146,6 +152,24 @@ async function fleetSnapshot(): Promise<FleetRow[]> {
     _count: { _all: true },
   });
   const todayMap = new Map(todayCounts.map((c) => [c.workspaceId, c._count._all]));
+  const tgCounts = await db.activityLog.groupBy({
+    by: ["workspaceId", "type"],
+    where: {
+      type: { in: [TELEGRAM_ATTEMPT_ACTIVITY, TELEGRAM_DELIVERY_ACTIVITY] },
+      createdAt: { gte: todayStart },
+    },
+    _count: { _all: true },
+  });
+  const tgDeliveredMap = new Map(
+    tgCounts
+      .filter((c) => c.type === TELEGRAM_DELIVERY_ACTIVITY)
+      .map((c) => [c.workspaceId, c._count._all]),
+  );
+  const tgAttemptedMap = new Map(
+    tgCounts
+      .filter((c) => c.type === TELEGRAM_ATTEMPT_ACTIVITY)
+      .map((c) => [c.workspaceId, c._count._all]),
+  );
 
   return sources.map((s) => {
     const cfg = (s.config as Record<string, unknown>) || {};
@@ -170,6 +194,8 @@ async function fleetSnapshot(): Promise<FleetRow[]> {
       cb,
       lastError: errorActive ? rawError : null,
       leadsToday: todayMap.get(s.workspaceId) || 0,
+      telegramAttemptedToday: tgAttemptedMap.get(s.workspaceId) || 0,
+      telegramDeliveredToday: tgDeliveredMap.get(s.workspaceId) || 0,
     };
   });
 }
@@ -219,6 +245,14 @@ async function eveningDigest(admin: { token: string; chat: string }) {
     `📊 *Сводка флота* ${mskTime()} МСК`,
     `Партнёры (Profi): *${fleet.length}* · online *${online}* · offline *${offline}*`,
     `Заявок сегодня: *${leadsToday}*`,
+    ...fleet.map((f) => {
+      const mismatch = f.telegramDeliveredToday < f.telegramAttemptedToday;
+      const tracking =
+        f.telegramAttemptedToday < f.leadsToday
+          ? ` · учёт после запуска ${f.telegramDeliveredToday}/${f.telegramAttemptedToday}`
+          : "";
+      return `${mismatch ? "⚠ " : "✅ "}${f.login}: ${f.leadsToday} в БД · ${f.telegramDeliveredToday} в TG${tracking}`;
+    }),
     cbBad.length ? `CB ≠ CLOSED: ${cbBad.map((f) => f.login + "/" + f.cb).join(", ")}` : `CB: все CLOSED`,
     errors.length
       ? `Ошибки: ${errors.map((f) => `${f.login}: ${(f.lastError || "").slice(0, 40)}`).join(" · ")}`

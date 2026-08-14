@@ -1,7 +1,9 @@
 import { db } from "@/lib/db";
-import { sendLeadNotification } from "@/lib/telegram/notifications";
+import { sendTrackedLeadNotification } from "@/lib/telegram/delivery";
 import { extractBudget } from "@/lib/connectors/profi";
 import { matchedKeyword, parseFeedCard } from "@/lib/leads/parse-feed-card";
+import { budgetPasses, filtersFromConfig, isWithinPartnerHours } from "@/lib/leads/partner-filters";
+import { passesGenderFilter } from "@/lib/leads/name-gender";
 import { assertCollectionAllowed, recordNewLead } from "@/lib/billing/quota";
 import { writeFileSync } from "fs";
 import { join } from "path";
@@ -34,18 +36,9 @@ function hasMinusKeywords(text: string, config: any) {
   return words.some((w: string) => lower.includes(w));
 }
 
-function budgetInRange(budgetMin: number | null | undefined, config: any) {
-  if (budgetMin == null) return true;
-  const cfgMin = config?.budgetMin;
-  const cfgMax = config?.budgetMax;
-  if (cfgMin && budgetMin < cfgMin) return false;
-  if (cfgMax && budgetMin > cfgMax) return false;
-  return true;
-}
-
 export async function saveAndNotify(lead: any, source: any, s: any, responseText?: string) {
-  // config: если s.config есть (source config) — берём его, иначе s — это settings напрямую
-  const config = s?.config || s || {};
+  const config = { ...(s || {}), ...((s?.config as Record<string, unknown>) || {}) };
+  const filters = filtersFromConfig(config as Record<string, unknown>, s);
   const title = (lead.title || "").toLowerCase();
   const desc = (lead.description || "").toLowerCase();
 
@@ -82,7 +75,9 @@ export async function saveAndNotify(lead: any, source: any, s: any, responseText
   }
   const city = lead.city || parsed.city || null;
 
-  if (!budgetInRange(budgetMin, config)) return null;
+  if (!budgetPasses(budgetMin, filters)) return null;
+  if (!passesGenderFilter(lead.author || parsed.author, filters.clientGender)) return null;
+  if (!isWithinPartnerHours(filters.workHoursStart, filters.workHoursEnd)) return null;
 
   const exists = await db.lead.findUnique({ where: { externalId: extId } });
   if (exists) return null;
@@ -90,11 +85,17 @@ export async function saveAndNotify(lead: any, source: any, s: any, responseText
   const quota = await assertCollectionAllowed(source.workspaceId);
   if (!quota.allowed) return null;
 
+  const author = lead.author || parsed.author || null;
+  const reviewCount =
+    lead.reviewCount != null ? Number(lead.reviewCount) : parsed.reviewCount ?? null;
+
   const saved = await db.lead.create({
     data: {
       workspaceId: source.workspaceId, sourceId: source.id,
       externalId: extId, title: lead.title, description: lead.description,
       budgetMin, budgetMax, city,
+      author: author || undefined,
+      reviewCount: reviewCount ?? undefined,
       url: lead.url, createdAt: new Date(lead.createdAt || Date.now()),
       metadata: {
         feed: {
@@ -103,6 +104,11 @@ export async function saveAndNotify(lead: any, source: any, s: any, responseText
           ageLabel: parsed.ageLabel ?? null,
           responsePrice: lead.responsePrice || parsed.responsePrice || null,
           clientHint: parsed.clientHint ?? null,
+          author: author,
+          reviewCount: reviewCount,
+          newbie: parsed.newbie ?? false,
+          taskSnippet: parsed.taskSnippet ?? null,
+          riskHint: parsed.riskHint ?? null,
         },
       } as Prisma.InputJsonValue,
     },
@@ -112,19 +118,31 @@ export async function saveAndNotify(lead: any, source: any, s: any, responseText
   if (s?.telegramChatId && s?.telegramToken && s?.telegramAlerts !== false) {
     const budgetStr = parsed.budgetLabel || fmtBudget(budgetMin) || fmtBudget(budgetMax) || "не указан";
     const blob = `${lead.title || ""} ${lead.description || ""}`;
-    sendLeadNotification(s.telegramChatId, {
-      platform: source.platform,
-      title: lead.title || "",
-      budget: budgetStr,
-      url: lead.url || "",
-      city: city || undefined,
-      remote: parsed.remote,
-      responses: parsed.responses,
-      responsePrice: lead.responsePrice || parsed.responsePrice,
-      ageLabel: parsed.ageLabel,
-      matchedKeyword: matchedKeyword(blob, config.keywords || s?.keywords),
-      clientHint: parsed.clientHint,
-    }, s.telegramToken).then((ok: boolean) => {
+    sendTrackedLeadNotification({
+      workspaceId: source.workspaceId,
+      sourceId: source.id,
+      leadId: saved.id,
+      chatId: s.telegramChatId,
+      botToken: s.telegramToken,
+      lead: {
+        platform: source.platform,
+        title: lead.title || "",
+        budget: budgetStr,
+        url: lead.url || "",
+        city: city || undefined,
+        remote: parsed.remote,
+        responses: parsed.responses,
+        responsePrice: lead.responsePrice || parsed.responsePrice,
+        ageLabel: parsed.ageLabel,
+        matchedKeyword: matchedKeyword(blob, filters.keywords || config.keywords || s?.keywords),
+        clientHint: parsed.clientHint,
+        taskSnippet: parsed.taskSnippet,
+        author: author || undefined,
+        reviewCount: reviewCount ?? undefined,
+        newbie: parsed.newbie,
+        riskHint: parsed.riskHint,
+      },
+    }).then((ok: boolean) => {
       if (!ok) console.error("[shared] Telegram send FAILED for", lead.title?.slice(0, 40));
     }).catch((e: any) => {
       console.error("[shared] Telegram send ERROR:", e?.message || e);

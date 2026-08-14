@@ -88,6 +88,14 @@ const CITY_RE = new RegExp(
   "i",
 );
 
+const MONTH_LINE =
+  /^\d{1,2}\s+(янв|фев|мар|апр|мая|июн|июл|авг|сен|окт|ноя|дек)/i;
+const WEEKDAY_RANGE = /\((?:Пн|Вт|Ср|Чт|Пт|Сб|Вс)\)/i;
+const TZ_JUNK = /^[-−–—]?\s*\d+\s*часа?$/i;
+
+const NOT_AUTHOR =
+  /сайт|лендинг|магазин|тильд|wordpress|shopify|контент|платформ|функционал|заказ|нужн|сдела|создан|доработ|объявлен|дизайн|бюджет|отзыв|клиент|специал|мастер|услуг|ремонт|визитк|корпорат|дистанц|москв|петербург|календар|срок|отклик|предложен|интернет|доска|помощ|анкет|сообщени/i;
+
 export type FeedCardParse = {
   budgetMin?: number;
   budgetMax?: number;
@@ -99,6 +107,16 @@ export type FeedCardParse = {
   clientHint?: string;
   ageMinutes?: number;
   ageLabel?: string;
+  /** Имя заказчика из ленты (если видно). */
+  author?: string;
+  /** Отзывы заказчика, если строка есть в тексте ленты. */
+  reviewCount?: number;
+  /** Новичок / 0 отзывов по тексту ленты. */
+  newbie?: boolean;
+  /** Суть задачи без мета-шума (для TG). */
+  taskSnippet?: string;
+  /** Мягкий риск без deep scan. */
+  riskHint?: string;
 };
 
 function parseNum(raw: string): number | undefined {
@@ -161,8 +179,9 @@ export function parseFeedCard(text: string, title?: string): FeedCardParse {
   if (respM) out.responses = parseInt(respM[1], 10);
 
   const priceM =
-    src.match(/(?:цена\s+)?отклик(?:а)?\s*[:\s]*(\d[\d\s\u00a0\u202f]*)\s*(?:₽|руб)/i) ||
-    src.match(/отклик\s+(\d[\d\s\u00a0\u202f]*)\s*(?:₽|руб)/i);
+    src.match(/(?:цена|стоимость)\s+отклик(?:а)?\s*[:\s]*(\d[\d\s\u00a0\u202f]*)\s*(?:₽|руб)/i) ||
+    src.match(/отклик(?:а)?\s*(?:за|—|-|:)?\s*(\d[\d\s\u00a0\u202f]*)\s*(?:₽|руб)/i) ||
+    src.match(/(\d[\d\s\u00a0\u202f]*)\s*(?:₽|руб)\s*(?:за\s+)?отклик/i);
   if (priceM) out.responsePrice = parseNum(priceM[1]);
 
   if (/клиент изучает цены/i.test(src)) out.clientHint = "изучает цены";
@@ -183,7 +202,98 @@ export function parseFeedCard(text: string, title?: string): FeedCardParse {
     }
   }
 
+  const reviewM =
+    src.match(/(?:оставил[аи]?\s*)?(\d+)\s*отзыв/i) ||
+    src.match(/отзывов?\s*[:\-]?\s*(\d+)/i);
+  if (reviewM) out.reviewCount = parseInt(reviewM[1], 10);
+
+  out.newbie =
+    /новый клиент|новичок|ещё не оставлял(?:а)? отзыв|не оставлял(?:а)? отзыв|без отзывов|0\s*отзыв/i.test(
+      src,
+    ) || out.reviewCount === 0;
+
+  const { author, taskSnippet, riskHint } = extractFeedExtras(text || "", title || "", out);
+  if (author) out.author = author;
+  if (taskSnippet) out.taskSnippet = taskSnippet;
+  if (riskHint) out.riskHint = riskHint;
+
   return out;
+}
+
+function isMetaLine(line: string, title: string): boolean {
+  const t = line.replace(NBSP, " ").trim();
+  if (!t || /^(true|false)$/i.test(t)) return true;
+  if (title && t.toLowerCase() === title.toLowerCase()) return true;
+  if (/^(до|от)\s*\d/.test(t) && /₽|руб/i.test(t)) return true;
+  if (/^\d[\d\s\u00a0\u202f]*\s*(?:₽|руб)/i.test(t)) return true;
+  if (/дистанционн/i.test(t)) return true;
+  if (/только что/i.test(t)) return true;
+  if (/^\d+\s*минут/i.test(t) || /^\d+\s*час/i.test(t)) return true;
+  if (/назад$/i.test(t) && /\d/.test(t)) return true;
+  if (/клиент изучает|клиент выбирает/i.test(t)) return true;
+  if (/^\d+\s*отклик/i.test(t) || /цена\s+отклик/i.test(t)) return true;
+  if (TZ_JUNK.test(t)) return true;
+  if (MONTH_LINE.test(t) || WEEKDAY_RANGE.test(t)) return true;
+  if (/^\d{1,2}\s+[а-яё]{3,}\.?/i.test(t) && t.length < 40) return true;
+  if (CITY_RE.test(` ${t} `) && t.length < 28 && !/[·•]/.test(t) && t.split(/\s+/).length <= 3) {
+    return true;
+  }
+  return false;
+}
+
+function isLikelyAuthor(line: string): boolean {
+  const t = line.replace(NBSP, " ").trim();
+  if (t.length < 2 || t.length > 36) return false;
+  if (NOT_AUTHOR.test(t)) return false;
+  if (/\d|₽|·|•|\/|https?:/i.test(t)) return false;
+  if (CITY_RE.test(` ${t} `)) return false;
+  return /^[A-ZА-ЯЁ][A-Za-zА-Яа-яЁё'’-]*(?:\s+[A-ZА-ЯЁа-яё][A-Za-zА-Яа-яЁё'’-]*){0,2}$/.test(t);
+}
+
+function extractFeedExtras(
+  text: string,
+  title: string,
+  meta: Pick<FeedCardParse, "budgetLabel" | "newbie" | "reviewCount">,
+): { author?: string; taskSnippet?: string; riskHint?: string } {
+  const lines = text
+    .replace(/\r/g, "")
+    .split("\n")
+    .map((l) => l.replace(NBSP, " ").trim())
+    .filter(Boolean);
+
+  let author: string | undefined;
+  const content: string[] = [];
+
+  for (const line of lines) {
+    if (isMetaLine(line, title)) continue;
+    if (isLikelyAuthor(line)) {
+      if (!author) author = line;
+      continue;
+    }
+    content.push(line);
+  }
+
+  let blob = content.join(" · ").replace(/\s*·\s*·\s*/g, " · ").trim();
+  blob = blob.replace(/^(Уже есть|Пожелания и особенности|Необходимо|Важно)\s*[:：]\s*/i, "");
+
+  blob = blob.replace(/\s{2,}/g, " ").trim();
+  if (blob.length > 900) blob = blob.slice(0, 897).replace(/\s+\S*$/, "") + "…";
+
+  const thin = !blob || blob.length < 48;
+  const genericTitle = /^(создание|разработка|доработка|сделать|нужен)\s+сайт/i.test(title.trim());
+  let riskHint: string | undefined;
+  if (thin && genericTitle) riskHint = "мало деталей — сверь на Profi";
+  else if (thin) riskHint = "краткое ТЗ в ленте";
+  else if (!meta.budgetLabel && genericTitle) riskHint = "бюджет не указан";
+  else if (meta.newbie && (meta.reviewCount === 0 || meta.reviewCount == null)) {
+    riskHint = "возможный новичок — чаще фейки";
+  }
+
+  return {
+    author,
+    taskSnippet: blob || undefined,
+    riskHint,
+  };
 }
 
 function normalizeCity(raw: string): string {

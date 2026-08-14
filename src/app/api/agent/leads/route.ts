@@ -2,7 +2,7 @@
 // Агент шлёт: { secret, sourceId, leads: [...] }
 
 import { db } from "@/lib/db";
-import { sendLeadNotification } from "@/lib/telegram/notifications";
+import { sendTrackedLeadNotification } from "@/lib/telegram/delivery";
 import { matchedKeyword, parseFeedCard } from "@/lib/leads/parse-feed-card";
 import { assertCollectionAllowed, recordNewLead } from "@/lib/billing/quota";
 import { NextRequest, NextResponse } from "next/server";
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
       if (!leadQuota.allowed) { skipped++; continue; }
 
       // Сохраняем
-      await db.lead.create({
+      const savedLead = await db.lead.create({
         data: {
           workspaceId: source.workspaceId,
           sourceId: source.id,
@@ -67,19 +67,31 @@ export async function POST(req: NextRequest) {
       if (settings?.telegramChatId && settings?.telegramToken && settings?.telegramAlerts !== false) {
         const parsed = parseFeedCard(String(lead.description || ""), String(lead.title || ""));
         const blob = `${lead.title || ""} ${lead.description || ""}`;
-        sendLeadNotification(settings.telegramChatId, {
-          platform: source.platform,
-          title: lead.title || "",
-          budget: parsed.budgetLabel || (lead.budgetMin ? Number(lead.budgetMin).toLocaleString("ru-RU") + " ₽" : "не указан"),
-          url: lead.url || "",
-          city: lead.city || parsed.city,
-          remote: parsed.remote,
-          responses: parsed.responses,
-          responsePrice: lead.responsePrice || parsed.responsePrice,
-          ageLabel: parsed.ageLabel,
-          matchedKeyword: matchedKeyword(blob, settings.keywords),
-          clientHint: parsed.clientHint,
-        }, settings.telegramToken).catch(() => {});
+        sendTrackedLeadNotification({
+          workspaceId: source.workspaceId,
+          sourceId: source.id,
+          leadId: savedLead.id,
+          chatId: settings.telegramChatId,
+          botToken: settings.telegramToken,
+          lead: {
+            platform: source.platform,
+            title: lead.title || "",
+            budget: parsed.budgetLabel || (lead.budgetMin ? Number(lead.budgetMin).toLocaleString("ru-RU") + " ₽" : "не указан"),
+            url: lead.url || "",
+            city: lead.city || parsed.city,
+            remote: parsed.remote,
+            responses: parsed.responses,
+            responsePrice: lead.responsePrice || parsed.responsePrice,
+            ageLabel: parsed.ageLabel,
+            matchedKeyword: matchedKeyword(blob, settings.keywords),
+            clientHint: parsed.clientHint,
+            taskSnippet: parsed.taskSnippet,
+            author: lead.author || parsed.author,
+            reviewCount: lead.reviewCount ?? parsed.reviewCount,
+            newbie: parsed.newbie,
+            riskHint: parsed.riskHint,
+          },
+        }).catch(() => {});
       }
 
       saved++;
