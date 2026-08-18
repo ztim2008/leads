@@ -77,6 +77,7 @@ git push origin main
 | SSH на сервере | Ключ `id_ed25519_github_nordicbuilder` (настроен в `core.sshCommand` репозитория) |
 | Push | После каждого логического блока работы, минимум — в конце дня |
 | Теги | `checkpoint/*` — вехи; `rollback-*` — точки отката. Как откатить: [docs/ROLLBACK.md](docs/ROLLBACK.md) |
+| Слепки | Ежедневно 03:10: БД + `.env` + git bundle → `/var/www/www-root/data/www/_backups/leads/` (не в git) |
 | Секреты | `.env` в `.gitignore` — **никогда** в коммит |
 
 ```bash

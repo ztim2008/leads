@@ -58,3 +58,47 @@ git push origin rollback-YYYY-MM-DD
 ```
 
 Теги не удаляем и не двигаем. Новая точка = новый тег.
+
+---
+
+## Слепок всей системы (не GitHub)
+
+Git хранит **код**. Заявки, пароли Profi в БД и `.env` в git не попадают — их снимает скрипт раз в сутки (и копия на неделю).
+
+| | |
+|---|---|
+| Куда | `/var/www/www-root/data/www/_backups/leads/` |
+| Расписание | каждый день 03:10, хранить 14 дней; по воскресеньям — weekly, 8 недель |
+| Внутри архива | `leads_ai.sql.gz` (база) · `env` (секреты) · `code.bundle` (git, даже если GitHub недоступен) · `meta.txt` |
+| Не входит | `node_modules`, сборка `.next`, cookies Profi на VPS пилота |
+
+Архивы **не** коммитим. Права `700` на папку, `600` на файлы.
+
+Ручной слепок:
+
+```bash
+/var/www/www-root/data/www/leads.konversus.ru/scripts/backup-snapshot.sh
+ls -lh /var/www/www-root/data/www/_backups/leads/daily /var/www/www-root/data/www/_backups/leads/weekly
+```
+
+### Достать файлы из архива (посмотреть, не восстанавливать)
+
+```bash
+mkdir -p /tmp/leads-snap && tar -tzf /var/www/www-root/data/www/_backups/leads/daily/leads-YYYY-MM-DD.tar.gz
+tar -C /tmp/leads-snap -xzf /var/www/www-root/data/www/_backups/leads/daily/leads-YYYY-MM-DD.tar.gz
+cat /tmp/leads-snap/meta.txt
+```
+
+### Восстановить базу (разрушает текущие заявки — только по явной команде)
+
+```bash
+gunzip -c /tmp/leads-snap/leads_ai.sql.gz | docker exec -i leads-pg psql -U leads_user -d leads_ai
+```
+
+Код из bundle, если GitHub недоступен:
+
+```bash
+git clone /tmp/leads-snap/code.bundle /tmp/leads-from-snap
+```
+
+**Не делать при восстановлении:** `pm2 start leads-profi`, рестарт `leads-agent-v2` на VPS.
