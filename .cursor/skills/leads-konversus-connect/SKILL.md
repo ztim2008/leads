@@ -108,7 +108,8 @@ pm2 list | grep leads
 1. `npm run build` + curl `localhost:3005` → 200
 2. `DEVLOG.md` → «Итоги дня · DD месяц YYYY»
 3. Обновить статусы в `docs/PLAN_2026-08-10.md`
-4. `git commit` + `git push origin main`
-5. `pm2 save` (если меняли PM2)
+4. `git commit` + `git push origin main` + тег `rollback-YYYY-MM-DD`
+5. `npm run snapshot` (БД + .env + git bundle)
+6. `pm2 save` (если меняли PM2)
 
 Полный чеклист: [AGENTS.md](../../../AGENTS.md)

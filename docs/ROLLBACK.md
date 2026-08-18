@@ -68,24 +68,27 @@ Git хранит **код**. Заявки, пароли Profi в БД и `.env` 
 | | |
 |---|---|
 | Куда | `/var/www/www-root/data/www/_backups/leads/` |
-| Расписание | каждый день 03:10, хранить 14 дней; по воскресеньям — weekly, 8 недель |
-| Внутри архива | `leads_ai.sql.gz` (база) · `env` (секреты) · `code.bundle` (git, даже если GitHub недоступен) · `meta.txt` |
+| Закрытие дня | `npm run snapshot` → `dayclose/leads-YYYY-MM-DD.tar.gz` (56 дней) |
+| Страховка | cron 03:10 → `daily/` (14 дней); воскресенье ещё `weekly/` (8 недель) |
+| Внутри архива | `leads_ai.sql.gz` (база) · `env` (секреты) · `code.bundle` (git) · `meta.txt` |
 | Не входит | `node_modules`, сборка `.next`, cookies Profi на VPS пилота |
 
 Архивы **не** коммитим. Права `700` на папку, `600` на файлы.
 
-Ручной слепок:
+Ручной слепок / закрытие дня:
 
 ```bash
-/var/www/www-root/data/www/leads.konversus.ru/scripts/backup-snapshot.sh
-ls -lh /var/www/www-root/data/www/_backups/leads/daily /var/www/www-root/data/www/_backups/leads/weekly
+npm run snapshot
+ls -lh /var/www/www-root/data/www/_backups/leads/dayclose
 ```
+
+Ночной cron пишет в `daily/`. Симлинк `latest.tar.gz` — последний слепок.
 
 ### Достать файлы из архива (посмотреть, не восстанавливать)
 
 ```bash
-mkdir -p /tmp/leads-snap && tar -tzf /var/www/www-root/data/www/_backups/leads/daily/leads-YYYY-MM-DD.tar.gz
-tar -C /tmp/leads-snap -xzf /var/www/www-root/data/www/_backups/leads/daily/leads-YYYY-MM-DD.tar.gz
+mkdir -p /tmp/leads-snap && tar -tzf /var/www/www-root/data/www/_backups/leads/dayclose/leads-YYYY-MM-DD.tar.gz
+tar -C /tmp/leads-snap -xzf /var/www/www-root/data/www/_backups/leads/dayclose/leads-YYYY-MM-DD.tar.gz
 cat /tmp/leads-snap/meta.txt
 ```
 

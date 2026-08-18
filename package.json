@@ -12,7 +12,8 @@
     "operator": "tsx scripts/operator/cli.ts",
     "operator:parse": "tsx scripts/operator/cli.ts parse",
     "operator:onboard": "tsx scripts/operator/cli.ts onboard",
-    "operator:verify": "tsx scripts/operator/cli.ts verify"
+    "operator:verify": "tsx scripts/operator/cli.ts verify",
+    "snapshot": "bash scripts/backup-snapshot.sh day-close"
   },
   "dependencies": {
     "@base-ui/react": "^1.5.0",
