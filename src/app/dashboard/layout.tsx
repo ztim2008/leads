@@ -50,12 +50,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
     { href: "/dashboard", label: "Обзор", icon: LayoutDashboard },
     { href: "/dashboard/leads", label: "Заявки", icon: Inbox },
     { href: "/dashboard/settings", label: "Фильтры", icon: SlidersHorizontal },
+    { href: "/dashboard/billing", label: "Счёт", icon: CreditCard },
   ];
 
   const ADMIN_OPERATOR_NAV = [
     { href: "/dashboard/admin/ops", label: "Пульт", icon: Radio },
     { href: "/dashboard/admin", label: "Партнёры", icon: Shield },
-    { href: "/dashboard/admin/billing", label: "Лимиты", icon: CreditCard },
+    { href: "/dashboard/admin/billing", label: "Счета", icon: CreditCard },
     { href: "/dashboard/admin/assistant", label: "Помощник", icon: Sparkles },
     { href: "/dashboard/admin/system", label: "Хаб", icon: Activity },
   ];

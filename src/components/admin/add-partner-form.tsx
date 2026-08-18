@@ -87,7 +87,9 @@ export default function AddPartnerForm({ onCreated, showCancel }: Props) {
             <div>
               <label style={lbl}>Лимит заявок / месяц *</label>
               <input name="leadsPerMonth" type="number" required defaultValue={500} style={i} />
-              <span style={{ fontSize: "0.65rem", color: "var(--ink-muted)" }}>При исчерпании — сбор остановится</span>
+              <span style={{ fontSize: "0.65rem", color: "var(--ink-muted)" }}>
+                При исчерпании — сбор остановится. Счёт берёт цены из Счетов: подключение разово, API ИИ каждый месяц, поддержка со 2-го месяца, VPS по дням.
+              </span>
             </div>
           </div>
         </div>

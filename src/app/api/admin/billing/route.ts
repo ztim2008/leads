@@ -5,7 +5,14 @@ import {
   getQuotaStatus,
   renewPartnerMonth,
   setCollectionEnabled,
+  pausePartnerBilling,
+  resumePartnerBilling,
+  setUnlimitedBilling,
+  setPeriodPaid,
 } from "@/lib/billing/quota";
+import { billingViewFor } from "@/lib/billing/view";
+import { getAppConfig, updateAppConfig } from "@/lib/config/app";
+import { nInt, pricesFromConfig, pricesFromSub } from "@/lib/billing/operator-pricing";
 
 export async function GET() {
   const s = await auth();
@@ -26,9 +33,12 @@ export async function GET() {
     orderBy: { createdAt: "desc" },
   });
 
-  const rows = partners.map((p) => {
+  const rows = await Promise.all(partners.map(async (p) => {
     const ws = p.workspaces[0];
     const sub = p.subscription;
+    const view = sub ? await billingViewFor(sub, p.createdAt, ws?.id) : null;
+    const billing = view?.report || null;
+    const calendar = view?.calendar || [];
     const quota = sub
       ? {
           used: sub.leadsUsedMonth,
@@ -36,7 +46,7 @@ export async function GET() {
           remaining: Math.max(0, sub.leadsPerMonth - sub.leadsUsedMonth),
           collectionEnabled: sub.collectionEnabled,
           expiresAt: sub.expiresAt?.toISOString() || null,
-          expired: sub.expiresAt ? sub.expiresAt.getTime() < Date.now() : false,
+          expired: billing?.expired ?? false,
         }
       : null;
     const source = ws?.sources[0];
@@ -46,26 +56,32 @@ export async function GET() {
       email: p.email,
       name: p.firstName || p.email,
       workspaceId: ws?.id,
+      connectedAt: p.createdAt.toISOString(),
       profiLogin: cfg.login || null,
       sourceEnabled: source?.enabled ?? false,
       agentOnline: cfg._lastHeartbeat
         ? Date.now() - new Date(cfg._lastHeartbeat).getTime() < 15 * 60 * 1000
         : false,
       quota,
+      billing,
+      calendar,
+      prices: sub ? pricesFromSub(sub) : null,
+      periodIndex: sub?.periodIndex ?? 1,
       plan: sub?.plan || "none",
       status: sub?.status || "none",
     };
-  });
+  }));
 
-  const active = rows.filter((r) => r.quota?.collectionEnabled && !r.quota?.expired).length;
-  const paused = rows.filter((r) => r.quota && (!r.quota.collectionEnabled || r.quota.expired)).length;
-  const nearLimit = rows.filter(
-    (r) => r.quota && r.quota.limit > 0 && r.quota.used / r.quota.limit >= 0.8,
-  ).length;
+  const active = rows.filter((r) => r.quota?.collectionEnabled && !r.billing?.expired && !r.billing?.paused).length;
+  const paused = rows.filter((r) => r.billing?.paused || (r.quota && !r.quota.collectionEnabled)).length;
+  const dueSum = rows.reduce((n, r) => n + (r.billing?.dueNow || 0), 0);
+
+  const defaults = pricesFromConfig(await getAppConfig());
 
   return NextResponse.json({
     partners: rows,
-    summary: { total: rows.length, active, paused, nearLimit },
+    summary: { total: rows.length, active, paused, dueSum },
+    defaults,
   });
 }
 
@@ -78,23 +94,78 @@ export async function POST(req: Request) {
   const body = await req.json();
   const { action, workspaceId, leadsPerMonth, enabled } = body;
 
+  if (action === "set_defaults") {
+    const cur = pricesFromConfig(await getAppConfig());
+    await updateAppConfig({
+      operatorConnectFeeRub: nInt(body.connectFeeRub, cur.connectFeeRub),
+      operatorAiApiRub: nInt(body.aiApiRub, cur.aiApiRub),
+      operatorAiApiUsd: nInt(body.aiApiUsd, cur.aiApiUsd),
+      operatorSupportFeeRub: nInt(body.supportFeeRub, cur.supportFeeRub),
+      operatorVpsPerDayRub: nInt(body.vpsPerDayRub, cur.vpsPerDayRub),
+    });
+    return NextResponse.json({ ok: true, defaults: pricesFromConfig(await getAppConfig()) });
+  }
+
+  if (action === "apply_defaults") {
+    const d = pricesFromConfig(await getAppConfig());
+    await db.subscription.updateMany({
+      data: {
+        connectFeeRub: d.connectFeeRub,
+        aiApiRub: d.aiApiRub,
+        aiApiUsd: d.aiApiUsd,
+        supportFeeRub: d.supportFeeRub,
+        vpsPerDayRub: d.vpsPerDayRub,
+      },
+    });
+    return NextResponse.json({ ok: true, defaults: d });
+  }
+
   if (!workspaceId) return NextResponse.json({ error: "workspaceId required" }, { status: 400 });
 
   switch (action) {
     case "renew":
       await renewPartnerMonth(workspaceId, leadsPerMonth ? parseInt(String(leadsPerMonth)) : undefined);
       break;
+    case "pause":
+      await pausePartnerBilling(workspaceId);
+      break;
+    case "resume":
+      await resumePartnerBilling(workspaceId);
+      break;
+    case "unlimited":
+      await setUnlimitedBilling(workspaceId);
+      break;
     case "toggle":
       await setCollectionEnabled(workspaceId, Boolean(enabled));
       break;
-    case "set_limit":
+    case "set_limit": {
       const limit = parseInt(String(leadsPerMonth)) || 500;
       const sub = await db.subscription.findFirst({ where: { workspaceId } });
       if (sub) {
         await db.subscription.update({ where: { id: sub.id }, data: { leadsPerMonth: limit } });
       }
       break;
-    case "reset_counter":
+    }
+    case "set_prices": {
+      const sub = await db.subscription.findFirst({ where: { workspaceId } });
+      if (sub) {
+        await db.subscription.update({
+          where: { id: sub.id },
+          data: {
+            connectFeeRub: nInt(body.connectFeeRub, sub.connectFeeRub),
+            vpsPerDayRub: nInt(body.vpsPerDayRub, sub.vpsPerDayRub),
+            aiApiRub: nInt(body.aiApiRub, sub.aiApiRub),
+            aiApiUsd: nInt(body.aiApiUsd, sub.aiApiUsd),
+            supportFeeRub: nInt(body.supportFeeRub, sub.supportFeeRub),
+          },
+        });
+      }
+      break;
+    }
+    case "set_paid":
+      await setPeriodPaid(workspaceId, Boolean(body.paid), body.periodStart ? String(body.periodStart) : undefined);
+      break;
+    case "reset_counter": {
       const existing = await db.subscription.findFirst({ where: { workspaceId } });
       if (existing) {
         await db.subscription.update({
@@ -103,6 +174,7 @@ export async function POST(req: Request) {
         });
       }
       break;
+    }
     default:
       return NextResponse.json({ error: "unknown action" }, { status: 400 });
   }

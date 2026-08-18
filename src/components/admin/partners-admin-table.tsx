@@ -8,6 +8,7 @@ import {
 } from "@/lib/agent/onboarding-steps";
 import PartnerAccessCardModal from "@/components/admin/partner-access-card";
 import type { PartnerAccessCard } from "@/lib/admin/access-card";
+import { PaidBadge } from "@/components/billing/paid-badge";
 
 function QuotaBar({ used, limit }: { used: number; limit: number }) {
   const pct = limit > 0 ? Math.min(100, (used / limit) * 100) : 0;
@@ -110,7 +111,7 @@ export default function PartnersAdminTable() {
           <tr style={{ borderBottom: "1px solid var(--border)" }}>
             <th style={th}>Партнёр</th>
             <th style={th}>Лимит месяца</th>
-            <th style={th}>Срок</th>
+            <th style={th}>Счёт</th>
             <th style={th}>Агент</th>
             <th style={th}>Сбор</th>
             <th style={th}></th>
@@ -123,10 +124,11 @@ export default function PartnersAdminTable() {
             const sub = p.subscription;
             const used = sub?.leadsUsedMonth ?? 0;
             const limit = sub?.leadsPerMonth ?? 0;
+            const billing = sub?.billing;
             const expires = sub?.expiresAt ? new Date(sub.expiresAt) : null;
-            const expired = expires ? expires.getTime() < Date.now() : true;
+            const expired = billing?.expired ?? (expires ? expires.getTime() < Date.now() : true);
             const online = source?.agentStatus?.online;
-            const collectionOn = sub?.collectionEnabled && !expired && used < limit;
+            const collectionOn = sub?.collectionEnabled && !expired && !billing?.paused && used < limit;
             const isOpen = expanded === p.id;
 
             const partnerInput = {
@@ -163,12 +165,34 @@ export default function PartnersAdminTable() {
                   <td style={td}>
                     {sub ? <QuotaBar used={used} limit={limit} /> : "—"}
                   </td>
-                  <td style={{ ...td, fontSize: "var(--text-xs)" }}>
-                    {expires
-                      ? expired
-                        ? <span style={{ color: "var(--red)" }}>истёк {expires.toLocaleDateString("ru")}</span>
-                        : expires.toLocaleDateString("ru")
-                      : "—"}
+                  <td style={{ ...td, fontSize: "var(--text-xs)", lineHeight: 1.45 }}>
+                    {billing ? (
+                      <>
+                        <PaidBadge paid={!!billing.periodPaid} size="sm" />
+                        <div style={{ marginTop: 4 }}>{billing.label}</div>
+                        <div style={{ color: "var(--ink-muted)" }}>
+                          VPS {billing.vpsDays} дн × {billing.vpsPerDayRub} = {billing.vpsCost.toLocaleString("ru-RU")} ₽
+                        </div>
+                        {!billing.unlimited && (
+                          <div style={{ color: "var(--ink-muted)" }}>
+                            к концу {billing.vpsCostAtEnd.toLocaleString("ru-RU")} ₽
+                          </div>
+                        )}
+                        <div style={{ fontWeight: 700 }}>
+                          {billing.periodPaid
+                            ? `оплачен · начислено ${billing.accruedNow.toLocaleString("ru-RU")} ₽`
+                            : `к оплате ${billing.dueNow.toLocaleString("ru-RU")} ₽`}
+                        </div>
+                      </>
+                    ) : expires ? (
+                      expired ? (
+                        <span style={{ color: "var(--red)" }}>истёк {expires.toLocaleDateString("ru")}</span>
+                      ) : (
+                        expires.toLocaleDateString("ru")
+                      )
+                    ) : (
+                      "—"
+                    )}
                   </td>
                   <td style={td}>
                     <span style={{ color: online ? "var(--green)" : "var(--ink-muted)", fontSize: "var(--text-xs)" }}>
@@ -246,8 +270,8 @@ export default function PartnersAdminTable() {
                             ))}
                           </ul>
                           <p style={{ marginTop: 12, fontSize: "var(--text-xs)", color: "var(--ink-muted)" }}>
-                            Лимиты и вкл/выкл сбора — вкладка{" "}
-                            <Link href="/dashboard/admin/billing" style={{ color: "var(--accent)" }}>Лимиты</Link>
+                            Сроки, VPS-счётчик и вкл/выкл сбора — вкладка{" "}
+                            <Link href="/dashboard/admin/billing" style={{ color: "var(--accent)" }}>Счета</Link>
                           </p>
                         </div>
                       </div>

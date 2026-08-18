@@ -7,7 +7,7 @@ const TABS = [
   { href: "/dashboard/admin/ops", label: "Пульт" },
   { href: "/dashboard/admin", label: "Все партнёры", exact: true },
   { href: "/dashboard/admin/new", label: "+ Подключить" },
-  { href: "/dashboard/admin/billing", label: "Лимиты" },
+  { href: "/dashboard/admin/billing", label: "Счета" },
   { href: "/dashboard/admin/assistant", label: "Помощник" },
   { href: "/dashboard/admin/system", label: "Хаб" },
 ];
@@ -21,7 +21,7 @@ export default function AdminNav() {
         Оператор
       </h1>
       <p style={{ fontSize: "var(--text-sm)", color: "var(--ink-muted)", marginBottom: 16 }}>
-        Подключение партнёров, лимиты заявок и мониторинг агентов
+        Подключение партнёров, счета и мониторинг агентов
       </p>
       <nav
         style={{

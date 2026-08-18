@@ -1,0 +1,10 @@
+-- AI API / support fees + admin-managed defaults
+ALTER TABLE "subscriptions" ADD COLUMN IF NOT EXISTS "ai_api_usd" INTEGER NOT NULL DEFAULT 20;
+ALTER TABLE "subscriptions" ADD COLUMN IF NOT EXISTS "support_fee_rub" INTEGER NOT NULL DEFAULT 2000;
+ALTER TABLE "subscriptions" ADD COLUMN IF NOT EXISTS "period_index" INTEGER NOT NULL DEFAULT 1;
+
+ALTER TABLE "app_config" ADD COLUMN IF NOT EXISTS "operator_connect_fee_rub" INTEGER NOT NULL DEFAULT 5000;
+ALTER TABLE "app_config" ADD COLUMN IF NOT EXISTS "operator_ai_api_rub" INTEGER NOT NULL DEFAULT 1700;
+ALTER TABLE "app_config" ADD COLUMN IF NOT EXISTS "operator_ai_api_usd" INTEGER NOT NULL DEFAULT 20;
+ALTER TABLE "app_config" ADD COLUMN IF NOT EXISTS "operator_support_fee_rub" INTEGER NOT NULL DEFAULT 2000;
+ALTER TABLE "app_config" ADD COLUMN IF NOT EXISTS "operator_vps_per_day_rub" INTEGER NOT NULL DEFAULT 40;

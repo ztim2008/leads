@@ -1,5 +1,7 @@
 import { db } from "@/lib/db";
 import type { Subscription } from "@prisma/client";
+import { PERIOD_DAYS, addDays, asBillingMode, reportFromSub, pricesFromConfig } from "./operator-pricing";
+import { getAppConfig } from "@/lib/config/app";
 
 const ADMIN_CHAT = process.env.TELEGRAM_ADMIN_CHAT_ID || "";
 const ADMIN_BOT = process.env.TELEGRAM_BOT_TOKEN || "";
@@ -26,6 +28,8 @@ async function sendTelegram(chatId: string, token: string, text: string): Promis
 }
 
 function isExpired(sub: Subscription): boolean {
+  if (asBillingMode(sub.billingMode) === "unlimited") return false;
+  if (asBillingMode(sub.billingMode) === "paused") return false;
   if (!sub.expiresAt) return false;
   return sub.expiresAt.getTime() < Date.now();
 }
@@ -78,13 +82,15 @@ export function quotaStatusFromSub(sub: Subscription | null): QuotaStatus {
 
   const rolled = maybeRollPeriod(sub);
   const expired = isExpired(sub);
+  const paused = asBillingMode(sub.billingMode) === "paused";
   const used = rolled.leadsUsedMonth;
   const limit = sub.leadsPerMonth;
   const atLimit = used >= limit;
-  const collectionEnabled = sub.collectionEnabled && !expired && !atLimit;
+  const collectionEnabled = sub.collectionEnabled && !expired && !paused && !atLimit;
 
   let reason: string | undefined;
-  if (expired) reason = "expired";
+  if (paused) reason = "paused";
+  else if (expired) reason = "expired";
   else if (!sub.collectionEnabled) reason = "disabled";
   else if (atLimit) reason = "quota_exceeded";
 
@@ -149,7 +155,7 @@ export async function haltCollection(
     `Партнёр: ${name} (${email})`,
     `Profi: ${profiLogin}`,
     reasonText,
-    "Включите в админке → Лимиты",
+    "Включите в админке → Счета",
   ].join("\n");
 
   if (ADMIN_BOT && ADMIN_CHAT) {
@@ -218,19 +224,38 @@ export async function renewPartnerMonth(
   leadsPerMonth?: number,
 ): Promise<Subscription> {
   const sub = await db.subscription.findFirst({ where: { workspaceId } });
-  const expiresAt = new Date(Date.now() + MONTH_MS);
+  const now = new Date();
+  const from = sub?.expiresAt && sub.expiresAt.getTime() > now.getTime() ? sub.expiresAt : now;
+  const expiresAt = addDays(from, PERIOD_DAYS);
   const data = {
     status: "active",
     plan: "pro",
+    billingMode: "monthly",
+    pausedAt: null as Date | null,
+    periodStart: from,
     expiresAt,
     leadsUsedMonth: 0,
-    quotaPeriodStart: new Date(),
+    quotaPeriodStart: from,
     collectionEnabled: true,
+    connectFeePaid: true,
+    periodPaid: true,
+    periodPaidAt: now,
+    periodIndex: sub ? (sub.periodIndex || 1) + 1 : 1,
     ...(leadsPerMonth ? { leadsPerMonth } : {}),
   };
 
   let updated: Subscription;
   if (sub) {
+    const prevStart = sub.periodStart || sub.quotaPeriodStart || sub.createdAt;
+    const prevEnd = sub.expiresAt || addDays(prevStart, PERIOD_DAYS);
+    const prevReport = reportFromSub(sub);
+    await upsertInvoice({
+      workspaceId,
+      periodStart: prevStart,
+      periodEnd: prevEnd,
+      amountRub: prevReport.accruedNow,
+      paid: true,
+    });
     updated = await db.subscription.update({ where: { id: sub.id }, data });
   } else {
     const ws = await db.workspace.findUnique({ where: { id: workspaceId } });
@@ -249,6 +274,73 @@ export async function renewPartnerMonth(
     data: { enabled: true, status: "active" },
   });
 
+  return updated;
+}
+
+export async function pausePartnerBilling(workspaceId: string): Promise<Subscription | null> {
+  const sub = await db.subscription.findFirst({ where: { workspaceId } });
+  if (!sub) return null;
+  if (asBillingMode(sub.billingMode) === "paused") return sub;
+  const updated = await db.subscription.update({
+    where: { id: sub.id },
+    data: {
+      billingMode: "paused",
+      pausedAt: new Date(),
+      collectionEnabled: false,
+    },
+  });
+  await db.source.updateMany({
+    where: { workspaceId },
+    data: { enabled: false, status: "paused" },
+  });
+  return updated;
+}
+
+export async function resumePartnerBilling(workspaceId: string): Promise<Subscription | null> {
+  const sub = await db.subscription.findFirst({ where: { workspaceId } });
+  if (!sub) return null;
+  const now = new Date();
+  let periodStart = sub.periodStart || sub.quotaPeriodStart || sub.createdAt;
+  let expiresAt = sub.expiresAt;
+  if (sub.pausedAt) {
+    const pauseMs = now.getTime() - sub.pausedAt.getTime();
+    periodStart = new Date(periodStart.getTime() + pauseMs);
+    if (expiresAt) expiresAt = new Date(expiresAt.getTime() + pauseMs);
+  }
+  const updated = await db.subscription.update({
+    where: { id: sub.id },
+    data: {
+      billingMode: "monthly",
+      pausedAt: null,
+      periodStart,
+      expiresAt,
+      collectionEnabled: true,
+      status: "active",
+    },
+  });
+  await db.source.updateMany({
+    where: { workspaceId },
+    data: { enabled: true, status: "active" },
+  });
+  return updated;
+}
+
+export async function setUnlimitedBilling(workspaceId: string): Promise<Subscription | null> {
+  const sub = await db.subscription.findFirst({ where: { workspaceId } });
+  if (!sub) return null;
+  const updated = await db.subscription.update({
+    where: { id: sub.id },
+    data: {
+      billingMode: "unlimited",
+      pausedAt: null,
+      collectionEnabled: true,
+      status: "active",
+    },
+  });
+  await db.source.updateMany({
+    where: { workspaceId },
+    data: { enabled: true, status: "active" },
+  });
   return updated;
 }
 
@@ -283,6 +375,7 @@ export async function createPartnerSubscription(
   leadsPerMonth: number,
 ): Promise<Subscription> {
   const now = new Date();
+  const prices = pricesFromConfig(await getAppConfig());
   return db.subscription.create({
     data: {
       workspaceId,
@@ -292,13 +385,99 @@ export async function createPartnerSubscription(
       leadsPerMonth: leadsPerMonth || 500,
       leadsUsedMonth: 0,
       quotaPeriodStart: now,
+      periodStart: now,
       collectionEnabled: true,
-      expiresAt: new Date(Date.now() + MONTH_MS),
+      billingMode: "monthly",
+      connectFeePaid: false,
+      periodPaid: false,
+      periodIndex: 1,
+      connectFeeRub: prices.connectFeeRub,
+      aiApiRub: prices.aiApiRub,
+      aiApiUsd: prices.aiApiUsd,
+      supportFeeRub: prices.supportFeeRub,
+      vpsPerDayRub: prices.vpsPerDayRub,
+      expiresAt: addDays(now, PERIOD_DAYS),
       leadsPerDay: 999999,
       sourcesLimit: 5,
       aiAnalysis: true,
       aiResponses: true,
       telegramAlerts: true,
+    },
+  });
+}
+
+async function upsertInvoice(input: {
+  workspaceId: string;
+  periodStart: Date;
+  periodEnd: Date;
+  amountRub: number;
+  paid: boolean;
+}) {
+  const paidAt = input.paid ? new Date() : null;
+  const t = input.periodStart.getTime();
+  const existing = await db.billingInvoice.findFirst({
+    where: {
+      workspaceId: input.workspaceId,
+      periodStart: { gte: new Date(t - 60_000), lte: new Date(t + 60_000) },
+    },
+  });
+  if (existing) {
+    return db.billingInvoice.update({
+      where: { id: existing.id },
+      data: {
+        periodEnd: input.periodEnd,
+        amountRub: input.amountRub,
+        paid: input.paid,
+        paidAt,
+      },
+    });
+  }
+  return db.billingInvoice.create({
+    data: {
+      workspaceId: input.workspaceId,
+      periodStart: input.periodStart,
+      periodEnd: input.periodEnd,
+      amountRub: input.amountRub,
+      paid: input.paid,
+      paidAt,
+    },
+  });
+}
+
+export async function setPeriodPaid(
+  workspaceId: string,
+  paid: boolean,
+  periodIso?: string,
+): Promise<Subscription | null> {
+  const sub = await db.subscription.findFirst({ where: { workspaceId } });
+  if (!sub) return null;
+  const currentStart = sub.periodStart || sub.quotaPeriodStart || sub.createdAt;
+  const targetStart = periodIso ? new Date(periodIso) : currentStart;
+  const isCurrent = Math.abs(targetStart.getTime() - currentStart.getTime()) < 60 * 1000;
+  const report = reportFromSub(sub);
+  const periodEnd = isCurrent
+    ? (sub.expiresAt || addDays(targetStart, PERIOD_DAYS))
+    : addDays(targetStart, PERIOD_DAYS);
+  const amountRub = isCurrent
+    ? report.accruedNow
+    : report.aiApiRub + report.supportFeeRub + report.vpsPerDayRub * PERIOD_DAYS;
+
+  await upsertInvoice({
+    workspaceId,
+    periodStart: targetStart,
+    periodEnd,
+    amountRub,
+    paid,
+  });
+
+  if (!isCurrent) return sub;
+
+  return db.subscription.update({
+    where: { id: sub.id },
+    data: {
+      periodPaid: paid,
+      periodPaidAt: paid ? new Date() : null,
+      connectFeePaid: paid ? true : sub.connectFeePaid,
     },
   });
 }

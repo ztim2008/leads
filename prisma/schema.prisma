@@ -51,11 +51,12 @@ model Workspace {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
-  sources      Source[]
-  leads        Lead[]
-  settings     Settings?
-  subscription Subscription?
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sources         Source[]
+  leads           Lead[]
+  settings        Settings?
+  subscription    Subscription?
+  billingInvoices BillingInvoice[]
 
   @@map("workspaces")
 }
@@ -187,6 +188,18 @@ model Subscription {
   leadsUsedMonth  Int       @default(0) @map("leads_used_month")
   quotaPeriodStart DateTime? @map("quota_period_start")
   collectionEnabled Boolean @default(true) @map("collection_enabled")
+  connectFeeRub    Int      @default(5000) @map("connect_fee_rub")
+  vpsPerDayRub     Int      @default(40) @map("vps_per_day_rub")
+  aiApiRub         Int      @default(1700) @map("month_markup_rub")
+  aiApiUsd         Int      @default(20) @map("ai_api_usd")
+  supportFeeRub    Int      @default(2000) @map("support_fee_rub")
+  periodIndex      Int      @default(1) @map("period_index")
+  billingMode      String   @default("monthly") @map("billing_mode")
+  periodStart      DateTime? @map("period_start")
+  pausedAt         DateTime? @map("paused_at")
+  connectFeePaid   Boolean  @default(false) @map("connect_fee_paid")
+  periodPaid       Boolean  @default(false) @map("period_paid")
+  periodPaidAt     DateTime? @map("period_paid_at")
   sourcesLimit    Int       @default(1) @map("sources_limit")
   aiAnalysis      Boolean   @default(false) @map("ai_analysis_enabled")
   aiResponses     Boolean   @default(false) @map("ai_responses_enabled")
@@ -199,6 +212,25 @@ model Subscription {
   workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@map("subscriptions")
+}
+
+model BillingInvoice {
+  id          String    @id @default(uuid())
+  workspaceId String    @map("workspace_id")
+  periodStart DateTime  @map("period_start")
+  periodEnd   DateTime  @map("period_end")
+  amountRub   Int       @map("amount_rub")
+  paid        Boolean   @default(false)
+  paidAt      DateTime? @map("paid_at")
+  note        String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, periodStart])
+  @@index([workspaceId, periodStart])
+  @@map("billing_invoices")
 }
 
 model ActivityLog {
@@ -240,6 +272,12 @@ model AppConfig {
   trialDays        Int    @default(7)     @map("trial_days")
   yookassaShopId   String? @map("yookassa_shop_id")
   yookassaSecret   String? @map("yookassa_secret")
+
+  operatorConnectFeeRub  Int @default(5000) @map("operator_connect_fee_rub")
+  operatorAiApiRub       Int @default(1700) @map("operator_ai_api_rub")
+  operatorAiApiUsd       Int @default(20) @map("operator_ai_api_usd")
+  operatorSupportFeeRub  Int @default(2000) @map("operator_support_fee_rub")
+  operatorVpsPerDayRub   Int @default(40) @map("operator_vps_per_day_rub")
 
   // 📞 Контакты
   supportTelegram  String? @map("support_telegram")

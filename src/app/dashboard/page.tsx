@@ -5,6 +5,8 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Inbox, Brain, Plug, TrendingUp, Plus, ExternalLink } from "lucide-react";
 import HowCollectorWorks from "@/components/dashboard/how-collector-works";
+import { reportFromSub, formatRub } from "@/lib/billing/operator-pricing";
+import { PaidBadge } from "@/components/billing/paid-badge";
 
 export default async function DashboardPage() {
   const session = await auth();
@@ -32,7 +34,7 @@ export default async function DashboardPage() {
   const settings = await db.settings.findUnique({ where: { workspaceId: workspace.id } });
   if (!settings) await db.settings.create({ data: { workspaceId: workspace.id } });
 
-  const [totalLeads, analyzedCount, activeSources, todayLeads, recentLeads, sources] = await Promise.all([
+  const [totalLeads, analyzedCount, activeSources, todayLeads, recentLeads, sources, sub] = await Promise.all([
     db.lead.count({ where: { workspaceId: workspace.id } }),
     db.leadAnalysis.count({ where: { lead: { workspaceId: workspace.id } } }),
     db.source.count({ where: { workspaceId: workspace.id, enabled: true } }),
@@ -47,7 +49,10 @@ export default async function DashboardPage() {
       orderBy: { createdAt: "desc" }, take: 10,
     }),
     db.source.findMany({ where: { workspaceId: workspace.id } }),
+    db.subscription.findFirst({ where: { workspaceId: workspace.id } }),
   ]);
+
+  const billing = sub ? reportFromSub(sub) : null;
 
   const profi = sources.find((s) => s.platform === "profi") || sources[0];
   const hbAge = profi?.lastCheckAt ? Date.now() - new Date(profi.lastCheckAt).getTime() : null;
@@ -73,6 +78,33 @@ export default async function DashboardPage() {
           {workspace.name}
         </p>
       </div>
+
+      {billing && (
+        <Link
+          href="/dashboard/billing"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            marginBottom: 20,
+            padding: "14px 18px",
+            borderRadius: "var(--radius-lg)",
+            border: "1px solid var(--border)",
+            background: billing.periodPaid ? "var(--green-soft)" : "var(--red-soft)",
+            textDecoration: "none",
+            color: "inherit",
+          }}
+        >
+          <span style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <PaidBadge paid={billing.periodPaid} />
+            <span style={{ fontSize: "var(--text-sm)", fontWeight: 600 }}>
+              {billing.periodPaid ? "Счёт оплачен" : `Счёт не оплачен · ${formatRub(billing.dueNow)}`}
+            </span>
+          </span>
+          <span style={{ fontSize: "var(--text-xs)", color: "var(--ink-muted)" }}>календарь →</span>
+        </Link>
+      )}
 
       <HowCollectorWorks
         collecting={collecting}

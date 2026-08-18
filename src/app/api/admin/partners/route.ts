@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { hash } from "bcryptjs";
 import { createPartnerSubscription } from "@/lib/billing/quota";
+import { reportFromSub } from "@/lib/billing/operator-pricing";
 import { requireAdminUser } from "@/lib/admin/guard";
 import { buildAccessCard, setupCommandFor } from "@/lib/admin/access-card";
 import { isActiveAgentError } from "@/lib/agent/stale-error";
@@ -96,6 +97,8 @@ export async function GET() {
         leadsUsedMonth: p.subscription.leadsUsedMonth,
         collectionEnabled: p.subscription.collectionEnabled,
         expiresAt: p.subscription.expiresAt?.toISOString() || null,
+        createdAt: p.subscription.createdAt.toISOString(),
+        billing: reportFromSub(p.subscription, p.createdAt),
       } : null,
       workspace: ws ? {
         id: ws.id, name: ws.name,
