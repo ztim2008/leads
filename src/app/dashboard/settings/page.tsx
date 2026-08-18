@@ -33,6 +33,9 @@ export default async function SettingsPage() {
   return (
     <div>
       <h1 style={{ fontSize: "var(--text-2xl)", fontWeight: 700, marginBottom: 4 }}>Фильтры</h1>
+      <p style={{ color: "var(--ink-muted)", fontSize: "var(--text-sm)", marginBottom: 16 }}>
+        Плюс и минус отдельно для заголовка и для текста. «Сайт» = сайты, сайтов, сайтами.
+      </p>
       <PartnerFiltersForm workspaceId={workspace.id} initial={initial} />
     </div>
   );

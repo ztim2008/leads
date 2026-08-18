@@ -2,8 +2,7 @@ import { db } from "@/lib/db";
 import { sendTrackedLeadNotification } from "@/lib/telegram/delivery";
 import { extractBudget } from "@/lib/connectors/profi";
 import { matchedKeyword, parseFeedCard } from "@/lib/leads/parse-feed-card";
-import { budgetPasses, filtersFromConfig, isWithinPartnerHours } from "@/lib/leads/partner-filters";
-import { passesGenderFilter } from "@/lib/leads/name-gender";
+import { evaluateLeadFilters, filtersFromConfig } from "@/lib/leads/partner-filters";
 import { assertCollectionAllowed, recordNewLead } from "@/lib/billing/quota";
 import { writeFileSync } from "fs";
 import { join } from "path";
@@ -16,52 +15,9 @@ function fmtBudget(n: number | null | undefined): string {
   return n.toLocaleString("ru-RU").replace(/\u00A0/g, " ") + " ₽";
 }
 
-// --- Filters ---
-
-function matchesKeywords(text: string, config: any) {
-  const kw = config?.keywords;
-  if (!kw || !kw.trim()) return true;
-  const words = kw.split(',').map((w: string) => w.trim().toLowerCase()).filter(Boolean);
-  if (words.length === 0) return true;
-  const lower = (text || '').toLowerCase();
-  return words.some((w: string) => lower.includes(w));
-}
-
-function hasMinusKeywords(text: string, config: any) {
-  const mk = config?.minusKeywords;
-  if (!mk || !mk.trim()) return false;
-  const words = mk.split(',').map((w: string) => w.trim().toLowerCase()).filter(Boolean);
-  if (words.length === 0) return false;
-  const lower = (text || '').toLowerCase();
-  return words.some((w: string) => lower.includes(w));
-}
-
 export async function saveAndNotify(lead: any, source: any, s: any, responseText?: string) {
   const config = { ...(s || {}), ...((s?.config as Record<string, unknown>) || {}) };
   const filters = filtersFromConfig(config as Record<string, unknown>, s);
-  const title = (lead.title || "").toLowerCase();
-  const desc = (lead.description || "").toLowerCase();
-
-  // Title: если есть titleKeywords — проверяем заголовок отдельно
-  if (config.titleKeywords) {
-    if (!matchesKeywords(title, { keywords: config.titleKeywords })) return null;
-  }
-  if (config.titleMinusKeywords) {
-    if (hasMinusKeywords(title, { minusKeywords: config.titleMinusKeywords })) return null;
-  }
-
-  // Description: keywords проверяем по описанию
-  // Если titleKeywords не задан — проверяем keywords по title+description (обратная совместимость)
-  if (config.titleKeywords) {
-    // Раздельный режим: keywords только для описания
-    if (!matchesKeywords(desc, config)) return null;
-    if (hasMinusKeywords(desc, config)) return null;
-  } else {
-    // Старый режим: keywords по title+description
-    const combined = title + " " + desc;
-    if (!matchesKeywords(combined, config)) return null;
-    if (hasMinusKeywords(combined, config)) return null;
-  }
 
   const extId = lead.externalId || source.platform + "-" + Date.now();
 
@@ -75,9 +31,16 @@ export async function saveAndNotify(lead: any, source: any, s: any, responseText
   }
   const city = lead.city || parsed.city || null;
 
-  if (!budgetPasses(budgetMin, filters)) return null;
-  if (!passesGenderFilter(lead.author || parsed.author, filters.clientGender)) return null;
-  if (!isWithinPartnerHours(filters.workHoursStart, filters.workHoursEnd)) return null;
+  const verdict = evaluateLeadFilters(
+    {
+      title: lead.title,
+      description: lead.description,
+      author: lead.author || parsed.author,
+      budgetMin,
+    },
+    filters,
+  );
+  if (!verdict.ok) return null;
 
   const exists = await db.lead.findUnique({ where: { externalId: extId } });
   if (exists) return null;
@@ -134,7 +97,10 @@ export async function saveAndNotify(lead: any, source: any, s: any, responseText
         responses: parsed.responses,
         responsePrice: lead.responsePrice || parsed.responsePrice,
         ageLabel: parsed.ageLabel,
-        matchedKeyword: matchedKeyword(blob, filters.keywords || config.keywords || s?.keywords),
+        matchedKeyword: matchedKeyword(
+          blob,
+          [filters.titleKeywords, filters.keywords].filter(Boolean).join(", ") || config.keywords || s?.keywords,
+        ),
         clientHint: parsed.clientHint,
         taskSnippet: parsed.taskSnippet,
         author: author || undefined,

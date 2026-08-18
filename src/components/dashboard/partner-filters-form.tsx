@@ -47,6 +47,8 @@ export default function PartnerFiltersForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           workspaceId,
+          titleKeywords: fd.get("titleKeywords") || "",
+          titleMinusKeywords: fd.get("titleMinusKeywords") || "",
           keywords: fd.get("keywords") || "",
           minusKeywords: fd.get("minusKeywords") || "",
           budgetMin: Number(fd.get("budgetMin") || 0),
@@ -75,14 +77,23 @@ export default function PartnerFiltersForm({
     <form onSubmit={onSubmit} style={{ maxWidth: 640 }}>
       <p style={{ color: "var(--ink-muted)", fontSize: "var(--text-sm)", marginBottom: 20 }}>
         Меняется только отбор заявок на хабе. Сбор на VPS не рестартится и новый вход в Profi не делается.
+        Склонения учитываются: «сайт» ловит сайты, сайтов, сайтами.
       </p>
 
-      <Field title="Ключевые слова" hint="Через запятую. Пусто — все темы, которые уже собирает агент.">
-        <input name="keywords" defaultValue={initial.keywords} placeholder="сайт, тильда, лендинг" style={inp} />
+      <Field title="Заголовок — плюс-слова" hint="Хотя бы одно слово должно быть в заголовке. Пусто — заголовок не фильтруем.">
+        <input name="titleKeywords" defaultValue={initial.titleKeywords} placeholder="сайт, лендинг, тильда" style={inp} />
       </Field>
 
-      <Field title="Минус-слова" hint="Заявки с этими словами не придут в Telegram.">
-        <input name="minusKeywords" defaultValue={initial.minusKeywords} placeholder="курсовая, студент, бесплатно" style={inp} />
+      <Field title="Заголовок — минус-слова" hint="Если слово есть в заголовке — заявка не придёт. Не смотрит текст, продублируйте ниже если нужно.">
+        <input name="titleMinusKeywords" defaultValue={initial.titleMinusKeywords} placeholder="курсовая, студент, бесплатно" style={inp} />
+      </Field>
+
+      <Field title="Текст — плюс-слова" hint="Хотя бы одно слово должно быть в тексте заявки. Пусто — текст не фильтруем.">
+        <input name="keywords" defaultValue={initial.keywords} placeholder="тильда, админка, каталог" style={inp} />
+      </Field>
+
+      <Field title="Текст — минус-слова" hint="Если слово есть в тексте — заявка не придёт. Не смотрит заголовок.">
+        <input name="minusKeywords" defaultValue={initial.minusKeywords} placeholder="курсовая, диплом, бартер" style={inp} />
       </Field>
 
       <Field title="Часы сбора" hint="Только 08:00–22:00 МСК. Ночью робот спит.">

@@ -1,8 +1,11 @@
 import { db } from "@/lib/db";
 import type { Prisma } from "@prisma/client";
-import type { ClientGenderFilter } from "./name-gender";
+import { passesGenderFilter, type ClientGenderFilter } from "./name-gender";
+import { listHasMatch, listHitsMinus } from "./ru-stem";
 
 export type PartnerFilterInput = {
+  titleKeywords?: string;
+  titleMinusKeywords?: string;
   keywords?: string;
   minusKeywords?: string;
   budgetMin?: number;
@@ -14,6 +17,8 @@ export type PartnerFilterInput = {
 };
 
 export type PartnerFilters = {
+  titleKeywords: string;
+  titleMinusKeywords: string;
   keywords: string;
   minusKeywords: string;
   budgetMin: number;
@@ -67,6 +72,8 @@ export function parsePartnerFilters(input: PartnerFilterInput): PartnerFilters {
     budgetMax = t;
   }
   return {
+    titleKeywords: sanitizeWordList(input.titleKeywords),
+    titleMinusKeywords: sanitizeWordList(input.titleMinusKeywords),
     keywords: sanitizeWordList(input.keywords),
     minusKeywords: sanitizeWordList(input.minusKeywords),
     budgetMin,
@@ -85,6 +92,53 @@ export function isWithinPartnerHours(start: string, end: string, now = new Date(
   return h >= a && h < b;
 }
 
+/** Пустой список = «все темы». Склонения: сайт = сайты/сайтов/сайтами. */
+export function matchesWordList(text: string, list: string | undefined | null): boolean {
+  return listHasMatch(text, list);
+}
+
+export function hasMinusWords(text: string, list: string | undefined | null): boolean {
+  return listHitsMinus(text, list);
+}
+
+export type LeadFilterReason =
+  | "title_plus"
+  | "title_minus"
+  | "text_plus"
+  | "text_minus"
+  | "budget"
+  | "gender"
+  | "hours";
+
+export type LeadFilterInput = {
+  title?: string;
+  description?: string;
+  author?: string | null;
+  budgetMin?: number | null;
+};
+
+/** Те же правила, что `saveAndNotify`, без записи в БД и без Telegram. */
+export function evaluateLeadFilters(
+  lead: LeadFilterInput,
+  filters: PartnerFilters,
+  now = new Date(),
+): { ok: true } | { ok: false; reason: LeadFilterReason } {
+  const title = lead.title || "";
+  const desc = lead.description || "";
+
+  if (!listHasMatch(title, filters.titleKeywords)) return { ok: false, reason: "title_plus" };
+  if (listHitsMinus(title, filters.titleMinusKeywords)) return { ok: false, reason: "title_minus" };
+  if (!listHasMatch(desc, filters.keywords)) return { ok: false, reason: "text_plus" };
+  if (listHitsMinus(desc, filters.minusKeywords)) return { ok: false, reason: "text_minus" };
+
+  if (!budgetPasses(lead.budgetMin, filters)) return { ok: false, reason: "budget" };
+  if (!passesGenderFilter(lead.author, filters.clientGender)) return { ok: false, reason: "gender" };
+  if (!isWithinPartnerHours(filters.workHoursStart, filters.workHoursEnd, now)) {
+    return { ok: false, reason: "hours" };
+  }
+  return { ok: true };
+}
+
 export function budgetPasses(
   leadBudget: number | null | undefined,
   filters: Pick<PartnerFilters, "budgetMin" | "budgetMax" | "showNoBudget">,
@@ -97,6 +151,8 @@ export function budgetPasses(
 
 export function filtersFromConfig(cfg: Record<string, unknown>, settings?: Record<string, unknown> | null): PartnerFilters {
   return parsePartnerFilters({
+    titleKeywords: String(cfg.titleKeywords ?? settings?.titleKeywords ?? ""),
+    titleMinusKeywords: String(cfg.titleMinusKeywords ?? settings?.titleMinusKeywords ?? ""),
     keywords: String(cfg.keywords ?? settings?.keywords ?? ""),
     minusKeywords: String(cfg.minusKeywords ?? settings?.minusKeywords ?? ""),
     budgetMin: Number(cfg.budgetMin ?? settings?.budgetMin ?? 0),
@@ -136,6 +192,8 @@ export async function applyPartnerFilters(workspaceId: string, input: PartnerFil
   const sources = await db.source.findMany({ where: { workspaceId, platform: "profi" } });
   for (const source of sources) {
     const cfg = { ...((source.config as Record<string, unknown>) || {}) };
+    cfg.titleKeywords = filters.titleKeywords;
+    cfg.titleMinusKeywords = filters.titleMinusKeywords;
     cfg.keywords = filters.keywords;
     cfg.minusKeywords = filters.minusKeywords;
     cfg.budgetMin = filters.budgetMin || null;

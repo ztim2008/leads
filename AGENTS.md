@@ -76,7 +76,7 @@ git push origin main
 | Ветка | `main` (единственная рабочая) |
 | SSH на сервере | Ключ `id_ed25519_github_nordicbuilder` (настроен в `core.sshCommand` репозитория) |
 | Push | После каждого логического блока работы, минимум — в конце дня |
-| Теги | `checkpoint/*` — вехи; `rollback-*` — точки отката |
+| Теги | `checkpoint/*` — вехи; `rollback-*` — точки отката. Как откатить: [docs/ROLLBACK.md](docs/ROLLBACK.md) |
 | Секреты | `.env` в `.gitignore` — **никогда** в коммит |
 
 ```bash
@@ -115,6 +115,7 @@ pm2 save
 | Файл | Назначение |
 |------|------------|
 | [.cursor/skills/leads-konversus-connect/SKILL.md](.cursor/skills/leads-konversus-connect/SKILL.md) | **Быстрый старт** — SSH, открытие сессии |
+| [docs/ROLLBACK.md](docs/ROLLBACK.md) | Как сохранить версию и откатиться |
 | [docs/PLAN_2026-08-10.md](docs/PLAN_2026-08-10.md) | Главный план — этапы, статусы, DoD |
 | [DEVLOG.md](DEVLOG.md) | **Единственный** активный девлог |
 | [docs/PHASE0_STABILIZATION.md](docs/PHASE0_STABILIZATION.md) | Отчёт Phase 0 |

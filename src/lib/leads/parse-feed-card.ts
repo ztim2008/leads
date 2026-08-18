@@ -1,5 +1,7 @@
 /** Разбор карточки ленты Profi без захода на страницу заказа. */
 
+import { textHasTerm } from "./ru-stem";
+
 const NBSP = /[\s\u00a0\u202f]+/g;
 
 const CITIES = [
@@ -307,10 +309,9 @@ function normalizeCity(raw: string): string {
 
 export function matchedKeyword(text: string, keywords?: string | null): string | undefined {
   if (!keywords?.trim()) return undefined;
-  const lower = text.toLowerCase();
   return keywords
     .split(",")
     .map((k) => k.trim())
     .filter(Boolean)
-    .find((k) => lower.includes(k.toLowerCase()));
+    .find((k) => textHasTerm(text, k));
 }

@@ -22,6 +22,8 @@ export async function POST(req: Request) {
 
   if (user.role !== "admin") {
     const filters = await applyPartnerFilters(workspace.id, {
+      titleKeywords: fields.titleKeywords,
+      titleMinusKeywords: fields.titleMinusKeywords,
       keywords: fields.keywords,
       minusKeywords: fields.minusKeywords,
       budgetMin: fields.budgetMin,
