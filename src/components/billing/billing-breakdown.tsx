@@ -52,12 +52,10 @@ export function BillingBreakdown({
             <td style={cell}>API агента ИИ (${b.aiApiUsd})</td>
             <td style={num}>{formatRub(b.aiApiRub)}</td>
           </tr>
-          {b.supportDue > 0 && (
-            <tr>
-              <td style={cell}>Поддержка аккаунта</td>
-              <td style={num}>{formatRub(b.supportDue)}</td>
-            </tr>
-          )}
+          <tr>
+            <td style={cell}>Поддержка аккаунта / мес</td>
+            <td style={num}>{formatRub(b.supportDue)}</td>
+          </tr>
           <tr>
             <td style={cell}>VPS сейчас</td>
             <td style={num}>{vpsNow}</td>

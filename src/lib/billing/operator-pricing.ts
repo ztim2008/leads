@@ -146,7 +146,7 @@ export function buildBillingReport(input: BillingInput): BillingReport {
   const periodIndex = Math.max(1, input.periodIndex || 1);
   const firstPeriod = periodIndex <= 1;
   const connectFeeDue = input.connectFeePaid ? 0 : connectFeeRub;
-  const supportDue = firstPeriod ? 0 : supportFeeRub;
+  const supportDue = supportFeeRub;
 
   const unlimited = mode === "unlimited";
   const paused = mode === "paused";

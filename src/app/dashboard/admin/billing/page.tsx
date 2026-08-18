@@ -101,7 +101,7 @@ export default function BillingLimitsPage() {
   return (
     <div>
       <p style={{ fontSize: "var(--text-sm)", color: "var(--ink-muted)", marginBottom: 20, lineHeight: 1.5 }}>
-        Первый месяц: подключение разово + API ИИ + VPS по дням. Со второго месяца вместо подключения идёт поддержка аккаунта.
+        Первый месяц: подключение разово + поддержка + API ИИ + VPS по дням. Дальше без подключения: поддержка + API ИИ + VPS.
         Цены меняете здесь: шаблон для новых и отдельно у каждого партнёра. Флажок «оплачен / не оплачен» один и тот же у вас и у клиента.
       </p>
 
@@ -183,7 +183,7 @@ export default function BillingLimitsPage() {
                 <div style={{ marginTop: 16 }}>
                   <p style={{ fontWeight: 650, fontSize: "var(--text-sm)", marginBottom: 8 }}>
                     Цены этого партнёра · период {p.periodIndex}
-                    {b?.firstPeriod ? " (первый месяц — без поддержки)" : " (поддержка включена)"}
+                    {b?.firstPeriod ? " (первый месяц: + подключение разово)" : ""}
                   </p>
                   <PriceFields
                     values={p.prices}

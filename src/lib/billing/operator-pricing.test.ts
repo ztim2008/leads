@@ -20,8 +20,9 @@ describe("buildBillingReport VPS meter", () => {
     assert.equal(r.vpsCost, 40);
     assert.equal(r.vpsDaysAtEnd, 30);
     assert.equal(r.vpsCostAtEnd, 1200);
-    assert.equal(r.dueNow, 5000 + 1700 + 40);
-    assert.equal(r.dueAtEnd, 5000 + 1700 + 1200);
+    assert.equal(r.dueNow, 5000 + 2000 + 1700 + 40);
+    assert.equal(r.dueAtEnd, 5000 + 2000 + 1700 + 1200);
+    assert.equal(r.supportDue, 2000);
   });
 
   it("на 12-й день VPS = 480, к концу 1200", () => {
@@ -37,16 +38,16 @@ describe("buildBillingReport VPS meter", () => {
     assert.equal(r.vpsDays, 12);
     assert.equal(r.vpsCost, 480);
     assert.equal(r.vpsCostAtEnd, 1200);
-    assert.equal(r.dueNow, 1700 + 480);
-    assert.equal(r.dueAtEnd, 1700 + 1200);
-    assert.equal(r.accruedNow, 1700 + 480);
+    assert.equal(r.dueNow, 2000 + 1700 + 480);
+    assert.equal(r.dueAtEnd, 2000 + 1700 + 1200);
+    assert.equal(r.accruedNow, 2000 + 1700 + 480);
     assert.equal(r.periodPaid, false);
     assert.equal(r.paidLabel, "не оплачен");
-    assert.equal(r.supportDue, 0);
+    assert.equal(r.supportDue, 2000);
     assert.equal(r.firstPeriod, true);
   });
 
-  it("со 2-го месяца: поддержка 2000 + API 1700 + VPS, без подключения", () => {
+  it("со 2-го месяца: снова поддержка + API + VPS, без подключения", () => {
     const r = buildBillingReport({
       connectedAt: start,
       periodStart: end,
@@ -79,7 +80,7 @@ describe("buildBillingReport VPS meter", () => {
     assert.equal(r.paidLabel, "оплачен");
     assert.equal(r.dueNow, 0);
     assert.equal(r.dueAtEnd, 0);
-    assert.equal(r.accruedNow, 1700 + 480);
+    assert.equal(r.accruedNow, 2000 + 1700 + 480);
   });
 
   it("в конце периода счётчик останавливается на 30 днях", () => {

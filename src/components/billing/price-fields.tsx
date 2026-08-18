@@ -7,7 +7,7 @@ const FIELDS: { key: keyof OperatorPriceSheet; label: string; suffix: string }[]
   { key: "connectFeeRub", label: "Подключение, разово", suffix: "₽" },
   { key: "aiApiUsd", label: "API ИИ, $", suffix: "$" },
   { key: "aiApiRub", label: "API ИИ, руб/мес", suffix: "₽" },
-  { key: "supportFeeRub", label: "Поддержка со 2-го мес", suffix: "₽" },
+  { key: "supportFeeRub", label: "Поддержка, руб/мес", suffix: "₽" },
   { key: "vpsPerDayRub", label: "VPS, руб/день", suffix: "₽" },
 ];
 

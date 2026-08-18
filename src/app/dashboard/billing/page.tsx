@@ -25,7 +25,7 @@ export default async function BillingPage() {
       <h1 style={{ fontSize: "var(--text-2xl)", fontWeight: 700, marginBottom: 4 }}>Счёт</h1>
       <p style={{ color: "var(--ink-muted)", fontSize: "var(--text-sm)", marginBottom: 28, lineHeight: 1.5 }}>
         Оплата оператору вручную. Статус «оплачен / не оплачен» ставит оператор — вы видите то же самое.
-        VPS считается каждый прожитый день. API агента ИИ — каждый месяц. Подключение — один раз, со второго месяца — поддержка аккаунта.
+        VPS считается каждый прожитый день. Каждый месяц: поддержка аккаунта + API агента ИИ. Подключение — один раз в первом периоде.
       </p>
 
       {!billing ? (
