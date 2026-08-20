@@ -1,0 +1,956 @@
+<!--
+  Калькулятор стоимости мобильной бани для bani53.ru
+  Встраивается в Крафтум блоком «HTML-код» — вставьте файл целиком.
+  Самодостаточный фрагмент: HTML + CSS + JS, без внешних зависимостей.
+  Версия: 1.1.0 (мобильная вёрстка, кнопка MAX)
+-->
+<div id="b53-calc" dir="ltr">
+  <div class="b53-wrap">
+    <!-- Заголовок -->
+    <div class="b53-head">
+      <div class="b53-head__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 21c8 0 16-8 16-16-8 0-16 8-16 16Z"/>
+          <path d="M8 21c3-3 8-8 10-10"/>
+          <path d="M12 21c1.5-1.5 5.5-6.5 6.5-8"/>
+        </svg>
+      </div>
+      <div>
+        <div class="b53-head__title">Калькулятор стоимости бани</div>
+        <div class="b53-head__sub">Предварительный расчёт по ценам каталога</div>
+      </div>
+      <div class="b53-head__badge">баня под ключ</div>
+    </div>
+
+    <div class="b53-grid">
+      <!-- Левая колонка: шаги -->
+      <div class="b53-main">
+        <!-- Шаг 1. Серия -->
+        <div class="b53-step">
+          <div class="b53-step__num">1</div>
+          <div class="b53-step__body">
+            <div class="b53-step__title">Выберите серию</div>
+            <div class="b53-series" id="b53-series" role="radiogroup" aria-label="Серия бани">
+              <label class="b53-card" data-series="standard">
+                <input type="radio" name="b53-series" value="standard" checked>
+                <span class="b53-card__name">Стандарт</span>
+                <span class="b53-card__dim">2,3 × 4–7 м</span>
+                <span class="b53-card__price">от 375 000 ₽</span>
+                <span class="b53-card__check" aria-hidden="true">✓</span>
+              </label>
+              <label class="b53-card" data-series="terrace">
+                <input type="radio" name="b53-series" value="terrace">
+                <span class="b53-card__name">С террасой</span>
+                <span class="b53-card__dim">2,3 × 5–7 м</span>
+                <span class="b53-card__price">от 385 000 ₽</span>
+                <span class="b53-card__check" aria-hidden="true">✓</span>
+              </label>
+              <label class="b53-card" data-series="scandi">
+                <input type="radio" name="b53-series" value="scandi">
+                <span class="b53-card__name">Скандинавия</span>
+                <span class="b53-card__dim">2,3 × 4,5–8 м</span>
+                <span class="b53-card__price">от 489 000 ₽</span>
+                <span class="b53-card__check" aria-hidden="true">✓</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Шаг 2. Длина -->
+        <div class="b53-step">
+          <div class="b53-step__num">2</div>
+          <div class="b53-step__body">
+            <div class="b53-step__title">Длина бани</div>
+            <div class="b53-size">
+              <div class="b53-size__value">
+                <span class="b53-size__big">2,3 × <b id="b53-size-label">6 м</b></span>
+                <span class="b53-size__hint" id="b53-size-hint">каталожный размер</span>
+              </div>
+              <input type="range" id="b53-size" min="4" max="7" step="0.5" value="6" aria-label="Длина бани в метрах">
+              <div class="b53-size__marks" id="b53-size-marks" aria-hidden="true"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Шаг 3. Опции -->
+        <div class="b53-step">
+          <div class="b53-step__num">3</div>
+          <div class="b53-step__body">
+            <div class="b53-step__title">Дополнительно</div>
+            <label class="b53-option" id="b53-option-sanuzel">
+              <input type="checkbox" id="b53-sanuzel">
+              <span class="b53-option__box" aria-hidden="true"></span>
+              <span class="b53-option__text">
+                <b>Санузел</b>
+                <small>+10 000 ₽ к стоимости бани</small>
+              </span>
+              <span class="b53-option__price">+10 000 ₽</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Шаг 4. Доставка -->
+        <div class="b53-step">
+          <div class="b53-step__num">4</div>
+          <div class="b53-step__body">
+            <div class="b53-step__title">Доставка до вашего участка</div>
+            <div class="b53-delivery">
+              <div class="b53-delivery__row">
+                <input type="text" id="b53-city" class="b53-input" placeholder="Город или населённый пункт" autocomplete="off">
+                <button type="button" id="b53-city-btn" class="b53-btn">Рассчитать</button>
+              </div>
+              <div class="b53-delivery__status" id="b53-city-status" role="status" aria-live="polite">
+                Доставка бесплатна в радиусе 500 км от Пестово, далее — 160 ₽/км.
+              </div>
+              <div class="b53-delivery__result" id="b53-city-result" hidden>
+                <div class="b53-delivery__line">
+                  <span>📍 <b id="b53-city-name">—</b></span>
+                  <span id="b53-city-dist">—</span>
+                </div>
+                <div class="b53-delivery__line">
+                  <span>Доплата за километраж</span>
+                  <span id="b53-city-extra">—</span>
+                </div>
+                <div class="b53-delivery__line b53-delivery__line--total">
+                  <span>Стоимость доставки</span>
+                  <span id="b53-city-total">—</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Комплектация -->
+        <details class="b53-kit">
+          <summary>Что входит в базовую комплектацию</summary>
+          <div class="b53-kit__body">
+            <ul>
+              <li>Печь «Дача» с баком для горячей воды на 45 л</li>
+              <li>Профилированный брус камерной сушки 90×140 мм</li>
+              <li>Электрика по всей бане, плафоны, розетки, автомат</li>
+              <li>Система слива, опорно-столбчатый фундамент</li>
+              <li>Двухъярусные пологи в парной, стол и 2 лавочки в комнате отдыха</li>
+              <li>Окна с двойным остеклением, утепление пола и потолка</li>
+            </ul>
+          </div>
+        </details>
+      </div>
+
+      <!-- Правая колонка: итог -->
+      <aside class="b53-total">
+        <div class="b53-total__label">Итого предварительно</div>
+        <div class="b53-total__sum" id="b53-sum">≈ 425 000 ₽</div>
+        <div class="b53-total__note" id="b53-sum-note">цена бани по каталогу</div>
+
+        <div class="b53-total__rows">
+          <div class="b53-total__row"><span>Баня</span><span id="b53-row-bath">425 000 ₽</span></div>
+          <div class="b53-total__row" id="b53-row-sanuzel-wrap" hidden><span>Санузел</span><span id="b53-row-sanuzel">+10 000 ₽</span></div>
+          <div class="b53-total__row"><span>Доставка</span><span id="b53-row-delivery">—</span></div>
+        </div>
+
+        <div class="b53-total__actions">
+          <a class="b53-max" id="b53-max" target="_blank" rel="noopener" href="https://max.ru/u/f9LHodD0cOJGd17TGHQs-RQFEHl-1LirxFAUAjz9LuuaUG8WxyuQM_y9Qfc">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="currentColor" d="M12 3C6.9 3 3 6.7 3 11.5c0 2.6 1.2 5 3.1 6.6L5 22l4-1.6c1 .3 2 .5 3 .5 5.1 0 9-3.7 9-8.4S17.1 3 12 3Z"/>
+              <path style="fill:var(--b53-max)" d="m10.2 8 4.6 2.7-4.6 2.7V8Z"/>
+            </svg>
+            <span>Написать в MAX</span>
+          </a>
+          <a class="b53-call" id="b53-call" href="tel:89212035333">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z"/></svg>
+            <span>Позвонить: 8 (921) 203-53-33</span>
+          </a>
+        </div>
+        <div class="b53-total__disclaimer">Расчёт предварительный и не является публичной офертой. Точную стоимость подтвердит менеджер.</div>
+      </aside>
+    </div>
+  </div>
+
+  <style>
+    #b53-calc {
+      --b53-green: #2b7a4b;
+      --b53-green-dark: #1f5c38;
+      --b53-ink: #1e2e3f;
+      --b53-muted: #6b7a8a;
+      --b53-wood: #a9744b;
+      --b53-wood-soft: #f3e7da;
+      --b53-bg: #faf6f0;
+      --b53-card: #ffffff;
+      --b53-line: #eadfcf;
+      --b53-wa: #25d366;
+      --b53-max: #0077ff;
+      --b53-radius: 16px;
+      --b53-shadow: 0 10px 30px rgba(30, 46, 63, 0.08);
+
+      font-family: "Segoe UI", Roboto, system-ui, -apple-system, sans-serif;
+      color: var(--b53-ink);
+      background: transparent;
+      box-sizing: border-box;
+      -webkit-text-size-adjust: 100%;
+    }
+    #b53-calc *, #b53-calc *::before, #b53-calc *::after { box-sizing: inherit; }
+    #b53-calc, #b53-calc .b53-wrap { max-width: 100%; min-width: 0; }
+    #b53-calc input, #b53-calc button, #b53-calc a, #b53-calc svg { max-width: 100%; }
+    #b53-calc input, #b53-calc button { font-family: inherit; font-size: 100%; }
+    #b53-calc a { text-decoration: none; }
+
+    #b53-calc .b53-wrap {
+      max-width: 980px;
+      margin: 0 auto;
+      padding: 28px 24px;
+      background: linear-gradient(160deg, #fbf8f2 0%, #f6efe4 100%);
+      border: 1px solid var(--b53-line);
+      border-radius: 22px;
+      box-shadow: var(--b53-shadow);
+    }
+
+    /* Шапка */
+    #b53-calc .b53-head {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+    #b53-calc .b53-head__icon {
+      width: 48px; height: 48px;
+      flex: 0 0 48px;
+      display: grid; place-items: center;
+      background: var(--b53-green);
+      color: #fff;
+      border-radius: 14px;
+    }
+    #b53-calc .b53-head__icon svg { width: 26px; height: 26px; }
+    #b53-calc .b53-head__title {
+      font-size: 24px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      line-height: 1.15;
+    }
+    #b53-calc .b53-head__sub {
+      color: var(--b53-muted);
+      font-size: 14px;
+      margin-top: 2px;
+    }
+    #b53-calc .b53-head__badge {
+      margin-left: auto;
+      background: var(--b53-wood-soft);
+      color: var(--b53-wood);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 6px 12px;
+      border-radius: 999px;
+      white-space: nowrap;
+    }
+
+    /* Сетка */
+    #b53-calc .b53-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 300px;
+      gap: 22px;
+      align-items: start;
+    }
+    /* Шаги */
+    #b53-calc .b53-step {
+      display: flex;
+      gap: 14px;
+      padding: 18px;
+      background: var(--b53-card);
+      border: 1px solid var(--b53-line);
+      border-radius: var(--b53-radius);
+      margin-bottom: 14px;
+    }
+    #b53-calc .b53-step__num {
+      flex: 0 0 30px;
+      height: 30px;
+      display: grid; place-items: center;
+      background: var(--b53-wood-soft);
+      color: var(--b53-wood);
+      font-weight: 700;
+      font-size: 14px;
+      border-radius: 9px;
+      margin-top: 2px;
+    }
+    #b53-calc .b53-step__body { flex: 1; min-width: 0; }
+    #b53-calc .b53-step__title {
+      font-weight: 700;
+      font-size: 15px;
+      margin-bottom: 12px;
+    }
+
+    /* Карточки серий */
+    #b53-calc .b53-series {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+    #b53-calc .b53-card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      padding: 14px 14px 13px;
+      background: #fbfaf7;
+      border: 2px solid var(--b53-line);
+      border-radius: 13px;
+      cursor: pointer;
+      transition: border-color .15s ease, background .15s ease, transform .15s ease;
+    }
+    #b53-calc .b53-card:hover { border-color: #cfc0a6; transform: translateY(-1px); }
+    #b53-calc .b53-card input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+    #b53-calc .b53-card:has(input:checked) {
+      border-color: var(--b53-green);
+      background: #f3f9f5;
+    }
+    #b53-calc .b53-card__name { font-weight: 700; font-size: 14.5px; }
+    #b53-calc .b53-card__dim { color: var(--b53-muted); font-size: 12.5px; }
+    #b53-calc .b53-card__price {
+      margin-top: 6px;
+      font-weight: 700;
+      color: var(--b53-green-dark);
+      font-size: 15px;
+    }
+    #b53-calc .b53-card__check {
+      position: absolute;
+      top: 10px; right: 10px;
+      width: 20px; height: 20px;
+      display: grid; place-items: center;
+      border-radius: 50%;
+      background: var(--b53-green);
+      color: #fff;
+      font-size: 12px;
+      opacity: 0;
+      transform: scale(.6);
+      transition: opacity .15s ease, transform .15s ease;
+    }
+    #b53-calc .b53-card:has(input:checked) .b53-card__check { opacity: 1; transform: scale(1); }
+
+    /* Слайдер */
+    #b53-calc .b53-size__value {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    #b53-calc .b53-size__big { font-size: 26px; font-weight: 400; }
+    #b53-calc .b53-size__big b { font-weight: 800; color: var(--b53-green-dark); }
+    #b53-calc .b53-size__hint {
+      font-size: 12px;
+      color: var(--b53-wood);
+      background: var(--b53-wood-soft);
+      padding: 3px 9px;
+      border-radius: 999px;
+    }
+    #b53-calc input[type="range"].b53-range, #b53-calc #b53-size {
+      width: 100%;
+      height: 34px;
+      margin: 4px 0 6px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: transparent;
+      cursor: pointer;
+    }
+    #b53-calc #b53-size::-webkit-slider-runnable-track {
+      height: 8px;
+      border-radius: 999px;
+      background: linear-gradient(to right, var(--b53-green) var(--b53-fill, 40%), #e9e0d0 var(--b53-fill, 40%));
+    }
+    #b53-calc #b53-size::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 26px; height: 26px;
+      margin-top: -9px;
+      border-radius: 50%;
+      background: #fff;
+      border: 3px solid var(--b53-green);
+      box-shadow: 0 2px 8px rgba(30, 46, 63, .25);
+      transition: transform .12s ease;
+    }
+    #b53-calc #b53-size::-webkit-slider-thumb:hover { transform: scale(1.1); }
+    #b53-calc #b53-size::-moz-range-track {
+      height: 8px;
+      border-radius: 999px;
+      background: #e9e0d0;
+    }
+    #b53-calc #b53-size::-moz-range-progress {
+      height: 8px;
+      border-radius: 999px;
+      background: var(--b53-green);
+    }
+    #b53-calc #b53-size::-moz-range-thumb {
+      width: 20px; height: 20px;
+      border-radius: 50%;
+      background: #fff;
+      border: 3px solid var(--b53-green);
+      box-shadow: 0 2px 8px rgba(30, 46, 63, .25);
+    }
+    #b53-calc .b53-size__marks {
+      display: flex;
+      justify-content: space-between;
+      color: var(--b53-muted);
+      font-size: 12px;
+      padding: 0 2px;
+    }
+    #b53-calc .b53-size__marks span { min-width: 2ch; text-align: center; }
+
+    /* Опции */
+    #b53-calc .b53-option {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 13px 14px;
+      border: 2px solid var(--b53-line);
+      border-radius: 13px;
+      cursor: pointer;
+      background: #fbfaf7;
+      transition: border-color .15s ease, background .15s ease;
+    }
+    #b53-calc .b53-option:has(input:checked) {
+      border-color: var(--b53-green);
+      background: #f3f9f5;
+    }
+    #b53-calc .b53-option input {
+      position: absolute;
+      opacity: 0;
+      pointer-events: none;
+    }
+    #b53-calc .b53-option__box {
+      flex: 0 0 22px;
+      width: 22px; height: 22px;
+      border: 2px solid #c9bba4;
+      border-radius: 7px;
+      display: grid; place-items: center;
+      background: #fff;
+      transition: all .15s ease;
+    }
+    #b53-calc .b53-option:has(input:checked) .b53-option__box {
+      background: var(--b53-green);
+      border-color: var(--b53-green);
+    }
+    #b53-calc .b53-option:has(input:checked) .b53-option__box::after {
+      content: "✓";
+      color: #fff;
+      font-size: 13px;
+      font-weight: 700;
+    }
+    #b53-calc .b53-option__text { flex: 1; display: flex; flex-direction: column; }
+    #b53-calc .b53-option__text b { font-size: 14.5px; }
+    #b53-calc .b53-option__text small { color: var(--b53-muted); font-size: 12.5px; }
+    #b53-calc .b53-option__price { font-weight: 700; color: var(--b53-green-dark); font-size: 14px; }
+
+    /* Доставка */
+    #b53-calc .b53-delivery__row { display: flex; gap: 10px; }
+    #b53-calc .b53-input {
+      flex: 1;
+      min-width: 0;
+      padding: 12px 14px;
+      border: 2px solid var(--b53-line);
+      border-radius: 11px;
+      background: #fff;
+      color: var(--b53-ink);
+      outline: none;
+      transition: border-color .15s ease;
+    }
+    #b53-calc .b53-input:focus { border-color: var(--b53-green); }
+    #b53-calc .b53-btn {
+      padding: 12px 18px;
+      border: none;
+      border-radius: 11px;
+      background: var(--b53-wood);
+      color: #fff;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: background .15s ease;
+    }
+    #b53-calc .b53-btn:hover { background: #8f5d38; }
+    #b53-calc .b53-btn:disabled { opacity: .6; cursor: default; }
+    #b53-calc .b53-delivery__status {
+      margin-top: 10px;
+      color: var(--b53-muted);
+      font-size: 12.5px;
+      line-height: 1.45;
+    }
+    #b53-calc .b53-delivery__result {
+      margin-top: 12px;
+      border-top: 1px dashed var(--b53-line);
+      padding-top: 10px;
+    }
+    #b53-calc .b53-delivery__line {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 13.5px;
+      padding: 3px 0;
+    }
+    #b53-calc .b53-delivery__line--total {
+      font-weight: 700;
+      color: var(--b53-green-dark);
+      border-top: 1px solid var(--b53-line);
+      margin-top: 4px;
+      padding-top: 8px;
+    }
+
+    /* Комплектация */
+    #b53-calc .b53-kit {
+      background: var(--b53-card);
+      border: 1px solid var(--b53-line);
+      border-radius: var(--b53-radius);
+      padding: 0 18px;
+      overflow: hidden;
+    }
+    #b53-calc .b53-kit summary {
+      cursor: pointer;
+      list-style: none;
+      padding: 15px 0;
+      font-weight: 600;
+      font-size: 14px;
+      color: var(--b53-green-dark);
+      position: relative;
+      padding-right: 28px;
+    }
+    #b53-calc .b53-kit summary::-webkit-details-marker { display: none; }
+    #b53-calc .b53-kit summary::after {
+      content: "";
+      position: absolute;
+      right: 4px; top: 50%;
+      width: 8px; height: 8px;
+      border-right: 2px solid var(--b53-green);
+      border-bottom: 2px solid var(--b53-green);
+      transform: translateY(-70%) rotate(45deg);
+      transition: transform .15s ease;
+    }
+    #b53-calc .b53-kit[open] summary::after { transform: translateY(-30%) rotate(225deg); }
+    #b53-calc .b53-kit__body ul {
+      margin: 0 0 16px;
+      padding: 0 0 0 18px;
+      color: var(--b53-muted);
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    /* Итоговая панель */
+    #b53-calc .b53-total {
+      position: sticky;
+      top: 20px;
+      background: var(--b53-ink);
+      color: #fff;
+      border-radius: 18px;
+      padding: 22px 20px;
+      box-shadow: 0 16px 40px rgba(30, 46, 63, .25);
+    }
+    #b53-calc .b53-total__label {
+      font-size: 12px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #b9c6d4;
+    }
+    #b53-calc .b53-total__sum {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      margin: 6px 0 2px;
+      line-height: 1.1;
+    }
+    #b53-calc .b53-total__note {
+      color: #9fb0c0;
+      font-size: 12.5px;
+      margin-bottom: 16px;
+    }
+    #b53-calc .b53-total__rows {
+      border-top: 1px solid rgba(255,255,255,.12);
+      padding-top: 12px;
+      margin-bottom: 16px;
+    }
+    #b53-calc .b53-total__row {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 13.5px;
+      padding: 5px 0;
+      color: #d6e0ea;
+    }
+    #b53-calc .b53-total__row span:last-child { font-weight: 600; color: #fff; }
+    #b53-calc .b53-max, #b53-calc .b53-call {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      width: 100%;
+      padding: 13px 14px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 14px;
+      transition: filter .15s ease, transform .15s ease;
+    }
+    #b53-calc .b53-max { background: var(--b53-max); color: #fff; margin-bottom: 10px; }
+    #b53-calc .b53-max:hover { filter: brightness(1.08); }
+    #b53-calc .b53-max svg { width: 20px; height: 20px; }
+    #b53-calc .b53-call {
+      background: transparent;
+      color: #fff;
+      border: 2px solid rgba(255,255,255,.25);
+    }
+    #b53-calc .b53-call:hover { border-color: rgba(255,255,255,.5); }
+    #b53-calc .b53-call svg { width: 18px; height: 18px; }
+    #b53-calc .b53-total__disclaimer {
+      margin-top: 14px;
+      color: #8fa0b2;
+      font-size: 11.5px;
+      line-height: 1.5;
+    }
+    /* ===== МОБИЛЬНАЯ ВЕРСИЯ ===== */
+    @media (max-width: 760px) {
+      #b53-calc .b53-wrap { padding: 14px 12px; border-radius: 16px; }
+      #b53-calc .b53-grid { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+      #b53-calc .b53-main { min-width: 0; }
+      #b53-calc .b53-head { gap: 10px; margin-bottom: 14px; }
+      #b53-calc .b53-head__icon { width: 38px; height: 38px; flex-basis: 38px; border-radius: 11px; }
+      #b53-calc .b53-head__icon svg { width: 22px; height: 22px; }
+      #b53-calc .b53-head__title { font-size: 18px; }
+      #b53-calc .b53-head__sub { font-size: 12px; }
+      #b53-calc .b53-head__badge { display: none; }
+
+      #b53-calc .b53-step { padding: 10px 12px; gap: 10px; margin-bottom: 8px; border-radius: 13px; }
+      #b53-calc .b53-step__num { flex: 0 0 24px; width: 24px; height: 24px; font-size: 12px; border-radius: 7px; }
+      #b53-calc .b53-step__title { font-size: 14px; margin-bottom: 6px; }
+
+      #b53-calc .b53-card { padding: 10px 8px; gap: 2px; border-radius: 11px; }
+      #b53-calc .b53-card__name { font-size: 12.5px; }
+      #b53-calc .b53-card__dim { font-size: 10.5px; }
+      #b53-calc .b53-card__price { font-size: 12.5px; margin-top: 4px; }
+      #b53-calc .b53-card__check { top: 6px; right: 6px; width: 16px; height: 16px; font-size: 10px; }
+
+      #b53-calc #b53-size { height: 28px; }
+      #b53-calc .b53-size__value { margin-bottom: 6px; }
+      #b53-calc .b53-size__big { font-size: 20px; }
+      #b53-calc .b53-size__hint { font-size: 11px; padding: 2px 8px; }
+      #b53-calc .b53-size__marks { font-size: 11px; }
+
+      #b53-calc .b53-option { padding: 8px 12px; }
+      #b53-calc .b53-option__text b { font-size: 13.5px; }
+      #b53-calc .b53-option__text small { font-size: 11.5px; }
+      #b53-calc .b53-option__price { font-size: 13px; }
+
+      #b53-calc .b53-input { padding: 9px 12px; font-size: 14px; }
+      #b53-calc .b53-btn { padding: 9px 14px; }
+      #b53-calc .b53-delivery__status { font-size: 11.5px; margin-top: 6px; }
+      #b53-calc .b53-delivery__line { font-size: 12.5px; }
+
+      #b53-calc .b53-kit summary { font-size: 12px; padding: 10px 0; }
+
+      /* Итог — компактная липкая панель */
+      #b53-calc .b53-total {
+        position: sticky;
+        bottom: 8px;
+        z-index: 20;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        padding: 10px 12px;
+        border-radius: 14px;
+        box-shadow: 0 8px 24px rgba(30, 46, 63, .35);
+      }
+      #b53-calc .b53-total__label,
+      #b53-calc .b53-total__note,
+      #b53-calc .b53-total__rows,
+      #b53-calc .b53-total__disclaimer { display: none; }
+      #b53-calc .b53-total__sum { font-size: 20px; margin: 0; }
+      #b53-calc .b53-total__actions { display: flex; gap: 6px; flex: 1; min-width: 0; }
+      #b53-calc .b53-max, #b53-calc .b53-call { margin-bottom: 0; padding: 11px 10px; font-size: 13px; border-radius: 11px; }
+      #b53-calc .b53-max { width: auto; flex: 2 1 0; }
+      #b53-calc .b53-call { width: 44px; flex: 0 0 44px; padding: 11px 0; }
+      #b53-calc .b53-call span { display: none; }
+      #b53-calc .b53-call svg { width: 20px; height: 20px; }
+    }
+
+    @media (max-width: 560px) {
+      #b53-calc .b53-head__title { font-size: 17px; }
+      #b53-calc .b53-head__sub { display: none; }
+      #b53-calc .b53-series { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+      #b53-calc .b53-card { min-width: 0; padding: 8px 6px; }
+      #b53-calc .b53-card__dim { display: none; }
+      #b53-calc .b53-card__name { font-size: 11.5px; }
+      #b53-calc .b53-card__price { font-size: 11.5px; }
+      #b53-calc .b53-size__big { font-size: 18px; }
+      #b53-calc .b53-total__sum { font-size: 18px; }
+      #b53-calc .b53-max { font-size: 12.5px; }
+    }
+  </style>
+
+  <script>
+    (function () {
+      "use strict";
+
+      /* ===== ДАННЫЕ КАТАЛОГА bani53.ru (источник: каталог на главной странице) ===== */
+      var SERIES = {
+        standard: {
+          name: "Стандарт",
+          points: { 4.0: 375000, 5.0: 405000, 6.0: 425000, 7.0: 445000 },
+          min: 4, max: 7, step: 0.5
+        },
+        terrace: {
+          name: "С террасой",
+          points: { 5.0: 385000, 6.0: 415000, 7.0: 435000 },
+          min: 5, max: 7, step: 0.5
+        },
+        scandi: {
+          name: "Скандинавия",
+          points: { 4.5: 489000, 5.0: 504000, 6.5: 536000, 7.0: 549000, 7.5: 559000, 8.0: 574000 },
+          min: 4.5, max: 8, step: 0.5
+        }
+      };
+      var SANUZEL_DELTA = 10000; // каталог: баня 2,3×7 с санузлом 455 000 − стандарт 2,3×7 445 000
+
+      var PESTOVO = [58.5942, 35.8024]; // как на сайте bani53.ru
+      var PRICE_PER_KM = 160;
+      var FREE_LIMIT = 500;
+      var PHONE_DISPLAY = "8 (921) 203-53-33";
+
+      /* ===== УТИЛИТЫ ===== */
+      function roundThousand(n) { return Math.round(n / 1000) * 1000; }
+      function fmt(n) { return n.toLocaleString("ru-RU") + " ₽"; }
+      function fmtRu(x) {
+        return String(x).replace(".", ",");
+      }
+
+      function lerpPrice(points, x) {
+        var keys = Object.keys(points).map(Number).sort(function (a, b) { return a - b; });
+        if (x <= keys[0]) return points[keys[0]];
+        if (x >= keys[keys.length - 1]) return points[keys[keys.length - 1]];
+        for (var i = 0; i < keys.length - 1; i++) {
+          if (x >= keys[i] && x <= keys[i + 1]) {
+            var t = (x - keys[i]) / (keys[i + 1] - keys[i]);
+            return Math.round(points[keys[i]] + t * (points[keys[i + 1]] - points[keys[i]]));
+          }
+        }
+        return points[keys[0]];
+      }
+
+      function haversineKm(lat1, lon1, lat2, lon2) {
+        var R = 6371;
+        var dLat = (lat2 - lat1) * Math.PI / 180;
+        var dLon = (lon2 - lon1) * Math.PI / 180;
+        var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+          Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      }
+
+      function deliveryCostByKm(km) {
+        if (km <= FREE_LIMIT) return 0;
+        return Math.round(km - FREE_LIMIT) * PRICE_PER_KM;
+      }
+
+      /* ===== СОСТОЯНИЕ ===== */
+      var state = {
+        series: "standard",
+        length: 6,
+        sanuzel: false,
+        delivery: { km: null, cost: 0, city: "" }
+      };
+
+      /* ===== DOM ===== */
+      var $ = function (id) { return document.getElementById(id); };
+      var elSeries = $("b53-series");
+      var elSize = $("b53-size");
+      var elSizeLabel = $("b53-size-label");
+      var elSizeHint = $("b53-size-hint");
+      var elSizeMarks = $("b53-size-marks");
+      var elSanuzel = $("b53-sanuzel");
+      var elCity = $("b53-city");
+      var elCityBtn = $("b53-city-btn");
+      var elCityStatus = $("b53-city-status");
+      var elCityResult = $("b53-city-result");
+      var elSum = $("b53-sum");
+      var elSumNote = $("b53-sum-note");
+      var elRowBath = $("b53-row-bath");
+      var elRowSanuzelWrap = $("b53-row-sanuzel-wrap");
+      var elRowSanuzel = $("b53-row-sanuzel");
+      var elRowDelivery = $("b53-row-delivery");
+
+      /* ===== РЕНДЕР ===== */
+      function currentSeries() { return SERIES[state.series]; }
+
+      function renderSizeControl() {
+        var s = currentSeries();
+        elSize.min = s.min;
+        elSize.max = s.max;
+        elSize.step = s.step;
+        // вписать текущее значение в новый диапазон
+        var snap = Math.max(s.min, Math.min(s.max, state.length));
+        var steps = Math.round((snap - s.min) / s.step);
+        snap = Math.round((s.min + steps * s.step) * 10) / 10;
+        state.length = snap;
+        elSize.value = snap;
+        renderSizeMarks();
+        renderSizeValue();
+      }
+
+      function renderSizeMarks() {
+        var s = currentSeries();
+        var marks = [];
+        for (var v = s.min; v <= s.max + 0.001; v = Math.round((v + s.step) * 10) / 10) {
+          marks.push("<span>" + fmtRu(v) + "</span>");
+        }
+        elSizeMarks.innerHTML = marks.join("");
+      }
+
+      function renderSizeValue() {
+        elSizeLabel.textContent = fmtRu(state.length) + " м";
+        var s = currentSeries();
+        var isCatalog = s.points.hasOwnProperty(state.length);
+        elSizeHint.textContent = isCatalog ? "каталожный размер" : "расчётная цена";
+        // заливка трека слайдера (webkit)
+        var pct = ((state.length - s.min) / (s.max - s.min)) * 100;
+        elSize.style.setProperty("--b53-fill", pct + "%");
+      }
+
+      function bathPrice() {
+        var base = lerpPrice(currentSeries().points, state.length);
+        return base + (state.sanuzel ? SANUZEL_DELTA : 0);
+      }
+
+      function deliveryCost() {
+        return state.delivery.cost || 0;
+      }
+
+      function totalPrice() {
+        return bathPrice() + deliveryCost();
+      }
+
+      function renderTotals() {
+        var bath = bathPrice();
+        var del = deliveryCost();
+        var total = bath + del;
+        elSum.textContent = "≈ " + fmt(roundThousand(total));
+        elRowBath.textContent = fmt(roundThousand(bath));
+        elRowSanuzelWrap.hidden = !state.sanuzel;
+        elRowSanuzel.textContent = "+" + fmt(SANUZEL_DELTA);
+        if (state.delivery.km === null) {
+          elRowDelivery.textContent = "не рассчитана";
+        } else if (del === 0) {
+          elRowDelivery.textContent = "0 ₽ (бесплатно)";
+        } else {
+          elRowDelivery.textContent = fmt(del);
+        }
+        elSumNote.textContent = state.delivery.km === null
+          ? "цена бани по каталогу + доставка"
+          : "баня + доставка до «" + (state.delivery.city || "вашего города") + "»";
+      }
+
+      function renderAll() {
+        renderTotals();
+      }
+
+      /* ===== ДОСТАВКА (Nominatim, как геокодер на сайте) ===== */
+      var geoTimer = null;
+      function setStatus(text, isError) {
+        elCityStatus.textContent = text;
+        elCityStatus.style.color = isError ? "#c0392b" : "";
+      }
+
+      function showDeliveryResult(city, km) {
+        state.delivery.km = km;
+        state.delivery.cost = deliveryCostByKm(km);
+        state.delivery.city = city;
+        $("b53-city-name").textContent = city;
+        $("b53-city-dist").textContent = "≈ " + Math.round(km) + " км от Пестово";
+        if (km <= FREE_LIMIT) {
+          $("b53-city-extra").textContent = "0 ₽ (в пределах 500 км)";
+        } else {
+          $("b53-city-extra").textContent = Math.round(km - FREE_LIMIT) + " км × 160 ₽ = " + fmt(deliveryCostByKm(km));
+        }
+        $("b53-city-total").textContent = deliveryCostByKm(km) === 0 ? "Бесплатно" : fmt(deliveryCostByKm(km));
+        elCityResult.hidden = false;
+        setStatus("Расстояние считается по прямой от Пестово. Точный маршрут уточнит менеджер.");
+        renderTotals();
+      }
+
+      function geocodeCity() {
+        var q = elCity.value.trim();
+        if (!q) { setStatus("Введите город или населённый пункт."); return; }
+        setStatus("Определяем расстояние…");
+        elCityBtn.disabled = true;
+        var url = "https://nominatim.openstreetmap.org/search?format=json&limit=1&accept-language=ru&q=" + encodeURIComponent(q);
+        fetch(url, { headers: { "Accept": "application/json" } })
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            elCityBtn.disabled = false;
+            if (!data || !data.length) {
+              setStatus("Город не найден. Попробуйте написать иначе (например, «Вологда»).", true);
+              return;
+            }
+            var lat = parseFloat(data[0].lat);
+            var lon = parseFloat(data[0].lon);
+            var km = haversineKm(PESTOVO[0], PESTOVO[1], lat, lon);
+            var city = data[0].display_name ? data[0].display_name.split(",")[0] : q;
+            showDeliveryResult(city, km);
+          })
+          .catch(function () {
+            elCityBtn.disabled = false;
+            setStatus("Не удалось определить расстояние. Позвоните: " + PHONE_DISPLAY + ".", true);
+          });
+      }
+
+      /* ===== СОБЫТИЯ ===== */
+      elSeries.addEventListener("change", function (e) {
+        if (e.target && e.target.name === "b53-series") {
+          state.series = e.target.value;
+          renderSizeControl();
+          renderAll();
+        }
+      });
+
+      elSize.addEventListener("input", function () {
+        state.length = parseFloat(elSize.value);
+        renderSizeValue();
+        renderAll();
+      });
+
+      elSanuzel.addEventListener("change", function () {
+        state.sanuzel = elSanuzel.checked;
+        renderAll();
+      });
+
+      elCityBtn.addEventListener("click", geocodeCity);
+      elCity.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") { e.preventDefault(); geocodeCity(); }
+      });
+      elCity.addEventListener("input", function () {
+        clearTimeout(geoTimer);
+        geoTimer = setTimeout(geocodeCity, 900);
+      });
+
+      /* ===== СТАРТ ===== */
+      renderSizeControl();
+      renderAll();
+
+      // Отладочный API для автотестов (не влияет на интерфейс)
+      window.__b53Test = {
+        priceFor: function (series, length, sanuzel) {
+          return roundThousand(lerpPrice(SERIES[series].points, length) + (sanuzel ? SANUZEL_DELTA : 0));
+        },
+        deliveryFor: function (km) { return deliveryCostByKm(km); },
+        setState: function (series, length, sanuzel) {
+          state.series = series;
+          state.length = length;
+          state.sanuzel = !!sanuzel;
+          var radio = document.querySelector('input[name="b53-series"][value="' + series + '"]');
+          if (radio) radio.checked = true;
+          elSanuzel.checked = !!sanuzel;
+          renderSizeControl();
+          renderAll();
+        },
+        getTotal: function () { return totalPrice(); }
+      };
+    })();
+  </script>
+</div>

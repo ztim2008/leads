@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>БАНИ53 — каталог мобильных бань</title>
+<style>
+  :root {
+    --green: #2b7a4b;
+    --green-dark: #1f5c38;
+    --ink: #1e2e3f;
+    --muted: #6b7a8a;
+    --wood: #a9744b;
+    --sand: #faf6f0;
+    --line: #eadfcf;
+    --white: #ffffff;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { font-family: "Segoe UI", Roboto, Arial, sans-serif; color: var(--ink); }
+
+  @page { size: A4; margin: 0; }
+
+  .page {
+    width: 210mm;
+    height: 297mm;
+    page-break-after: always;
+    position: relative;
+    overflow: hidden;
+    background: var(--white);
+  }
+  .page:last-child { page-break-after: auto; }
+
+  .page--inner { padding: 16mm 14mm 14mm; }
+
+  /* ===== ОБЛОЖКА ===== */
+  .cover { background: var(--ink); }
+  .cover__img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .55; }
+  .cover__shade { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(30,46,63,.25) 0%, rgba(30,46,63,.55) 55%, rgba(30,46,63,.92) 100%); }
+  .cover__content { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-end; padding: 20mm 16mm; color: #fff; }
+  .cover__brand { font-size: 64pt; font-weight: 800; letter-spacing: 2px; line-height: 1; }
+  .cover__brand span { color: #7fc79a; }
+  .cover__sub { margin-top: 6mm; font-size: 17pt; color: #dbe6f0; line-height: 1.5; }
+  .cover__facts { margin-top: 8mm; display: flex; gap: 6mm; flex-wrap: wrap; }
+  .cover__fact { background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.25); border-radius: 4mm; padding: 4mm 5mm; font-size: 11pt; color: #fff; }
+  .cover__fact b { display: block; font-size: 15pt; }
+  .cover__contact { margin-top: 10mm; font-size: 13pt; color: #cfe0ee; line-height: 1.7; }
+  .cover__contact b { color: #fff; font-size: 15pt; }
+
+  /* ===== ЗАГОЛОВКИ СЕКЦИЙ ===== */
+  .kicker { font-size: 10pt; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; color: var(--wood); }
+  h1 { font-size: 24pt; font-weight: 800; margin-top: 2mm; line-height: 1.15; }
+  h1 span { color: var(--green); }
+  .lead { margin-top: 3mm; font-size: 11.5pt; color: var(--muted); line-height: 1.6; max-width: 165mm; }
+  .pagehead { margin-bottom: 8mm; }
+  .pagehead::after { content: ""; display: block; width: 34mm; height: 1.6mm; background: var(--green); margin-top: 4mm; border-radius: 1mm; }
+
+  /* ===== ПРЕИМУЩЕСТВА ===== */
+  .adv { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6mm; }
+  .adv__item { background: var(--sand); border: 1px solid var(--line); border-radius: 4mm; padding: 6mm; }
+  .adv__num { font-size: 20pt; font-weight: 800; color: var(--green); }
+  .adv__title { font-weight: 700; font-size: 11.5pt; margin-top: 2mm; }
+  .adv__text { font-size: 9.5pt; color: var(--muted); margin-top: 1.5mm; line-height: 1.55; }
+
+  /* ===== КАРТОЧКИ ===== */
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7mm; }
+  .card { border: 1px solid var(--line); border-radius: 4mm; overflow: hidden; background: #fff; page-break-inside: avoid; }
+  .card__img { width: 100%; height: 62mm; object-fit: cover; display: block; }
+  .card__body { padding: 5mm 5mm 5.5mm; }
+  .card__name { font-size: 12.5pt; font-weight: 800; line-height: 1.25; }
+  .card__size { font-size: 9.5pt; color: var(--muted); margin-top: 1mm; }
+  .card__foot { display: flex; align-items: baseline; justify-content: space-between; margin-top: 3mm; border-top: 1px solid var(--line); padding-top: 3mm; }
+  .card__price-label { font-size: 8.5pt; color: var(--muted); }
+  .card__price { font-size: 15pt; font-weight: 800; color: var(--green-dark); }
+
+  /* ===== СПИСОК КОМПЛЕКТАЦИИ ===== */
+  .kit { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm 7mm; }
+  .kit__item { display: flex; gap: 3mm; font-size: 10pt; line-height: 1.5; page-break-inside: avoid; }
+  .kit__dot { flex: 0 0 2.4mm; width: 2.4mm; height: 2.4mm; border-radius: 50%; background: var(--green); margin-top: 1.8mm; }
+
+  /* ===== ДОСТАВКА ===== */
+  .delivery { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6mm; }
+  .delivery__item { background: var(--sand); border: 1px solid var(--line); border-radius: 4mm; padding: 6mm; text-align: center; }
+  .delivery__big { font-size: 22pt; font-weight: 800; color: var(--green); }
+  .delivery__text { font-size: 10pt; color: var(--muted); margin-top: 2mm; line-height: 1.5; }
+
+  /* ===== КОНТАКТЫ ===== */
+  .contacts { background: var(--ink); color: #fff; border-radius: 5mm; padding: 10mm; display: flex; flex-direction: column; gap: 5mm; }
+  .contacts a { color: #7fc79a; text-decoration: none; font-weight: 700; }
+  .contacts__row { font-size: 11.5pt; line-height: 1.7; }
+  .contacts__row b { font-size: 13pt; }
+
+  .note { margin-top: 5mm; font-size: 8.5pt; color: var(--muted); line-height: 1.5; }
+  .footer { position: absolute; left: 14mm; right: 14mm; bottom: 8mm; display: flex; justify-content: space-between; font-size: 8pt; color: #9aa7b4; }
+</style>
+</head>
+<body>
+
+<!-- 1. Обложка -->
+<div class="page cover">
+  <img class="cover__img" src="https://274418.selcdn.ru/cv08300-33250f0d-0664-43fc-9dbf-9d89738d114e/uploads/696357/c603eaa7-b966-425b-b8dc-c85a65942863.jpg" alt="">
+  <div class="cover__shade"></div>
+  <div class="cover__content">
+    <div class="cover__brand">БАНИ<span>53</span></div>
+    <div class="cover__sub">Мобильные бани под ключ от производителя.<br>Новгородская область, г. Пестово</div>
+    <div class="cover__facts">
+      <div class="cover__fact"><b>7+ лет</b>производим бани</div>
+      <div class="cover__fact"><b>300+</b>собрано бань</div>
+      <div class="cover__fact"><b>12 мес</b>гарантия</div>
+      <div class="cover__fact"><b>до 500 км</b>доставка бесплатно</div>
+    </div>
+    <div class="cover__contact">
+      <b>8 (921) 203-53-33</b><br>
+      Каталог проектов и цены — 2026
+    </div>
+  </div>
+</div>
+
+<!-- 2. Почему мы -->
+<div class="page page--inner">
+  <div class="pagehead">
+    <div class="kicker">О компании</div>
+    <h1>Баня, которую <span>привозят</span> на участок</h1>
+    <div class="lead">Мы делаем мобильные бани уже более 7 лет. За это время собрали более 300 бань — от компактных дачных до просторных семейных с террасами и верандами. Наша философия: «Баня должна быть доступной, тёплой и вашей — по-настоящему».</div>
+  </div>
+  <div class="adv">
+    <div class="adv__item"><div class="adv__num">01</div><div class="adv__title">Брус камерной сушки</div><div class="adv__text">Наружные стены — профилированный брус 90×140 мм камерной сушки. Не ведёт, не трескается, держит тепло.</div></div>
+    <div class="adv__item"><div class="adv__num">02</div><div class="adv__title">Без предоплаты</div><div class="adv__text">Цена фиксируется в договоре, без неожиданных доплат. Официальный договор на каждую баню.</div></div>
+    <div class="adv__item"><div class="adv__num">03</div><div class="adv__title">Своё производство</div><div class="adv__text">Мы не перекупщики: цена от производства без торговых наценок — в 1,5–2 раза дешевле.</div></div>
+    <div class="adv__item"><div class="adv__num">04</div><div class="adv__title">Сборка за 4–7 дней</div><div class="adv__text">Пока конкуренты ждут материалы, мы уже на следующий день после заказа начинаем сборку.</div></div>
+    <div class="adv__item"><div class="adv__num">05</div><div class="adv__title">Доставка за 24 часа</div><div class="adv__text">Везём манипулятором, ставим на подготовленную площадку. По Новгородской области — в течение суток.</div></div>
+    <div class="adv__item"><div class="adv__num">06</div><div class="adv__title">Гарантия 12 месяцев</div><div class="adv__text">Целостность конструкции, кровля и банная печь — под гарантией год.</div></div>
+  </div>
+  <div class="note">Фото на сайте и в каталоге — реальные проекты, не рендер.</div>
+  <div class="footer"><span>БАНИ53 · Пестово</span><span>стр. 2</span></div>
+</div>
+
+<!-- 3. Стандарт -->
+<div class="page page--inner">
+  <div class="pagehead">
+    <div class="kicker">Каталог · Серия</div>
+    <h1>Мобильная баня <span>«Стандарт»</span></h1>
+    <div class="lead">Классическая баня 2,3 м шириной: парная, моечное отделение и комната отдыха. Печь «Дача» с баком 45 л, электрика, слив и мебель — уже в комплекте.</div>
+  </div>
+  <div class="grid">
+    <div class="card">
+      <img class="card__img" src="https://274418.selcdn.ru/cv08300-33250f0d-0664-43fc-9dbf-9d89738d114e/uploads/696357/4b5647da-85d7-4e87-9074-9609a7dc4cef.jpg" alt="">
+      <div class="card__body">
+        <div class="card__name">Мобильная баня 2,3×4 м</div>
+        <div class="card__size">Размер: 4×2,3 м · Гарантия: 1 год</div>
+        <div class="card__foot"><span class="card__price-label">Стоимость</span><span class="card__price">от 375 000 ₽</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <img class="card__img" src="https://274418.selcdn.ru/cv08300-33250f0d-0664-43fc-9dbf-9d89738d114e/uploads/696357/5396b683-1a0f-45a2-bd00-51c23fea4696.jpg" alt="">
+      <div class="card__body">
+        <div class="card__name">Мобильная баня 2,3×5 м</div>
+        <div class="card__size">Размер: 5×2,3 м · Гарантия: 1 год</div>
+        <div class="card__foot"><span class="card__price-label">Стоимость</span><span class="card__price">от 405 000 ₽</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <img class="card__img" src="https://274418.selcdn.ru/cv08300-33250f0d-0664-43fc-9dbf-9d89738d114e/uploads/696357/65c50752-bf99-4ebb-8aef-cca210143045.jpg" alt="">
+      <div class="card__body">
+        <div class="card__name">Мобильная баня 2,3×6 м</div>
+        <div class="card__size">Размер: 6×2,3 м · Гарантия: 1 год</div>
+        <div class="card__foot"><span class="card__price-label">Стоимость</span><span class="card__price">от 425 000 ₽</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <img class="card__img" src="https://274418.selcdn.ru/cv08300-33250f0d-0664-43fc-9dbf-9d89738d114e/uploads/696357/dfe0e0aa-96c9-4889-bace-74338efdbf68.jpg" alt="">
+      <div class="card__body">
+        <div class="card__name">Мобильная баня 2,3×7 м</div>
+        <div class="card__size">Размер: 7×2,3 м · Гарантия: 1 год</div>
+        <div class="card__foot"><span class="card__price-label">Стоимость</span><span class="card__price">от 445 000 ₽</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><span>БАНИ53 · Каталог</span><span>стр. 3</span></div>
+</div>
+
+<!-- 4. С террасой и санузел -->
+<div class="page page--inner">
+  <div class="pagehead">
+    <div class="kicker">Каталог · Серии</div>
+    <h1>С террасой <span>и санузлом</span></h1>
+    <div class="lead">Баня с открытой террасой — для летних посиделок. Версия с санузлом добавляет отдельное помещение с унитазом.</div>
+  </div>
+  <div class="grid">
+    <div class="card">
+      <img class="card__img" src="https://274418.selcdn.ru/cv08300-33250f0d-0664-43fc-9dbf-9d89738d114e/uploads/696357/f7583ec8-a564-4aed-819a-522ac0a7e2b3.jpg" alt="">
+      <div class="card__body">
+        <div class="card__name">Баня с террасой 2,3×5 м</div>
+        <div class="card__size">Размер: 5×2,3 м · Гарантия: 1 год</div>
+        <div class="card__foot"><span class="card__price-label">Стоимость</span><span class="card__price">от 385 000 ₽</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <img class="card__img" src="https://274418.selcdn.ru/cv08300-33250f0d-0664-43fc-9dbf-9d89738d114e/uploads/696357/423cf560-79c2-44aa-b831-113b64b48933.jpg" alt="">
+      <div class="card__body">
+        <div class="card__name">Баня с террасой 2,3×6 м</div>
+        <div class="card__size">Размер: 6×2,3 м · Гарантия: 1 год</div>
+        <div class="card__foot"><span class="card__price-label">Стоимость</span><span class="card__price">от 415 000 ₽</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <img class="card__img" src="https://274418.selcdn.ru/cv08300-33250f0d-0664-43fc-9dbf-9d89738d114e/uploads/696357/da748763-a3ef-4cdf-802a-76e600885d57.jpg" alt="">
+      <div class="card__body">
+        <div class="card__name">Баня с террасой 2,3×7 м</div>
+        <div class="card__size">Размер: 7×2,3 м · Гарантия: 1 год</div>
+        <div class="card__foot"><span class="card__price-label">Стоимость</span><span class="card__price">от 435 000 ₽</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <img class="card__img" src="https://274418.selcdn.ru/cv08300-33250f0d-0664-43fc-9dbf-9d89738d114e/uploads/696357/9f642168-3af1-4449-93e2-82280ffd180e.webp" alt="">
+      <div class="card__body">
+        <div class="card__name">Баня с санузлом 2,3×7 м</div>
+        <div class="card__size">Размер: 7×2,3 м · Гарантия: 1 год</div>
+        <div class="card__foot"><span class="card__price-label">Стоимость</span><span class="card__price">от 455 000 ₽</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="note">Любую модель можно изготовить по индивидуальной планировке: изменим размер, комплектацию и функционал.</div>
+  <div class="footer"><span>БАНИ53 · Каталог</span><span>стр. 4</span></div>
+</div>
+
+<!-- 5. Скандинавия 1 -->
+<div class="page page--inner">
+  <div class="pagehead">
+    <div class="kicker">Каталог · Серия</div>
+    <h1>Мобильная баня <span>«Скандинавия»</span></h1>
+    <div class="lead">Просторная семейная серия с панорамным остеклением и увеличенной комнатой отдыха. Идеальна для круглогодичного использования.</div>
+  </div>
+  <div class="grid">
+    <div class="card">
+      <img class="card__img" src="https://274418.selcdn.ru/cv08300-33250f0d-0664-43fc-9dbf-9d89738d114e/uploads/696357/2ccc4a0f-8c2c-485f-9386-24faf1e584b1.jpg" alt="">
+      <div class="card__body">
+        <div class="card__name">Скандинавия 2,3×4,5 м</div>
+        <div class="card__size">Размер: 4,5×2,3 м · Гарантия: 1 год</div>
+        <div class="card__foot"><span class="card__price-label">Стоимость</span><span class="card__price">от 489 000 ₽</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <img class="card__img" src="https://274418.selcdn.ru/cv08300-33250f0d-0664-43fc-9dbf-9d89738d114e/uploads/696357/881e287f-28c0-41ae-a787-e58e69ea8b19.jpg" alt="">
+      <div class="card__body">
+        <div class="card__name">Скандинавия 2,3×5 м</div>
+        <div class="card__size">Размер: 5×2,3 м · Гарантия: 1 год</div>
+        <div class="card__foot"><span class="card__price-label">Стоимость</span><span class="card__price">от 504 000 ₽</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <img class="card__img" src="https://274418.selcdn.ru/cv08300-33250f0d-0664-43fc-9dbf-9d89738d114e/uploads/696357/5ca69db6-053e-491b-b096-a31963297939.jpg" alt="">
+      <div class="card__body">
+        <div class="card__name">Скандинавия 2,3×6,5 м</div>
+        <div class="card__size">Размер: 6,5×2,3 м · Гарантия: 1 год</div>
+        <div class="card__foot"><span class="card__price-label">Стоимость</span><span class="card__price">от 536 000 ₽</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <img class="card__img" src="https://274418.selcdn.ru/cv08300-33250f0d-0664-43fc-9dbf-9d89738d114e/uploads/696357/f644aaa2-7d4b-4080-b10f-dbfc20f11be5.jpg" alt="">
+      <div class="card__body">
+        <div class="card__name">Скандинавия 2,3×7 м</div>
+        <div class="card__size">Размер: 7×2,3 м · Гарантия: 1 год</div>
+        <div class="card__foot"><span class="card__price-label">Стоимость</span><span class="card__price">от 549 000 ₽</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><span>БАНИ53 · Каталог</span><span>стр. 5</span></div>
+</div>
+
+<!-- 6. Скандинавия 2 -->
+<div class="page page--inner">
+  <div class="pagehead">
+    <div class="kicker">Каталог · Серия «Скандинавия»</div>
+    <h1>Продолжение <span>серии</span></h1>
+  </div>
+  <div class="grid">
+    <div class="card">
+      <img class="card__img" src="https://274418.selcdn.ru/cv08300-33250f0d-0664-43fc-9dbf-9d89738d114e/uploads/696357/2bd34e17-ade9-4b64-a2da-a30c6ba79f86.jpg" alt="">
+      <div class="card__body">
+        <div class="card__name">Скандинавия 2,3×7,5 м</div>
+        <div class="card__size">Размер: 7,5×2,3 м · Гарантия: 1 год</div>
+        <div class="card__foot"><span class="card__price-label">Стоимость</span><span class="card__price">от 559 000 ₽</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <img class="card__img" src="https://274418.selcdn.ru/cv08300-33250f0d-0664-43fc-9dbf-9d89738d114e/uploads/696357/2f4cb09e-950b-43f7-8317-074f95d80b02.jpg" alt="">
+      <div class="card__body">
+        <div class="card__name">Скандинавия 2,3×8 м</div>
+        <div class="card__size">Размер: 8×2,3 м · Гарантия: 1 год</div>
+        <div class="card__foot"><span class="card__price-label">Стоимость</span><span class="card__price">от 574 000 ₽</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="delivery" style="margin-top: 8mm;">
+    <div class="delivery__item"><div class="delivery__big">6–14 дней</div><div class="delivery__text">изготовление в зависимости от проекта</div></div>
+    <div class="delivery__item"><div class="delivery__big">24 часа</div><div class="delivery__text">доставка до участка манипулятором</div></div>
+    <div class="delivery__item"><div class="delivery__big">1,9–2,05 м</div><div class="delivery__text">высота помещений</div></div>
+  </div>
+  <div class="note">Цена фиксируется в договоре. Точную стоимость с доставкой до вашего участка рассчитает менеджер за 10 минут.</div>
+  <div class="footer"><span>БАНИ53 · Каталог</span><span>стр. 6</span></div>
+</div>
+
+<!-- 7. Комплектация -->
+<div class="page page--inner">
+  <div class="pagehead">
+    <div class="kicker">Что входит</div>
+    <h1>Базовая <span>комплектация</span></h1>
+    <div class="lead">Каждая баня полностью готова к эксплуатации. В цену уже включено:</div>
+  </div>
+  <div class="kit">
+    <div class="kit__item"><span class="kit__dot"></span><span><b>Основание:</b> нестроганный брус естественной влажности 100×150 мм</span></div>
+    <div class="kit__item"><span class="kit__dot"></span><span><b>Половые лаги:</b> 40×100 мм, шаг 0,6 м</span></div>
+    <div class="kit__item"><span class="kit__dot"></span><span><b>Черновой пол:</b> нестроганная доска 20×100 мм</span></div>
+    <div class="kit__item"><span class="kit__dot"></span><span><b>Чистовой пол:</b> шпунтовая половая доска 27 мм камерной сушки</span></div>
+    <div class="kit__item"><span class="kit__dot"></span><span><b>Наружные стены:</b> профилированный брус камерной сушки 90×140 мм, между венцами — льноджутовое полотно 50 мм</span></div>
+    <div class="kit__item"><span class="kit__dot"></span><span><b>Перегородки:</b> каркасная технология, обрезной брусок 40×50 мм</span></div>
+    <div class="kit__item"><span class="kit__dot"></span><span><b>Крыша:</b> двухскатная или односкатная, оцинкованный профлист, высота конька 30 см</span></div>
+    <div class="kit__item"><span class="kit__dot"></span><span><b>Утепление:</b> минвата 100 мм в комнате отдыха, керамзит в моечном и парном отделении</span></div>
+    <div class="kit__item"><span class="kit__dot"></span><span><b>Окна:</b> деревянные с двойным остеклением — 800×800, 600×600 и 400×400 мм</span></div>
+    <div class="kit__item"><span class="kit__dot"></span><span><b>Двери:</b> каркасно-щитовые, обшиты вагонкой хвойных пород с двух сторон</span></div>
+    <div class="kit__item"><span class="kit__dot"></span><span><b>Отделка парной:</b> алюминиевая фольга + осиновая вагонка сорта «А», пологи двухъярусные из осины</span></div>
+    <div class="kit__item"><span class="kit__dot"></span><span><b>Печь:</b> «Дача» со встроенным баком на 45 л, дымоход через стену</span></div>
+    <div class="kit__item"><span class="kit__dot"></span><span><b>Электрика:</b> плафоны во всех помещениях, розетка, выключатель, автомат 16С</span></div>
+    <div class="kit__item"><span class="kit__dot"></span><span><b>Слив:</b> система желоб</span></div>
+    <div class="kit__item"><span class="kit__dot"></span><span><b>Мебель:</b> стол и 2 лавочки в комнате отдыха, двухъярусные пологи в парной</span></div>
+    <div class="kit__item"><span class="kit__dot"></span><span><b>Покраска снаружи:</b> «Биотекс», «Акватекс» или аналоги в один слой</span></div>
+  </div>
+  <div class="note">Фундамент: в комплекте — опорно-столбчатый из бетонных блоков 200×200×400 мм. Для уклона или болотистого грунта — свайно-винтовой (рассчитывается отдельно).</div>
+  <div class="footer"><span>БАНИ53 · Комплектация</span><span>стр. 7</span></div>
+</div>
+
+<!-- 8. Доставка -->
+<div class="page page--inner">
+  <div class="pagehead">
+    <div class="kicker">Доставка</div>
+    <h1>Привезём и <span>поставим</span></h1>
+    <div class="lead">Отправляем из Пестово (Новгородская область) грузовым транспортом с манипулятором. Подъезжаем к участку и ставим баню на подготовленную площадку — всё, баня готова к эксплуатации.</div>
+  </div>
+  <div class="delivery">
+    <div class="delivery__item"><div class="delivery__big">0 ₽</div><div class="delivery__text">доставка при расстоянии до 500 км от Пестово</div></div>
+    <div class="delivery__item"><div class="delivery__big">160 ₽/км</div><div class="delivery__text">доплата за каждый километр сверх 500 км</div></div>
+    <div class="delivery__item"><div class="delivery__big">2 дня</div><div class="delivery__text">максимальный срок доставки после изготовления</div></div>
+  </div>
+  <div class="pagehead" style="margin-top: 9mm;">
+    <div class="kicker">Условия</div>
+    <h1>Просто и <span>прозрачно</span></h1>
+  </div>
+  <div class="kit">
+    <div class="kit__item"><span class="kit__dot"></span><span><b>Без предоплаты.</b> Цена фиксируется в договоре.</span></div>
+    <div class="kit__item"><span class="kit__dot"></span><span><b>Официальный договор</b> на каждую баню.</span></div>
+    <div class="kit__item"><span class="kit__dot"></span><span><b>Антисептирование</b> основания бани.</span></div>
+    <div class="kit__item"><span class="kit__dot"></span><span><b>Подстраиваемся под дату</b> и время приёмки, удобные заказчику.</span></div>
+    <div class="kit__item"><span class="kit__dot"></span><span><b>Если не подъехать</b> нашим транспортом — нанимаем кран или манипулятор-вездеход, разницу оплачивает заказчик.</span></div>
+    <div class="kit__item"><span class="kit__dot"></span><span><b>Натуральные материалы:</b> осина, липа, ель — без химии и запаха, с настоящим паром.</span></div>
+  </div>
+  <div class="note">Не знаете, какую баню выбрать? Позвоните — за 10 минут подберём идеальный вариант под ваш бюджет и участок.</div>
+  <div class="footer"><span>БАНИ53 · Доставка и условия</span><span>стр. 8</span></div>
+</div>
+
+<!-- 9. Контакты -->
+<div class="page page--inner">
+  <div class="pagehead">
+    <div class="kicker">Контакты</div>
+    <h1>Свяжитесь <span>с нами</span></h1>
+  </div>
+  <div class="contacts">
+    <div class="contacts__row"><b>8 (921) 203-53-33</b><br>служба продаж, ежедневно</div>
+    <div class="contacts__row">Мессенджер MAX: <a href="https://max.ru/u/f9LHodD0cOJGd17TGHQs-RQFEHl-1LirxFAUAjz9LuuaUG8WxyuQM_y9Qfc">max.ru/u/f9LHodD0cOJGd17TGHQs-RQFEHl-1LirxFAUAjz9LuuaUG8WxyuQM_y9Qfc</a></div>
+    <div class="contacts__row">ВКонтакте: <a href="https://vk.com/club232162845">vk.com/club232162845</a></div>
+    <div class="contacts__row">Сайт: <a href="https://bani53.ru">bani53.ru</a></div>
+    <div class="contacts__row">Новгородская область, г. Пестово, ул. Почтовая, д. 4</div>
+  </div>
+  <div class="note" style="margin-top: 8mm;">Цены в каталоге — «от», не являются публичной офертой. Точную стоимость с доставкой до вашего участка подтвердит менеджер.</div>
+  <div class="footer"><span>БАНИ53 · Пестово</span><span>стр. 9</span></div>
+</div>
+
+</body>
+</html>
