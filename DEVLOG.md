@@ -597,24 +597,23 @@ Partner buys VPS, downloads zip, fills config.json (Profi login/password + Teleg
 - **CRM «Наши клиенты»** (`/dashboard/crm`): карточки, контакты, статусы воронки, заметки, дата следующего шага, фильтры «сегодня / просрочено»
 - **Роль `sales`:** напарник видит только свои карточки; админ — все (+ «Только мои»)
 - **Команда** (`/dashboard/admin/team`): создать sales, сброс пароля, вкл/выкл вход
-- UI: компактная таблица, добавление и карточка во всплывающих окнах
-- Списки партнёров/мониторинг фильтруют `role: "user"` (sales не путается с партнёрами)
+- UI CRM: компактная таблица, добавление и карточка во всплывающих окнах
+- **Интервал съёма Profi (админ):** пресеты спокойный 5–9 / стандарт 3–7 / быстрее 2–4; пол ≥2 мин; UI на Пульте; `docs/PROFI_POLL_LOGISTICS.md`
+- **Пилот:** обновлён `agent.bundle` на VPS, мягкий `pm2 restart leads-agent-v2` — сессия из профиля, CB CLOSED
+- Решение: deep scan ради цены отклика **не** включать (риск заходов внутрь объявлений)
 
 ### Файлы
-- `prisma/schema.prisma`, `prisma/migrations/20260821120000_crm_clients_sales_role/`
-- `src/app/dashboard/crm/`, `src/app/api/crm/`, `src/components/crm/`
-- `src/app/dashboard/admin/team/`, `src/app/api/admin/team/`, `src/components/admin/team-admin-app.tsx`
-- `src/lib/auth/roles.ts`, `src/lib/crm/*`, `src/middleware.ts`, `src/app/dashboard/layout.tsx`
-- `docs/CJM_PARTNER_SALES.md`, `SALES_ZOOM_SCRIPT.md`, `SALES_SMS_PITCHES.md`, `CRM_SALES_ROLE.md`, `sales-cheat-sheet.*`, `LOGISTICS.md`, `PATH-E-ZERO-TOUCH.md`, `PLAN`, `DEVLOG`
+- CRM/sales: `src/app/dashboard/crm/`, `src/app/api/crm/`, `src/components/crm/`, `src/lib/crm/`, `src/lib/auth/roles.ts`, team API/UI
+- Poll: `src/lib/agent/poll-interval.ts`, `src/app/api/admin/poll-interval/`, `src/agent-core/*`, `public/agent/v2/agent.bundle.mjs`, `ops-console.tsx`
+- Docs: `PROFI_POLL_LOGISTICS.md`, CJM/Zoom/SMS/CRM_SALES_ROLE, LOGISTICS/Path E, PLAN, DEVLOG
 
 ### Production
 - `npm run build` ✅ · `localhost:3005` → **200**
-- PM2: `leads-konversus` / `leads-health` **online**; `leads-profi` нет
-- `profiOnHub: false`; пилот не рестартили
-- Пилот RysyevIV: HB ~4 мин, CB **CLOSED**, lastError нет; сегодня **9** заявок; всего лидов **2337**; CRM-карточек: **1**
-- CRM-таблицы в БД применены (`db push` + SQL миграция в git)
+- PM2 хаб: `leads-konversus` / `leads-health` **online**; `leads-profi` нет
+- `profiOnHub: false`
+- Пилот: HB свежий, CB **CLOSED**, lastError нет; сегодня **9** заявок; агент v2 с новым bundle, интервал 3–7 мин
 
 ### Осталось / завтра
-- Создать учётку напарника в **Команда** и обкатать воронку
-- По желанию: 4.11.3 утренняя сводка
-- **Не** этап 6 AI и 4.9 бот без команды
+- Создать учётку напарника в **Команда** и обкатать CRM
+- По желанию: 4.11.3; пресет «быстрее» на пилоте только осознанно
+- **Не** этап 6 AI, 4.9 бот, deep scan без команды

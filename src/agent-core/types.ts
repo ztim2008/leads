@@ -82,6 +82,9 @@ export interface ProfiCollectorConfig {
   proxy?: string;
   workHoursStart?: string;
   workHoursEnd?: string;
+  /** Минуты между проверками ленты (админ). Default 3–7. Пол ≥ 2. */
+  pollMinMinutes?: number;
+  pollMaxMinutes?: number;
   antiDetect?: {
     mode?: "light" | "balanced" | "stealth";
     delayMultiplier?: number;

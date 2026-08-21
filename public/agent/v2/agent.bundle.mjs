@@ -531,10 +531,16 @@ var ProfiCollector = class {
       for (const lead of leads) {
         await callbacks.onLead(lead);
       }
-      const nextMs = this.breaker.canAttempt() ? randomCheckIntervalMs(3, 7) : Math.max(6e4, (this.breaker.getState().openUntil ?? Date.now() + 6e4) - Date.now());
+      const minM = Math.max(2, this.config.pollMinMinutes ?? 3);
+      const maxM = Math.max(minM, this.config.pollMaxMinutes ?? 7);
+      const nextMs = this.breaker.canAttempt() ? randomCheckIntervalMs(minM, maxM) : Math.max(6e4, (this.breaker.getState().openUntil ?? Date.now() + 6e4) - Date.now());
       this.timer = setTimeout(loop, nextMs);
     };
     await loop();
+  }
+  /** Подтянуть интервал/часы с хаба без рестарта процесса. */
+  updateRuntime(partial) {
+    Object.assign(this.config, partial);
   }
   stop() {
     this.running = false;
@@ -811,10 +817,30 @@ async function main() {
     keywords: config.keywords,
     workHoursStart: config.workHoursStart,
     workHoursEnd: config.workHoursEnd,
+    pollMinMinutes: config.pollMinMinutes,
+    pollMaxMinutes: config.pollMaxMinutes,
     antiDetect: config.antiDetect,
     proxy: config.proxy,
     headless: true
   });
+  console.log(
+    "[agent-v2] \u0438\u043D\u0442\u0435\u0440\u0432\u0430\u043B \u043B\u0435\u043D\u0442\u044B:",
+    `${config.pollMinMinutes ?? 3}\u2013${config.pollMaxMinutes ?? 7} \u043C\u0438\u043D`
+  );
+  setInterval(() => {
+    loadConfig().then((cfg) => {
+      collector.updateRuntime({
+        workHoursStart: cfg.workHoursStart,
+        workHoursEnd: cfg.workHoursEnd,
+        pollMinMinutes: cfg.pollMinMinutes,
+        pollMaxMinutes: cfg.pollMaxMinutes,
+        antiDetect: cfg.antiDetect,
+        keywords: cfg.keywords
+      });
+    }).catch(
+      (e) => console.error("[agent-v2] config refresh:", e instanceof Error ? e.message : e)
+    );
+  }, 2 * 60 * 1e3);
   agentState = "running";
   const loginAtIso = () => {
     const ts = collector.profiles.getMeta().lastLoginAt;

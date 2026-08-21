@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { agentUnauthorized, verifyAgentSecret } from "@/lib/agent/auth";
+import { resolvePollRange } from "@/lib/agent/poll-interval";
 import { getQuotaStatus } from "@/lib/billing/quota";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -25,6 +26,7 @@ export async function GET(req: NextRequest) {
 
   const cfg = (source.config as Record<string, unknown>) || {};
   const s = source.workspace.settings;
+  const poll = resolvePollRange(cfg);
 
   return NextResponse.json({
     version: 2,
@@ -41,6 +43,10 @@ export async function GET(req: NextRequest) {
     antiDetect: cfg.antiDetect || { mode: "light" },
     workHoursStart: cfg.workHoursStart || "08:00",
     workHoursEnd: cfg.workHoursEnd || "22:00",
+    pollPreset: poll.preset,
+    pollMinMinutes: poll.minMinutes,
+    pollMaxMinutes: poll.maxMinutes,
+    pollLabel: poll.label,
     proxy: cfg.proxy || null,
     telegramChatId: s?.telegramChatId || null,
     telegramToken: s?.telegramToken || null,

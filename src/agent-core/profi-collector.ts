@@ -126,14 +126,21 @@ export class ProfiCollector {
       }
 
       // If CB opened during runOnce — next tick waits
+      const minM = Math.max(2, this.config.pollMinMinutes ?? 3);
+      const maxM = Math.max(minM, this.config.pollMaxMinutes ?? 7);
       const nextMs = this.breaker.canAttempt()
-        ? randomCheckIntervalMs(3, 7)
+        ? randomCheckIntervalMs(minM, maxM)
         : Math.max(60_000, (this.breaker.getState().openUntil ?? Date.now() + 60_000) - Date.now());
 
       this.timer = setTimeout(loop, nextMs);
     };
 
     await loop();
+  }
+
+  /** Подтянуть интервал/часы с хаба без рестарта процесса. */
+  updateRuntime(partial: Partial<ProfiCollectorConfig>): void {
+    Object.assign(this.config, partial);
   }
 
   stop(): void {

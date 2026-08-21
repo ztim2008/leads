@@ -29,6 +29,8 @@ interface HubConfig {
   keywords?: string;
   workHoursStart?: string;
   workHoursEnd?: string;
+  pollMinMinutes?: number;
+  pollMaxMinutes?: number;
   antiDetect?: { mode?: "light" | "balanced" | "stealth" };
   proxy?: string;
 }
@@ -113,10 +115,35 @@ async function main(): Promise<void> {
     keywords: config.keywords,
     workHoursStart: config.workHoursStart,
     workHoursEnd: config.workHoursEnd,
+    pollMinMinutes: config.pollMinMinutes,
+    pollMaxMinutes: config.pollMaxMinutes,
     antiDetect: config.antiDetect,
     proxy: config.proxy,
     headless: true,
   });
+
+  console.log(
+    "[agent-v2] интервал ленты:",
+    `${config.pollMinMinutes ?? 3}–${config.pollMaxMinutes ?? 7} мин`,
+  );
+
+  // Подтягивать интервал/часы с хаба без рестарта (админ сменил пресет)
+  setInterval(() => {
+    loadConfig()
+      .then((cfg) => {
+        collector.updateRuntime({
+          workHoursStart: cfg.workHoursStart,
+          workHoursEnd: cfg.workHoursEnd,
+          pollMinMinutes: cfg.pollMinMinutes,
+          pollMaxMinutes: cfg.pollMaxMinutes,
+          antiDetect: cfg.antiDetect,
+          keywords: cfg.keywords,
+        });
+      })
+      .catch((e) =>
+        console.error("[agent-v2] config refresh:", e instanceof Error ? e.message : e),
+      );
+  }, 2 * 60 * 1000);
 
   agentState = "running";
 

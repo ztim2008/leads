@@ -44,6 +44,9 @@ type PartnerRow = {
         _vpsIp?: string | null;
         workHoursStart?: string;
         workHoursEnd?: string;
+        pollPreset?: string;
+        pollMinMinutes?: number;
+        pollMaxMinutes?: number;
         _lastLoginAt?: string | null;
       };
       agentStatus?: {
@@ -408,8 +411,16 @@ export default function OpsConsole() {
                             >
                               Карточка доступа
                             </button>
+                            {src?.id && (
+                              <PollIntervalControl
+                                sourceId={src.id}
+                                currentPreset={(src.config?.pollPreset as string) || "standard"}
+                                label={a?.checkIntervalLabel || "3–7 мин"}
+                                onSaved={load}
+                              />
+                            )}
                             <p style={{ marginTop: 10, fontSize: "var(--text-xs)", color: "var(--ink-muted)" }}>
-                              Стоп сбора / сброс CB — без рестарта Playwright на хабе (этап 3.6, следующая итерация).
+                              Интервал ленты — только админ. Документ: docs/PROFI_POLL_LOGISTICS.md. Пол не короче 2 мин.
                             </p>
                           </div>
                         </div>
@@ -524,6 +535,93 @@ function Stat({ label, value, color }: { label: string; value: string; color?: s
     <div style={{ padding: 14, border: "1px solid var(--border)", borderRadius: "var(--radius-lg)", background: "var(--bg-surface)" }}>
       <div style={{ fontSize: "var(--text-xs)", color: "var(--ink-muted)", marginBottom: 4 }}>{label}</div>
       <div style={{ fontSize: "var(--text-xl)", fontWeight: 800, color: color || "var(--ink-heading)" }}>{value}</div>
+    </div>
+  );
+}
+
+function PollIntervalControl({
+  sourceId,
+  currentPreset,
+  label,
+  onSaved,
+}: {
+  sourceId: string;
+  currentPreset: string;
+  label: string;
+  onSaved: () => void;
+}) {
+  const [preset, setPreset] = useState(currentPreset || "standard");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    setPreset(currentPreset || "standard");
+  }, [currentPreset, sourceId]);
+
+  async function save() {
+    setBusy(true);
+    setMsg(null);
+    const r = await fetch("/api/admin/poll-interval", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sourceId, preset }),
+    });
+    const d = await r.json().catch(() => ({}));
+    setBusy(false);
+    if (!r.ok) {
+      setMsg(d.error || "Ошибка");
+      return;
+    }
+    setMsg(`Сохранено: ${d.poll?.label || ""}. ${d.note || ""}`);
+    onSaved();
+  }
+
+  return (
+    <div style={{ marginTop: 12, padding: 10, border: "1px solid var(--border)", borderRadius: "var(--radius-sm)", background: "var(--bg-surface)" }}>
+      <p style={{ fontWeight: 650, margin: "0 0 6px", fontSize: "var(--text-xs)" }}>Интервал Profi → TG</p>
+      <p style={{ margin: "0 0 8px", fontSize: "0.65rem", color: "var(--ink-muted)" }}>
+        Сейчас: {label}. TG после нахождения — секунды; задержка = сон между проверками ленты.
+      </p>
+      <select
+        value={preset}
+        onChange={(e) => setPreset(e.target.value)}
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          width: "100%",
+          padding: "6px 8px",
+          borderRadius: "var(--radius-sm)",
+          border: "1px solid var(--border)",
+          background: "var(--bg-layer)",
+          color: "var(--ink-body)",
+          fontSize: "var(--text-xs)",
+          marginBottom: 8,
+        }}
+      >
+        <option value="calm">Спокойный · 5–9 мин (ниже риск)</option>
+        <option value="standard">Стандарт · 3–7 мин</option>
+        <option value="responsive">Быстрее отклик · 2–4 мин (выше риск)</option>
+      </select>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={(e) => {
+          e.stopPropagation();
+          save();
+        }}
+        style={{
+          padding: "6px 12px",
+          borderRadius: "var(--radius-sm)",
+          border: "none",
+          background: "var(--accent)",
+          color: "#fff",
+          fontWeight: 600,
+          fontSize: "var(--text-xs)",
+          cursor: "pointer",
+        }}
+      >
+        {busy ? "…" : "Применить"}
+      </button>
+      {msg && <p style={{ margin: "8px 0 0", fontSize: "0.65rem", color: "var(--ink-muted)" }}>{msg}</p>}
     </div>
   );
 }

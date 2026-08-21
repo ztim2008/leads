@@ -9,6 +9,7 @@ import { reportFromSub } from "@/lib/billing/operator-pricing";
 import { requireAdminUser } from "@/lib/admin/guard";
 import { buildAccessCard, setupCommandFor } from "@/lib/admin/access-card";
 import { isActiveAgentError } from "@/lib/agent/stale-error";
+import { resolvePollRange } from "@/lib/agent/poll-interval";
 import {
   TELEGRAM_ATTEMPT_ACTIVITY,
   TELEGRAM_DELIVERY_ACTIVITY,
@@ -104,6 +105,7 @@ export async function GET() {
         id: ws.id, name: ws.name,
         sources: ws.sources.map(s => {
           const cfg = (s.config as any) || {};
+          const poll = resolvePollRange(cfg);
           const liveError = s.lastError || cfg._lastError || null;
           const archivedStored = cfg._lastErrorArchived || null;
           const errorActive = isActiveAgentError({
@@ -127,6 +129,9 @@ export async function GET() {
               _onboardingNotes: cfg._onboardingNotes || null,
               workHoursStart: cfg.workHoursStart || "08:00",
               workHoursEnd: cfg.workHoursEnd || "22:00",
+              pollPreset: poll.preset,
+              pollMinMinutes: poll.minMinutes,
+              pollMaxMinutes: poll.maxMinutes,
               _lastLoginAt: cfg._lastLoginAt || null,
             },
             agentStatus: {
@@ -142,7 +147,7 @@ export async function GET() {
               lifecycle: cfg._agentState || "pending",
               circuitBreaker: cfg._circuitBreaker || null,
               version: cfg._agentVersion || 1,
-              checkIntervalLabel: "3–7 мин",
+              checkIntervalLabel: poll.label,
             },
             setupCommand: setupCommandFor(s.id),
           };
