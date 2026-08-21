@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Leads.Konversus — партнёрам v3</title>
+  <script src="https://unpkg.com/lucide@0.469.0"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0a0a0b;
+      --panel: #141416;
+      --panel-2: #1a1a1e;
+      --ink: #f4f1ea;
+      --muted: #a39e93;
+      --line: rgba(244, 241, 234, 0.1);
+      --copper: #d97706;
+      --copper-2: #f59e0b;
+      --ember: #ea580c;
+      --mint: #5eead4;
+      --danger: #f87171;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: "IBM Plex Sans", system-ui, sans-serif;
+      overflow: hidden;
+    }
+    .deck { height: 100%; width: 100%; position: relative; }
+    .slide {
+      display: none;
+      position: absolute;
+      inset: 0;
+      padding: 3rem 3.75rem 4.6rem;
+      overflow: auto;
+      background:
+        radial-gradient(900px 480px at 0% 0%, rgba(217, 119, 6, 0.18), transparent 55%),
+        radial-gradient(700px 420px at 100% 0%, rgba(94, 234, 212, 0.07), transparent 50%),
+        radial-gradient(800px 500px at 50% 120%, rgba(234, 88, 12, 0.1), transparent 50%),
+        linear-gradient(165deg, #0a0a0b 0%, #121214 55%, #0d0d0f 100%);
+    }
+    .slide.active { display: flex; flex-direction: column; animation: rise .32s ease; }
+    @keyframes rise {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: none; }
+    }
+    .brand {
+      font-family: Outfit, sans-serif;
+      font-weight: 700; letter-spacing: .08em; font-size: .78rem;
+      color: var(--copper-2); display: inline-flex; align-items: center; gap: .45rem;
+      margin-bottom: 1rem; text-transform: uppercase;
+    }
+    .brand svg { width: 1rem; height: 1rem; }
+    .tag {
+      display: inline-flex; align-items: center; gap: .35rem;
+      font-size: .7rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+      color: var(--mint); margin-bottom: .55rem;
+    }
+    h1 {
+      font-family: Outfit, sans-serif;
+      font-size: clamp(1.5rem, 3vw, 2.35rem);
+      font-weight: 800; line-height: 1.12; letter-spacing: -0.02em;
+      max-width: 20ch;
+    }
+    h1.wide { max-width: 26ch; }
+    .kicker {
+      margin-top: .85rem; font-family: Outfit, sans-serif;
+      font-size: .95rem; font-weight: 700; letter-spacing: .06em;
+      text-transform: uppercase; color: var(--copper-2); max-width: 36rem; line-height: 1.4;
+    }
+    .lead { margin-top: .75rem; color: var(--muted); font-size: 1.05rem; line-height: 1.5; max-width: 40rem; }
+    .grid-2 { display: grid; grid-template-columns: 1.1fr .9fr; gap: 1.75rem; flex: 1; align-items: center; }
+    .grid-2b { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1.2rem; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 1.2rem; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: .85rem; margin-top: 1.2rem; }
+    .grid-6 { display: grid; grid-template-columns: repeat(3, 1fr); gap: .85rem; margin-top: 1.1rem; }
+    .panel {
+      background: linear-gradient(160deg, rgba(26,26,30,.95), rgba(20,20,22,.9));
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 1.15rem 1.2rem;
+      position: relative;
+      box-shadow: 0 20px 50px rgba(0,0,0,.35);
+    }
+    .panel.glow {
+      box-shadow: 0 0 0 1px rgba(217,119,6,.2), 0 24px 60px rgba(0,0,0,.4);
+    }
+    .panel h3 {
+      font-family: Outfit, sans-serif; font-size: 1.05rem; font-weight: 700;
+      display: flex; align-items: center; gap: .5rem; margin-bottom: .55rem;
+    }
+    .panel h3 svg { width: 1.15rem; height: 1.15rem; color: var(--copper-2); flex-shrink: 0; }
+    .panel p, .panel li { color: var(--muted); font-size: .94rem; line-height: 1.45; }
+    .panel ul { list-style: none; }
+    .panel li { margin: .4rem 0; padding-left: 1rem; position: relative; }
+    .panel li::before {
+      content: ""; position: absolute; left: 0; top: .55em;
+      width: .35rem; height: .35rem; border-radius: 1px; background: var(--copper);
+      transform: rotate(45deg);
+    }
+    .chips { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .8rem; }
+    .chip {
+      font-size: .76rem; font-weight: 600; color: #fde68a;
+      background: rgba(217, 119, 6, 0.12);
+      border: 1px solid rgba(217, 119, 6, 0.28);
+      padding: .3rem .6rem; border-radius: 6px;
+    }
+    /* TG mock — screenshot-like */
+    .phone {
+      max-width: 340px; margin-left: auto;
+      border-radius: 28px;
+      padding: 12px;
+      background: linear-gradient(160deg, #2a2a2e, #151518);
+      border: 1px solid rgba(255,255,255,.08);
+      box-shadow: 0 30px 70px rgba(0,0,0,.55), 0 0 40px rgba(217,119,6,.12);
+    }
+    .phone-inner {
+      border-radius: 20px; overflow: hidden;
+      background: #0e1621;
+      border: 1px solid rgba(255,255,255,.06);
+    }
+    .tg-bar {
+      background: #17212b; padding: .7rem .9rem;
+      display: flex; align-items: center; gap: .65rem;
+      border-bottom: 1px solid rgba(255,255,255,.05);
+    }
+    .tg-avatar {
+      width: 2rem; height: 2rem; border-radius: 50%;
+      background: linear-gradient(135deg, var(--copper), var(--ember));
+      display: grid; place-items: center; font-weight: 800; font-size: .75rem; color: #fff;
+    }
+    .tg-bar .name { font-weight: 700; font-size: .88rem; }
+    .tg-bar .sub { font-size: .7rem; color: #6d7f8f; }
+    .tg-body { padding: .85rem .75rem 1rem; }
+    .bubble {
+      background: #182533; border-radius: 12px 12px 12px 4px;
+      padding: .75rem .85rem; font-size: .86rem; line-height: 1.4;
+      border: 1px solid rgba(255,255,255,.04);
+    }
+    .bubble .src {
+      font-size: .68rem; letter-spacing: .1em; color: #6d7f8f;
+      font-weight: 700; margin-bottom: .35rem;
+    }
+    .bubble .ttl { font-weight: 800; font-size: 1rem; margin-bottom: .45rem; color: #fff; }
+    .bubble .row {
+      display: flex; align-items: center; gap: .4rem;
+      color: #a8b8c7; margin: .22rem 0; font-size: .82rem;
+    }
+    .bubble .row svg { width: .9rem; height: .9rem; color: var(--copper-2); flex-shrink: 0; }
+    .bubble .row b { color: #e8f0f7; font-weight: 700; }
+    .bubble .cta {
+      margin-top: .7rem; display: block; text-align: center;
+      background: linear-gradient(90deg, var(--copper), var(--ember));
+      color: #fff; font-weight: 800; font-size: .82rem;
+      padding: .55rem; border-radius: 8px; text-decoration: none;
+    }
+    .notif {
+      margin-top: .55rem; background: #1c2733; border-radius: 10px;
+      padding: .55rem .7rem; font-size: .72rem; color: #8fa3b5;
+      display: flex; gap: .45rem; align-items: flex-start;
+      border: 1px solid rgba(94,234,212,.15);
+    }
+    .notif svg { width: .85rem; height: .85rem; color: var(--mint); margin-top: .1rem; }
+    .stat {
+      text-align: center; padding: 1rem .75rem; border-radius: 14px;
+      background: var(--panel); border: 1px solid var(--line);
+    }
+    .stat .n {
+      font-family: Outfit, sans-serif; font-size: 1.55rem; font-weight: 800;
+      color: var(--copper-2);
+    }
+    .stat .l { font-size: .8rem; color: var(--muted); margin-top: .3rem; line-height: 1.35; }
+    .flow { display: flex; align-items: stretch; gap: .45rem; margin-top: 1.5rem; flex-wrap: wrap; }
+    .flow .step {
+      flex: 1; min-width: 125px; text-align: center; padding: 1rem .75rem;
+      border-radius: 12px; border: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(217,119,6,.14), rgba(20,20,22,.8));
+    }
+    .flow .step svg { width: 1.2rem; height: 1.2rem; color: var(--copper-2); margin-bottom: .3rem; }
+    .flow .step strong { display: block; font-family: Outfit, sans-serif; font-size: .95rem; }
+    .flow .step span { display: block; font-size: .76rem; color: var(--muted); margin-top: .2rem; }
+    .flow .arrow { align-self: center; color: var(--mint); font-weight: 800; font-size: 1.2rem; }
+    .check { list-style: none; }
+    .check li {
+      display: flex; gap: .65rem; align-items: flex-start;
+      margin: .7rem 0; font-size: 1rem; line-height: 1.4;
+    }
+    .check li svg { width: 1.15rem; height: 1.15rem; color: var(--copper-2); flex-shrink: 0; margin-top: .12rem; }
+    .big-num {
+      text-align: center; padding: 1.5rem 1rem; border-radius: 16px;
+      background: linear-gradient(145deg, rgba(217,119,6,.22), rgba(20,20,22,.9));
+      border: 1px solid rgba(217,119,6,.35);
+    }
+    .big-num .pct {
+      font-family: Outfit, sans-serif; font-size: 4.4rem; font-weight: 800;
+      line-height: 1; color: var(--copper-2); letter-spacing: -0.04em;
+    }
+    .pie {
+      width: 180px; height: 180px; border-radius: 50%; margin: 1rem auto 0;
+      background: conic-gradient(var(--copper-2) 0 36deg, rgba(163,158,147,.2) 36deg 360deg);
+      position: relative;
+      box-shadow: 0 0 36px rgba(217,119,6,.2);
+    }
+    .pie::after {
+      content: "10%"; position: absolute; inset: 26%; border-radius: 50%;
+      background: #121214; display: grid; place-items: center;
+      font-family: Outfit, sans-serif; font-weight: 800; color: var(--copper-2); font-size: 1.3rem;
+    }
+    .legend {
+      display: flex; gap: 1rem; justify-content: center; margin-top: .8rem;
+      font-size: .8rem; color: var(--muted);
+    }
+    .legend span::before {
+      content: ""; display: inline-block; width: .6rem; height: .6rem;
+      margin-right: .3rem; vertical-align: middle; border-radius: 2px;
+    }
+    .legend .a::before { background: var(--copper-2); }
+    .legend .b::before { background: rgba(163,158,147,.35); }
+    .filter {
+      border-radius: 14px; overflow: hidden;
+      border: 1px solid rgba(217,119,6,.3);
+      background: #121214;
+    }
+    .filter .fh {
+      padding: .7rem 1rem; font-weight: 700; font-size: .85rem;
+      background: linear-gradient(90deg, rgba(217,119,6,.25), transparent);
+      color: var(--copper-2); display: flex; gap: .4rem; align-items: center;
+    }
+    .filter .fh svg { width: 1rem; height: 1rem; }
+    .filter .row {
+      display: flex; justify-content: space-between; gap: 1rem;
+      padding: .58rem 1rem; border-top: 1px solid var(--line); font-size: .88rem;
+    }
+    .filter .k { color: var(--muted); }
+    .filter .v { font-weight: 700; color: #fde68a; }
+    .levels { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 1.3rem; }
+    .level {
+      border-radius: 14px; overflow: hidden; text-align: center;
+      border: 1px solid var(--line); background: var(--panel);
+    }
+    .level .head {
+      padding: .9rem; font-family: Outfit, sans-serif; font-weight: 800;
+      display: flex; align-items: center; justify-content: center; gap: .4rem;
+      background: linear-gradient(90deg, #b45309, #d97706); color: #fff;
+    }
+    .level:nth-child(2) .head { background: linear-gradient(90deg, #c2410c, #ea580c); }
+    .level:nth-child(3) .head { background: linear-gradient(90deg, #1c1917, #44403c); }
+    .level .head svg { width: 1.1rem; height: 1.1rem; }
+    .level .body { padding: 1.1rem; color: var(--muted); font-size: .9rem; }
+    .level .body strong { display: block; color: var(--ink); margin-bottom: .3rem; font-size: 1rem; }
+    .scale {
+      display: flex; height: 8px; border-radius: 99px; overflow: hidden;
+      margin: 1rem 0 .4rem; background: #27272a;
+    }
+    .scale i { display: block; height: 100%; }
+    .scale i:nth-child(1) { width: 33%; background: #d97706; }
+    .scale i:nth-child(2) { width: 33%; background: #ea580c; }
+    .scale i:nth-child(3) { width: 34%; background: #a8a29e; }
+    .bars {
+      display: flex; align-items: flex-end; gap: 2rem; height: 220px; margin-top: .5rem;
+    }
+    .bar-col {
+      flex: 1; height: 100%; display: flex; flex-direction: column;
+      align-items: center; justify-content: flex-end; gap: .5rem;
+    }
+    .bar {
+      width: 100%; max-width: 84px; border-radius: 10px 10px 4px 4px;
+      display: flex; justify-content: center; padding-top: .4rem;
+      font-weight: 800; font-size: .85rem; color: #fff;
+    }
+    .bar.was { height: 14%; background: #52525b; }
+    .bar.now {
+      height: 100%;
+      background: linear-gradient(180deg, #fbbf24, #c2410c);
+      box-shadow: 0 0 28px rgba(234, 88, 12, .35);
+    }
+    .bar-col span { font-size: .8rem; color: var(--muted); font-weight: 600; text-align: center; }
+    .metric {
+      display: flex; gap: .8rem; align-items: center;
+      padding: .9rem 1rem; border-radius: 12px;
+      background: var(--panel); border: 1px solid var(--line);
+    }
+    .metric .ico {
+      width: 2.3rem; height: 2.3rem; border-radius: 10px;
+      display: grid; place-items: center; background: rgba(217,119,6,.15); flex-shrink: 0;
+    }
+    .metric .ico svg { width: 1.15rem; height: 1.15rem; color: var(--copper-2); }
+    .metric .n { font-weight: 800; font-family: Outfit, sans-serif; }
+    .metric .l { font-size: .8rem; color: var(--muted); }
+    table.compare {
+      width: 100%; border-collapse: separate; border-spacing: 0;
+      margin-top: 1.15rem; border-radius: 12px; overflow: hidden;
+      border: 1px solid var(--line); font-size: .88rem;
+    }
+    table.compare th, table.compare td { padding: .75rem .9rem; text-align: center; }
+    table.compare th {
+      background: #1c1917; color: #e7e5e4; font-weight: 700;
+      border-bottom: 1px solid var(--line);
+    }
+    table.compare td { background: rgba(20,20,22,.85); color: var(--muted); border-top: 1px solid var(--line); }
+    table.compare td:first-child, table.compare th:first-child {
+      text-align: left; color: var(--ink); font-weight: 650;
+    }
+    table.compare td.win {
+      background: rgba(217, 119, 6, 0.14);
+      color: #fde68a; font-weight: 800;
+    }
+    .tariff {
+      border-radius: 16px; overflow: hidden; border: 1px solid var(--line);
+      background: var(--panel); display: flex; flex-direction: column;
+    }
+    .tariff .top {
+      padding: 1.15rem; text-align: center;
+      background: linear-gradient(135deg, rgba(217,119,6,.28), rgba(20,20,22,.5));
+    }
+    .tariff:nth-child(2) .top { background: linear-gradient(135deg, rgba(234,88,12,.28), rgba(20,20,22,.5)); }
+    .tariff:nth-child(3) .top { background: linear-gradient(135deg, rgba(68,64,60,.6), rgba(20,20,22,.6)); }
+    .tariff .top h3 {
+      font-family: Outfit, sans-serif; font-size: 1.2rem;
+      display: flex; justify-content: center; gap: .4rem; align-items: center;
+    }
+    .tariff .top h3 svg { width: 1.1rem; height: 1.1rem; color: var(--copper-2); }
+    .tariff .price { font-family: Outfit, sans-serif; font-size: 1.4rem; font-weight: 800; margin: .3rem 0; }
+    .tariff .who { font-size: .78rem; color: var(--muted); }
+    .tariff ul { list-style: none; padding: 1rem 1.1rem 1.2rem; flex: 1; }
+    .tariff li {
+      display: flex; gap: .45rem; padding: .38rem 0; color: var(--muted); font-size: .88rem;
+    }
+    .tariff li svg { width: .95rem; height: .95rem; color: var(--mint); margin-top: .12rem; flex-shrink: 0; }
+    .trial {
+      margin-top: 1.1rem; text-align: center; font-weight: 700;
+      padding: .85rem 1rem; border-radius: 10px;
+      background: linear-gradient(90deg, rgba(234,88,12,.25), rgba(217,119,6,.18));
+      border: 1px solid rgba(234,88,12,.4); color: #fed7aa;
+    }
+    .reason {
+      padding: 1.05rem 1.1rem; border-radius: 14px;
+      background: var(--panel); border: 1px solid var(--line);
+    }
+    .reason .ico {
+      width: 2.3rem; height: 2.3rem; border-radius: 10px; margin-bottom: .5rem;
+      display: grid; place-items: center;
+      background: rgba(217,119,6,.15);
+    }
+    .reason .ico svg { width: 1.15rem; height: 1.15rem; color: var(--copper-2); }
+    .reason h3 { font-family: Outfit, sans-serif; font-size: 1.02rem; margin-bottom: .2rem; }
+    .reason p { color: var(--muted); font-size: .86rem; }
+    .duo {
+      display: grid; grid-template-columns: 1fr 1fr; gap: .85rem; margin-top: 1rem;
+    }
+    .scene {
+      border-radius: 14px; min-height: 150px; padding: 1rem;
+      display: flex; flex-direction: column; justify-content: flex-end;
+      border: 1px solid var(--line); position: relative; overflow: hidden;
+    }
+    .scene.master {
+      background:
+        linear-gradient(180deg, transparent 20%, rgba(10,10,11,.85) 100%),
+        linear-gradient(135deg, #292524 0%, #1c1917 50%, #44403c 100%);
+    }
+    .scene.legal {
+      background:
+        linear-gradient(180deg, transparent 20%, rgba(10,10,11,.85) 100%),
+        linear-gradient(135deg, #1e293b 0%, #0f172a 55%, #334155 100%);
+    }
+    .scene .ico-big {
+      position: absolute; top: .9rem; right: .9rem; opacity: .35;
+    }
+    .scene .ico-big svg { width: 2.5rem; height: 2.5rem; color: var(--copper-2); }
+    .scene .label { font-family: Outfit, sans-serif; font-weight: 700; font-size: .95rem; }
+    .scene .mini {
+      margin-top: .55rem; background: rgba(14,22,33,.9); border-radius: 10px;
+      padding: .55rem .65rem; font-size: .72rem; border: 1px solid rgba(255,255,255,.08);
+    }
+    .scene .mini b { color: var(--copper-2); }
+    .center { text-align: center; align-items: center; }
+    .center h1 { max-width: none; margin: 0 auto; }
+    .center .lead, .center .kicker { margin-left: auto; margin-right: auto; }
+    .cta {
+      display: inline-flex; align-items: center; gap: .45rem;
+      margin-top: 1.5rem; padding: 1rem 1.75rem; border-radius: 12px;
+      background: linear-gradient(90deg, var(--copper), var(--ember));
+      color: #fff; font-weight: 800; font-size: 1.1rem; text-decoration: none;
+      font-family: Outfit, sans-serif;
+      box-shadow: 0 14px 36px rgba(234, 88, 12, .35);
+    }
+    .cta svg { width: 1.1rem; height: 1.1rem; }
+    a.link { color: var(--copper-2); font-weight: 700; text-decoration: none; }
+    .nav {
+      position: fixed; inset: auto 0 0 0; height: 3.15rem; z-index: 40;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 1rem; background: rgba(10,10,11,.92);
+      border-top: 1px solid var(--line); backdrop-filter: blur(10px);
+      color: var(--muted); font-size: .82rem;
+    }
+    .nav button {
+      background: rgba(217,119,6,.1); border: 1px solid rgba(217,119,6,.35);
+      color: var(--ink); padding: .38rem .8rem; border-radius: 8px; cursor: pointer;
+      font-weight: 700; display: inline-flex; align-items: center; gap: .3rem;
+      font-family: inherit;
+    }
+    .nav button:hover { color: var(--copper-2); }
+    .nav button svg { width: .95rem; height: .95rem; }
+    .dots { display: flex; gap: .26rem; }
+    .dots span { width: .34rem; height: .34rem; border-radius: 50%; background: #3f3f46; }
+    .dots span.on { background: var(--copper-2); box-shadow: 0 0 8px var(--copper); }
+    @media (max-width: 920px) {
+      .slide { padding: 1.7rem 1.1rem 4.4rem; }
+      .grid-2, .grid-2b, .grid-3, .grid-4, .grid-6, .levels, .duo { grid-template-columns: 1fr; }
+      .flow { flex-direction: column; }
+      .flow .arrow { transform: rotate(90deg); align-self: center; }
+      .phone { margin: 1rem auto 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="deck">
+
+    <!-- 1 -->
+    <section class="slide active" data-i="0">
+      <div class="brand"><i data-lucide="zap"></i> Leads.Konversus</div>
+      <div class="grid-2">
+        <div>
+          <h1 class="wide">Все заказы с Profi — только ваши, только квалифицированные</h1>
+          <p class="kicker">Вы выбираете задачу и клиента, за которого платите</p>
+          <p class="lead"><b style="color:var(--ink)">25+ реальных клиентов в день</b>, которым можно продать и заработать</p>
+        </div>
+        <div class="phone" aria-label="Telegram со входящими заявками">
+          <div class="phone-inner">
+            <div class="tg-bar">
+              <div class="tg-avatar">LK</div>
+              <div>
+                <div class="name">Leads · Profi</div>
+                <div class="sub">бот · сейчас онлайн</div>
+              </div>
+            </div>
+            <div class="tg-body">
+              <div class="bubble">
+                <div class="src">══ PROFI.RU ══</div>
+                <div class="ttl">Строительство ангара 18×30 м</div>
+                <div class="row"><i data-lucide="wallet"></i> <b>от 2,8 млн ₽</b></div>
+                <div class="row"><i data-lucide="map-pin"></i> МО · Чеховский р-н</div>
+                <div class="row"><i data-lucide="hammer"></i> каркас · фундамент · обшивка</div>
+                <div class="row"><i data-lucide="star"></i> заказчик с отзывами</div>
+                <a class="cta" href="https://leads.konversus.ru" target="_blank" rel="noopener" style="margin-top:.7rem;font-size:.82rem;padding:.55rem;box-shadow:none;">Открыть заказ</a>
+              </div>
+              <div class="notif">
+                <i data-lucide="bell"></i>
+                <span>+ ещё 2 заявки за последние 12 мин · электрика, отделка</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2A -->
+    <section class="slide" data-i="1">
+      <span class="tag"><i data-lucide="hard-hat"></i> вариант А</span>
+      <h1 class="wide">Кому мы даём поток заказов — строителям и ремонтникам</h1>
+      <div class="grid-2b">
+        <div class="panel glow">
+          <h3><i data-lucide="wrench"></i> Частные мастера</h3>
+          <p>Сантехники, электрики, плиточники, штукатуры, маляры и др. — получают заказы строго по своей специализации, без мусора.</p>
+        </div>
+        <div class="panel">
+          <h3><i data-lucide="users"></i> Бригады и подрядчики</h3>
+          <p>От 2–3 человек до крупных команд — поток объектов для загрузки; фильтр по типу объекта (жилой/коммерческий), бюджету и срокам.</p>
+        </div>
+      </div>
+      <div class="duo">
+        <div class="scene master">
+          <div class="ico-big"><i data-lucide="hard-hat"></i></div>
+          <div class="label">Мастер на объекте</div>
+          <div class="mini">📱 уведомление: <b>электрика · от 18 000 ₽ · Москва</b></div>
+        </div>
+        <div class="panel" style="display:flex;flex-direction:column;justify-content:center;">
+          <h3><i data-lucide="search"></i> Кто ищет</h3>
+          <div class="chips">
+            <span class="chip">Ремонт квартир и домов</span>
+            <span class="chip">Отделка</span>
+            <span class="chip">Строительство</span>
+            <span class="chip">Сантехника</span>
+            <span class="chip">Электрика</span>
+            <span class="chip">Фасады</span>
+            <span class="chip">Ландшафт</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2B -->
+    <section class="slide" data-i="2">
+      <span class="tag"><i data-lucide="scale"></i> вариант Б</span>
+      <h1 class="wide">Кому мы даём поток клиентов — юристам и бухгалтерам</h1>
+      <div class="grid-2b">
+        <div class="panel glow">
+          <h3><i data-lucide="briefcase"></i> Частные практики</h3>
+          <p>ИП и самозанятые — консультации, договоры, налоговые декларации и др., только под свою специализацию.</p>
+        </div>
+        <div class="panel">
+          <h3><i data-lucide="building-2"></i> Юр. и бухгалтерские фирмы</h3>
+          <p>От 2–3 сотрудников до крупных компаний — поток корпоративных клиентов; фильтр по бюджету, типу услуги, срочности, рейтингу заказчика.</p>
+        </div>
+      </div>
+      <div class="duo">
+        <div class="scene legal">
+          <div class="ico-big"><i data-lucide="file-text"></i></div>
+          <div class="label">Ноутбук с карточкой заявки</div>
+          <div class="mini">💻 <b>юр. консультация · от 25 000 ₽ · срочно</b></div>
+        </div>
+        <div class="panel" style="display:flex;flex-direction:column;justify-content:center;">
+          <h3><i data-lucide="search"></i> Кто ищет</h3>
+          <div class="chips">
+            <span class="chip">Юр. консультации</span>
+            <span class="chip">Бухобслуживание</span>
+            <span class="chip">Аудит</span>
+            <span class="chip">Налоговое планирование</span>
+            <span class="chip">Регистрация ООО</span>
+            <span class="chip">Суд</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3 -->
+    <section class="slide" data-i="3">
+      <h1 class="wide">Что вы теряете на Profi каждый день</h1>
+      <div class="grid-2" style="margin-top:.7rem;">
+        <ul class="check">
+          <li><i data-lucide="alert-triangle"></i> Profi.ru показывает только 2–3 заявки в день — искусственное ограничение алгоритма.</li>
+          <li><i data-lucide="eye-off"></i> Остальные 90% заказов вы не видите — конкуренты успевают раньше.</li>
+          <li><i data-lucide="trash-2"></i> Без фильтрации: низкий бюджет, не ваш тип работ, боты, «холодные» клиенты — время уходит на мусор.</li>
+        </ul>
+        <div>
+          <div class="big-num">
+            <div style="color:var(--muted);font-size:.88rem;">Вы видите лишь</div>
+            <div class="pct">10%</div>
+            <div>от всех заказов</div>
+          </div>
+          <div class="pie" aria-hidden="true"></div>
+          <div class="legend">
+            <span class="a">видимые 10%</span>
+            <span class="b">скрытые 90%</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4 -->
+    <section class="slide" data-i="4">
+      <span class="tag">решение · Leads.Konversus</span>
+      <h1 class="wide">Мы даём вам все заказы — и только те, что подходят</h1>
+      <ul class="check" style="margin-top:.8rem;max-width:48rem;">
+        <li><i data-lucide="radar"></i> Перехватываем все заказы с Profi — 20–25+ в день, а не 2–3.</li>
+        <li><i data-lucide="filter"></i> Фильтруем по 15+ параметрам — только то, что подходит под ваш бизнес.</li>
+        <li><i data-lucide="send"></i> Присылаем в Telegram за секунды — вы первыми, конкуренты не успевают.</li>
+        <li><i data-lucide="coins"></i> Цена квалифицированной заявки — от 100 до 400 ₽ (тариф и ниша).</li>
+      </ul>
+      <div class="flow">
+        <div class="step"><i data-lucide="globe"></i><strong>Profi</strong><span>лента заказов</span></div>
+        <div class="arrow">→</div>
+        <div class="step"><i data-lucide="eye"></i><strong>Сервис</strong><span>наш контур</span></div>
+        <div class="arrow">→</div>
+        <div class="step"><i data-lucide="filter"></i><strong>Фильтры</strong><span>15+ правил</span></div>
+        <div class="arrow">→</div>
+        <div class="step"><i data-lucide="zap"></i><strong>Telegram</strong><span>вам за секунды</span></div>
+      </div>
+    </section>
+
+    <!-- 5 -->
+    <section class="slide" data-i="5">
+      <h1 class="wide">Никаких сложных настроек — мы всё сделаем за вас</h1>
+      <div class="grid-2" style="margin-top:1rem;">
+        <ul class="check">
+          <li><i data-lucide="user-cog"></i> Не нужно разбираться в конструкторе — анализируем профиль, типичные заказы, бюджет, географию, виды работ.</li>
+          <li><i data-lucide="sliders-horizontal"></i> Индивидуальные фильтры: ключевые слова, бюджет, рейтинг заказчика, пол, тип объекта, сроки и т.д.</li>
+          <li><i data-lucide="inbox"></i> Вы просто получаете готовый поток идеальных заявок в Telegram — без лишних действий.</li>
+        </ul>
+        <div class="filter">
+          <div class="fh"><i data-lucide="clipboard-check"></i> карточка после фильтров</div>
+          <div class="row"><span class="k">Тип работ</span><span class="v">Строительство · ангар</span></div>
+          <div class="row"><span class="k">Бюджет</span><span class="v">от 2 млн ₽</span></div>
+          <div class="row"><span class="k">Рейтинг</span><span class="v">заказчик с отзывами</span></div>
+          <div class="row"><span class="k">Гео</span><span class="v">МО + до 80 км</span></div>
+          <div class="row"><span class="k">Минус</span><span class="v">мусор отсеян</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6 -->
+    <section class="slide" data-i="6">
+      <h1 class="wide">Работаем без риска бана</h1>
+      <p class="lead">Profi банит парсеров — поэтому антидетект: эмуляция человека, случайные паузы, ротация User-Agent. Аккаунт в безопасности: система имитирует живого пользователя.</p>
+      <div class="scale" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div style="display:flex;justify-content:space-between;font-size:.75rem;color:var(--muted);margin-bottom:.4rem;">
+        <span>Light</span><span>Balanced</span><span>Stealth</span>
+      </div>
+      <div class="levels">
+        <div class="level">
+          <div class="head"><i data-lucide="shield"></i> Light</div>
+          <div class="body"><strong>Базовая защита</strong>Тариф «Мастер»</div>
+        </div>
+        <div class="level">
+          <div class="head"><i data-lucide="shield-check"></i> Balanced</div>
+          <div class="body"><strong>Усиленный режим</strong>Тариф «Команда»</div>
+        </div>
+        <div class="level">
+          <div class="head"><i data-lucide="lock"></i> Stealth</div>
+          <div class="body"><strong>Максимум осторожности</strong>Тариф «Бизнес»</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7 -->
+    <section class="slide" data-i="7">
+      <h1 class="wide">Что меняется после подключения</h1>
+      <div class="grid-2" style="margin-top:.5rem;">
+        <div>
+          <div class="bars">
+            <div class="bar-col"><div class="bar was">2–3</div><span>было · Profi</span></div>
+            <div class="bar-col"><div class="bar now">25+</div><span>стало · Leads</span></div>
+          </div>
+        </div>
+        <div style="display:grid;gap:.7rem;">
+          <div class="metric"><div class="ico"><i data-lucide="trending-up"></i></div><div><div class="n">25+ лидов в день</div><div class="l">вместо 2–3 с ленты</div></div></div>
+          <div class="metric"><div class="ico"><i data-lucide="clock"></i></div><div><div class="n">Экономия времени</div><div class="l">не скроллите мусор</div></div></div>
+          <div class="metric"><div class="ico"><i data-lucide="target"></i></div><div><div class="n">Рост конверсии</div><div class="l">только те, кто готов платить</div></div></div>
+          <div class="metric"><div class="ico"><i data-lucide="coins"></i></div><div><div class="n">100–400 ₽ за заявку</div><div class="l">в разы ниже контекста (2026)</div></div></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8 -->
+    <section class="slide" data-i="8">
+      <h1 class="wide">Leads.Konversus vs другие способы</h1>
+      <table class="compare">
+        <thead>
+          <tr>
+            <th></th>
+            <th>Обычный Profi</th>
+            <th>Контекстная реклама</th>
+            <th>Leads.Konversus</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Заявок в день</td>
+            <td>2–3</td>
+            <td>зависит от бюджета</td>
+            <td class="win">20–25+</td>
+          </tr>
+          <tr>
+            <td>Фильтрация</td>
+            <td>нет</td>
+            <td>частичная</td>
+            <td class="win">15+ параметров</td>
+          </tr>
+          <tr>
+            <td>Цена за заявку</td>
+            <td>«бесплатно», но нет потока</td>
+            <td>500–1500 ₽</td>
+            <td class="win">100–400 ₽</td>
+          </tr>
+          <tr>
+            <td>Риск бана</td>
+            <td>нет</td>
+            <td>нет</td>
+            <td class="win">минимальный (антидетект)</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 9 -->
+    <section class="slide" data-i="9">
+      <h1 class="wide">Выберите свой тариф</h1>
+      <div class="grid-3">
+        <div class="tariff">
+          <div class="top">
+            <h3><i data-lucide="user"></i> Мастер</h3>
+            <div class="price">19 990 ₽/мес</div>
+            <div class="who">частники</div>
+          </div>
+          <ul>
+            <li><i data-lucide="check"></i> до 5 фильтров</li>
+            <li><i data-lucide="check"></i> 1 Telegram-уведомление</li>
+            <li><i data-lucide="check"></i> антидетект Light</li>
+          </ul>
+        </div>
+        <div class="tariff">
+          <div class="top">
+            <h3><i data-lucide="users"></i> Команда</h3>
+            <div class="price">30 000 ₽/мес</div>
+            <div class="who">малые организации</div>
+          </div>
+          <ul>
+            <li><i data-lucide="check"></i> до 10 фильтров</li>
+            <li><i data-lucide="check"></i> уведомления для 2 менеджеров</li>
+            <li><i data-lucide="check"></i> антидетект Balanced</li>
+          </ul>
+        </div>
+        <div class="tariff">
+          <div class="top">
+            <h3><i data-lucide="building-2"></i> Бизнес</h3>
+            <div class="price">50 000 ₽/мес</div>
+            <div class="who">крупные организации</div>
+          </div>
+          <ul>
+            <li><i data-lucide="check"></i> неограниченные фильтры</li>
+            <li><i data-lucide="check"></i> любое число менеджеров + API</li>
+            <li><i data-lucide="check"></i> антидетект Stealth</li>
+          </ul>
+        </div>
+      </div>
+      <div class="trial">Пробный период: 7 дней за 7 000 ₽ — без привязки к основному тарифу</div>
+    </section>
+
+    <!-- 10 -->
+    <section class="slide" data-i="10">
+      <h1 class="wide">6 причин выбрать Leads.Konversus</h1>
+      <div class="grid-6">
+        <div class="reason"><div class="ico"><i data-lucide="eye"></i></div><h3>Полнота</h3><p>Все заказы, а не малая часть</p></div>
+        <div class="reason"><div class="ico"><i data-lucide="crosshair"></i></div><h3>Точность</h3><p>Фильтры под ваш бизнес, без мусора</p></div>
+        <div class="reason"><div class="ico"><i data-lucide="zap"></i></div><h3>Скорость</h3><p>Telegram — вы первые</p></div>
+        <div class="reason"><div class="ico"><i data-lucide="coins"></i></div><h3>Экономия</h3><p>100–400 ₽ vs 500–1500 ₽ в рекламе</p></div>
+        <div class="reason"><div class="ico"><i data-lucide="shield"></i></div><h3>Безопасность</h3><p>Аккаунт Profi под защитой</p></div>
+        <div class="reason"><div class="ico"><i data-lucide="puzzle"></i></div><h3>Простота</h3><p>Мы всё настраиваем за вас</p></div>
+      </div>
+    </section>
+
+    <!-- 11 -->
+    <section class="slide center" data-i="11">
+      <div class="brand" style="justify-content:center;"><i data-lucide="zap"></i> Leads.Konversus</div>
+      <h1>Начните получать 25+ квалифицированных заявок уже сегодня</h1>
+      <p class="lead">Пробная неделя за 7 000 ₽ — убедитесь, что заявки есть и они качественные.</p>
+      <p class="lead">Сайт: <a class="link" href="https://leads.konversus.ru" target="_blank" rel="noopener">leads.konversus.ru</a> · напишите в Telegram</p>
+      <a class="cta" href="https://leads.konversus.ru" target="_blank" rel="noopener">Попробовать неделю <i data-lucide="arrow-right"></i></a>
+    </section>
+
+    <!-- 12 -->
+    <section class="slide center" data-i="12">
+      <div class="brand" style="justify-content:center;"><i data-lucide="zap"></i> Leads.Konversus</div>
+      <h1>Остались вопросы? Мы на связи</h1>
+      <p class="lead" style="margin-top:1.4rem;font-size:1.15rem;">
+        <a class="link" href="https://leads.konversus.ru" target="_blank" rel="noopener">leads.konversus.ru</a>
+      </p>
+      <p class="lead">Telegram — менеджер / бот сервиса</p>
+      <p class="lead" style="margin-top:2rem;font-size:.88rem;">Спасибо за внимание · Zoom · вариант 3</p>
+    </section>
+  </div>
+
+  <nav class="nav">
+    <button type="button" id="prev"><i data-lucide="chevron-left"></i> Назад</button>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:.3rem;">
+      <span id="counter">1 / 13</span>
+      <div class="dots" id="dots"></div>
+    </div>
+    <button type="button" id="next">Вперёд <i data-lucide="chevron-right"></i></button>
+  </nav>
+
+  <script>
+    lucide.createIcons();
+    const slides = [...document.querySelectorAll(".slide")];
+    const dots = document.getElementById("dots");
+    slides.forEach(() => dots.appendChild(Object.assign(document.createElement("span"), {})));
+    let i = 0;
+    const counter = document.getElementById("counter");
+    function show(n) {
+      i = Math.max(0, Math.min(slides.length - 1, n));
+      slides.forEach((s, idx) => s.classList.toggle("active", idx === i));
+      [...dots.children].forEach((d, idx) => d.classList.toggle("on", idx === i));
+      counter.textContent = (i + 1) + " / " + slides.length;
+      history.replaceState(null, "", "#" + (i + 1));
+      lucide.createIcons();
+    }
+    document.getElementById("prev").onclick = () => show(i - 1);
+    document.getElementById("next").onclick = () => show(i + 1);
+    document.addEventListener("keydown", (e) => {
+      if (["ArrowRight", " ", "PageDown"].includes(e.key)) { e.preventDefault(); show(i + 1); }
+      if (["ArrowLeft", "PageUp"].includes(e.key)) { e.preventDefault(); show(i - 1); }
+      if (e.key === "Home") show(0);
+      if (e.key === "End") show(slides.length - 1);
+      if (e.key === "f" || e.key === "F") {
+        if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+        else document.exitFullscreen?.();
+      }
+    });
+    const hash = parseInt(location.hash.replace("#", ""), 10);
+    show(Number.isFinite(hash) && hash >= 1 ? hash - 1 : 0);
+  </script>
+</body>
+</html>
