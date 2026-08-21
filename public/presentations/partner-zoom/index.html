@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Leads.Konversus — презентация для партнёров</title>
+  <script src="https://unpkg.com/lucide@0.469.0"></script>
+  <style>
+    :root {
+      --navy: #0f1c2e;
+      --navy-2: #162536;
+      --teal: #0d9488;
+      --teal-dk: #0f766e;
+      --orange: #ea580c;
+      --slate: #475569;
+      --muted: #94a3b8;
+      --cream: #f1f5f9;
+      --white: #ffffff;
+      --green: #16a34a;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      font-family: "Segoe UI", "PT Sans", system-ui, sans-serif;
+      background: #0a121c;
+      color: var(--navy);
+      overflow: hidden;
+    }
+    .deck {
+      height: 100%;
+      width: 100%;
+      position: relative;
+    }
+    .slide {
+      display: none;
+      height: 100%;
+      width: 100%;
+      padding: 3.5rem 4rem 4.5rem;
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(145deg, #f8fafc 0%, #e2e8f0 55%, #ccfbf1 140%);
+      overflow: auto;
+    }
+    .slide.active { display: flex; flex-direction: column; }
+    .slide.dark {
+      background: radial-gradient(ellipse at 20% 0%, #1a3a3a 0%, var(--navy) 45%, #0a121c 100%);
+      color: var(--white);
+    }
+    .slide.dark .muted { color: var(--muted); }
+    .brand {
+      display: flex; align-items: center; gap: .5rem;
+      font-weight: 700; letter-spacing: .02em; color: var(--teal);
+      font-size: .95rem; margin-bottom: 1.25rem;
+    }
+    .brand i, .brand svg { width: 1.15rem; height: 1.15rem; }
+    h1 {
+      font-size: clamp(1.6rem, 3.2vw, 2.35rem);
+      line-height: 1.2; font-weight: 800; color: var(--navy);
+      max-width: 22ch;
+    }
+    .slide.dark h1 { color: var(--white); }
+    h1.wide { max-width: none; }
+    .lead {
+      margin-top: .85rem; font-size: 1.15rem; color: var(--slate); max-width: 42rem; line-height: 1.45;
+    }
+    .slide.dark .lead { color: #cbd5e1; }
+    .eyebrow {
+      display: inline-block; font-size: .75rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .08em; color: var(--teal); margin-bottom: .5rem;
+    }
+    .grid-2 { display: grid; grid-template-columns: 1.1fr .9fr; gap: 2rem; flex: 1; align-items: center; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; margin-top: 1.5rem; }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-top: 1.5rem; }
+    .grid-6 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 1.25rem; }
+    .card {
+      background: var(--white);
+      border-radius: 14px;
+      padding: 1.25rem 1.35rem;
+      box-shadow: 0 8px 28px rgba(15, 28, 46, .08);
+      border-left: 4px solid var(--teal);
+    }
+    .card h3 { font-size: 1.05rem; margin-bottom: .55rem; display: flex; align-items: center; gap: .5rem; }
+    .card h3 svg { width: 1.15rem; height: 1.15rem; color: var(--teal); flex-shrink: 0; }
+    .card p, .card li { color: var(--slate); font-size: .95rem; line-height: 1.45; }
+    .card ul { list-style: none; }
+    .card li { margin: .4rem 0; padding-left: 1.1rem; position: relative; }
+    .card li::before { content: ""; position: absolute; left: 0; top: .55em; width: .4rem; height: .4rem; border-radius: 50%; background: var(--teal); }
+    .tg-mock {
+      background: #fff; border-radius: 16px; padding: 1rem 1.1rem 1.2rem;
+      box-shadow: 0 20px 50px rgba(0,0,0,.25); border: 1px solid #e2e8f0;
+      max-width: 340px; margin-left: auto;
+    }
+    .tg-mock .head { display: flex; align-items: center; gap: .5rem; color: var(--teal); font-weight: 700; font-size: .85rem; margin-bottom: .75rem; }
+    .tg-mock .title { font-weight: 800; font-size: 1.05rem; margin: .35rem 0; color: var(--navy); }
+    .tg-mock .meta { font-size: .88rem; color: var(--slate); margin: .25rem 0; display: flex; gap: .4rem; align-items: center; }
+    .tg-mock .meta svg { width: .95rem; height: .95rem; }
+    .tg-mock .btn {
+      margin-top: .9rem; display: block; text-align: center; background: var(--orange);
+      color: #fff; font-weight: 700; padding: .65rem; border-radius: 10px; text-decoration: none;
+    }
+    .pill-row { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: 1rem; }
+    .pill {
+      background: rgba(13,148,136,.12); color: var(--teal-dk); font-size: .8rem; font-weight: 600;
+      padding: .35rem .7rem; border-radius: 999px;
+    }
+    .stat {
+      background: var(--white); border-radius: 14px; padding: 1.1rem; text-align: center;
+      box-shadow: 0 8px 24px rgba(15,28,46,.07);
+    }
+    .stat .n { font-size: 1.75rem; font-weight: 800; color: var(--teal); }
+    .stat .l { font-size: .85rem; color: var(--slate); margin-top: .25rem; }
+    .big-num {
+      background: var(--navy); color: #fff; border-radius: 16px; padding: 1.5rem; text-align: center;
+    }
+    .big-num .pct { font-size: 4rem; font-weight: 900; color: var(--orange); line-height: 1; }
+    .flow { display: flex; align-items: center; gap: .5rem; margin-top: 1.75rem; flex-wrap: wrap; }
+    .flow .step {
+      flex: 1; min-width: 140px; background: var(--navy); color: #fff; border-radius: 12px;
+      padding: 1rem; text-align: center;
+    }
+    .flow .step:nth-child(even) { background: var(--teal); }
+    .flow .step strong { display: block; font-size: 1.05rem; }
+    .flow .step span { font-size: .8rem; opacity: .85; }
+    .flow .arrow { color: var(--orange); font-size: 1.5rem; font-weight: 800; }
+    .chart-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; align-items: center; margin-top: 1rem; flex: 1; }
+    .bars { display: flex; align-items: flex-end; gap: 2rem; height: 220px; padding: 0 1rem; }
+    .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: .5rem; height: 100%; justify-content: flex-end; }
+    .bar {
+      width: 100%; max-width: 90px; border-radius: 10px 10px 4px 4px;
+      display: flex; align-items: flex-start; justify-content: center; padding-top: .5rem;
+      color: #fff; font-weight: 800; font-size: .9rem;
+    }
+    .bar.was { height: 12%; background: var(--muted); }
+    .bar.now { height: 100%; background: linear-gradient(180deg, var(--teal), var(--teal-dk)); }
+    .pie {
+      width: 200px; height: 200px; border-radius: 50%;
+      background: conic-gradient(var(--orange) 0 36deg, var(--navy) 36deg 360deg);
+      margin: 0 auto; position: relative; box-shadow: 0 12px 30px rgba(0,0,0,.15);
+    }
+    .pie::after {
+      content: "10%"; position: absolute; inset: 28%; background: #fff; border-radius: 50%;
+      display: grid; place-items: center; font-weight: 900; color: var(--orange); font-size: 1.4rem;
+    }
+    .legend { display: flex; gap: 1.25rem; justify-content: center; margin-top: 1rem; font-size: .85rem; color: var(--slate); }
+    .legend span::before {
+      content: ""; display: inline-block; width: .7rem; height: .7rem; border-radius: 2px; margin-right: .35rem; vertical-align: middle;
+    }
+    .legend .a::before { background: var(--orange); }
+    .legend .b::before { background: var(--navy); }
+    table.compare {
+      width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 1.25rem;
+      border-radius: 12px; overflow: hidden; box-shadow: 0 8px 28px rgba(15,28,46,.08);
+      font-size: .92rem;
+    }
+    table.compare th, table.compare td { padding: .85rem 1rem; text-align: center; background: #fff; }
+    table.compare th { background: var(--navy); color: #fff; font-weight: 700; }
+    table.compare td:first-child, table.compare th:first-child { text-align: left; font-weight: 600; }
+    table.compare td.win { background: #ccfbf1; color: var(--teal-dk); font-weight: 700; }
+    table.compare tr:nth-child(even) td:not(.win) { background: var(--cream); }
+    .tariff {
+      background: #fff; border-radius: 16px; overflow: hidden;
+      box-shadow: 0 10px 30px rgba(15,28,46,.1); display: flex; flex-direction: column;
+    }
+    .tariff .top { background: var(--teal); color: #fff; padding: 1.25rem; text-align: center; }
+    .tariff:nth-child(2) .top { background: var(--teal-dk); }
+    .tariff:nth-child(3) .top { background: var(--navy); }
+    .tariff .top h3 { font-size: 1.35rem; display: flex; justify-content: center; gap: .45rem; align-items: center; }
+    .tariff .top .price { font-size: 1.5rem; font-weight: 800; margin: .35rem 0; }
+    .tariff .top .who { font-size: .8rem; opacity: .9; }
+    .tariff ul { list-style: none; padding: 1.1rem 1.25rem 1.4rem; flex: 1; }
+    .tariff li { padding: .45rem 0; color: var(--slate); font-size: .92rem; display: flex; gap: .5rem; align-items: flex-start; }
+    .tariff li svg { width: 1rem; height: 1rem; color: var(--teal); margin-top: .15rem; flex-shrink: 0; }
+    .trial {
+      margin-top: 1.25rem; background: var(--orange); color: #fff; border-radius: 12px;
+      padding: .9rem 1.25rem; text-align: center; font-weight: 700; font-size: 1rem;
+    }
+    .reason {
+      background: #fff; border-radius: 14px; padding: 1.15rem 1.2rem;
+      border-left: 4px solid var(--teal); box-shadow: 0 6px 20px rgba(15,28,46,.06);
+    }
+    .reason .ico {
+      width: 2.4rem; height: 2.4rem; border-radius: 10px; background: rgba(13,148,136,.12);
+      display: grid; place-items: center; margin-bottom: .65rem;
+    }
+    .reason .ico svg { width: 1.25rem; height: 1.25rem; color: var(--teal); }
+    .reason h3 { font-size: 1.1rem; margin-bottom: .25rem; }
+    .reason p { color: var(--slate); font-size: .9rem; }
+    .levels { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; margin-top: 1.5rem; }
+    .level {
+      background: #fff; border-radius: 14px; overflow: hidden; text-align: center;
+      box-shadow: 0 8px 24px rgba(15,28,46,.08);
+    }
+    .level .head { padding: 1rem; color: #fff; font-weight: 800; font-size: 1.2rem;
+      display: flex; align-items: center; justify-content: center; gap: .45rem; }
+    .level:nth-child(1) .head { background: var(--teal); }
+    .level:nth-child(2) .head { background: var(--teal-dk); }
+    .level:nth-child(3) .head { background: var(--navy); }
+    .level .body { padding: 1.25rem; color: var(--slate); }
+    .level .body strong { display: block; color: var(--navy); font-size: 1.05rem; margin-bottom: .4rem; }
+    .cta-btn {
+      display: inline-flex; align-items: center; gap: .5rem;
+      background: var(--orange); color: #fff; font-weight: 800; font-size: 1.25rem;
+      padding: 1rem 2rem; border-radius: 14px; text-decoration: none;
+      box-shadow: 0 12px 30px rgba(234,88,12,.35); margin-top: 1.5rem;
+    }
+    .cta-btn:hover { filter: brightness(1.05); }
+    .center { text-align: center; align-items: center; }
+    .center h1 { max-width: none; margin: 0 auto; }
+    .nav {
+      position: fixed; bottom: 0; left: 0; right: 0; height: 3.25rem;
+      background: rgba(15,28,46,.92); backdrop-filter: blur(8px);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 1.25rem; color: #cbd5e1; font-size: .85rem; z-index: 50;
+    }
+    .nav button {
+      background: transparent; border: 1px solid #334155; color: #fff;
+      padding: .4rem .9rem; border-radius: 8px; cursor: pointer; font-weight: 600;
+      display: inline-flex; align-items: center; gap: .35rem;
+    }
+    .nav button:hover { border-color: var(--teal); color: var(--teal); }
+    .nav button svg { width: 1rem; height: 1rem; }
+    .check-list { list-style: none; margin-top: 1rem; }
+    .check-list li {
+      display: flex; gap: .75rem; align-items: flex-start; margin: .85rem 0;
+      font-size: 1.05rem; color: var(--navy); line-height: 1.4;
+    }
+    .check-list li svg { width: 1.25rem; height: 1.25rem; color: var(--teal); flex-shrink: 0; margin-top: .1rem; }
+    .filter-card {
+      background: #fff; border-radius: 14px; overflow: hidden;
+      box-shadow: 0 12px 32px rgba(15,28,46,.1);
+    }
+    .filter-card .fh { background: var(--teal); color: #fff; padding: .75rem 1rem; font-weight: 700; font-size: .9rem; }
+    .filter-card .fb { padding: 1rem 1.15rem; }
+    .filter-card .row { display: flex; justify-content: space-between; padding: .55rem 0; border-bottom: 1px solid #e2e8f0; font-size: .92rem; }
+    .filter-card .row:last-child { border: 0; }
+    .filter-card .k { color: var(--slate); }
+    .filter-card .v { font-weight: 700; color: var(--teal-dk); }
+    .contacts a { color: var(--teal); text-decoration: none; font-weight: 700; }
+    @media (max-width: 900px) {
+      .slide { padding: 2rem 1.25rem 4.5rem; }
+      .grid-2, .grid-3, .grid-4, .grid-6, .chart-wrap, .levels { grid-template-columns: 1fr; }
+      .flow { flex-direction: column; }
+      .flow .arrow { transform: rotate(90deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="deck" id="deck">
+
+    <!-- 1 -->
+    <section class="slide dark active" data-i="0">
+      <div class="brand"><i data-lucide="zap"></i> Leads.Konversus</div>
+      <div class="grid-2">
+        <div>
+          <h1 class="wide">Все заказы с Profi — только ваши, только квалифицированные</h1>
+          <p class="lead" style="color:#5eead4;font-weight:700;text-transform:uppercase;font-size:.95rem;letter-spacing:.04em;margin-top:1rem;">
+            Вы выбираете задачу и клиента, за которого платите
+          </p>
+          <p class="lead">25+ реальных клиентов в день, которым можно продать и заработать</p>
+        </div>
+        <div class="tg-mock">
+          <div class="head"><i data-lucide="send"></i> Telegram · входящая заявка</div>
+          <div style="font-size:.75rem;font-weight:700;color:var(--slate);letter-spacing:.06em;">══ PROFI.RU ══</div>
+          <div class="title">Создание сайта на Тильде</div>
+          <div class="meta"><i data-lucide="wallet"></i> до 40 000 ₽</div>
+          <div class="meta"><i data-lucide="map-pin"></i> Москва · <i data-lucide="star"></i> 12 отзывов</div>
+          <div class="meta"><i data-lucide="user"></i> Клиент изучает цены</div>
+          <a class="btn" href="https://leads.konversus.ru" target="_blank" rel="noopener">Открыть заказ</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2A -->
+    <section class="slide" data-i="1">
+      <span class="eyebrow">Вариант А · строители и ремонтники</span>
+      <h1 class="wide">Кому мы даём поток заказов — строителям и ремонтникам</h1>
+      <div class="grid-2" style="margin-top:1.5rem;align-items:stretch;">
+        <div class="card">
+          <h3><i data-lucide="wrench"></i> Частные мастера</h3>
+          <ul>
+            <li>Сантехники, электрики, плиточники, штукатуры, маляры и др.</li>
+            <li>Заказы строго по специализации — без мусора</li>
+          </ul>
+        </div>
+        <div class="card" style="border-color:var(--teal-dk);">
+          <h3><i data-lucide="users"></i> Бригады и подрядчики</h3>
+          <ul>
+            <li>От 2–3 человек до крупных команд</li>
+            <li>Фильтр: жилой / коммерция, бюджет, сроки</li>
+          </ul>
+        </div>
+      </div>
+      <div class="card" style="margin-top:1.25rem;border-left-color:var(--orange);">
+        <h3><i data-lucide="search"></i> Кто ищет</h3>
+        <div class="pill-row">
+          <span class="pill">Ремонт квартир</span><span class="pill">Отделка</span><span class="pill">Строительство</span>
+          <span class="pill">Сантехника</span><span class="pill">Электрика</span><span class="pill">Фасады</span><span class="pill">Ландшафт</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2B -->
+    <section class="slide" data-i="2">
+      <span class="eyebrow">Вариант Б · юристы и бухгалтеры</span>
+      <h1 class="wide">Кому мы даём поток клиентов — юристам и бухгалтерам</h1>
+      <div class="grid-2" style="margin-top:1.5rem;align-items:stretch;">
+        <div class="card">
+          <h3><i data-lucide="scale"></i> Частные практики</h3>
+          <ul>
+            <li>ИП и самозанятые: консультации, договоры, декларации</li>
+            <li>Только под вашу специализацию</li>
+          </ul>
+        </div>
+        <div class="card" style="border-color:var(--teal-dk);">
+          <h3><i data-lucide="building-2"></i> Юр. и бухгалтерские фирмы</h3>
+          <ul>
+            <li>Поток корпоративных клиентов</li>
+            <li>Фильтр: бюджет, услуга, срочность, рейтинг</li>
+          </ul>
+        </div>
+      </div>
+      <div class="card" style="margin-top:1.25rem;border-left-color:var(--orange);">
+        <h3><i data-lucide="search"></i> Кто ищет</h3>
+        <div class="pill-row">
+          <span class="pill">Юр. консультации</span><span class="pill">Бухобслуживание</span><span class="pill">Аудит</span>
+          <span class="pill">Налоги</span><span class="pill">Регистрация ООО</span><span class="pill">Суд</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3 -->
+    <section class="slide" data-i="3">
+      <h1 class="wide">Что вы теряете на Profi каждый день</h1>
+      <div class="chart-wrap">
+        <div>
+          <ul class="check-list">
+            <li><i data-lucide="alert-triangle"></i> Profi показывает 2–3 заявки в день — искусственное ограничение алгоритма</li>
+            <li><i data-lucide="eye-off"></i> Остальные ~90% заказов вы не видите — конкуренты успевают раньше</li>
+            <li><i data-lucide="trash-2"></i> Без фильтрации: низкий бюджет, не ваш тип работ, боты, «холодные» клиенты</li>
+          </ul>
+        </div>
+        <div>
+          <div class="big-num" style="margin-bottom:1.25rem;">
+            <div style="opacity:.7;font-size:.9rem;">Вы видите лишь</div>
+            <div class="pct">10%</div>
+            <div>от всех заказов</div>
+          </div>
+          <div class="pie" aria-hidden="true"></div>
+          <div class="legend"><span class="a">Видимые 10%</span><span class="b">Скрытые 90%</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4 -->
+    <section class="slide" data-i="4">
+      <span class="eyebrow">Решение · Leads.Konversus</span>
+      <h1 class="wide">Мы даём вам все заказы — и только те, что подходят</h1>
+      <div class="grid-4">
+        <div class="stat"><div class="n">20–25+</div><div class="l">заявок в день, не 2–3</div></div>
+        <div class="stat"><div class="n">15+</div><div class="l">параметров фильтрации</div></div>
+        <div class="stat"><div class="n">сек.</div><div class="l">доставка в Telegram</div></div>
+        <div class="stat"><div class="n">100–400 ₽</div><div class="l">цена квалиф. заявки</div></div>
+      </div>
+      <div class="flow">
+        <div class="step"><i data-lucide="globe" style="width:1.2rem;height:1.2rem;margin-bottom:.35rem;"></i><strong>Profi</strong><span>Лента заказов</span></div>
+        <div class="arrow">→</div>
+        <div class="step"><i data-lucide="eye" style="width:1.2rem;height:1.2rem;margin-bottom:.35rem;"></i><strong>Сервис</strong><span>Сбор + защита</span></div>
+        <div class="arrow">→</div>
+        <div class="step"><i data-lucide="filter" style="width:1.2rem;height:1.2rem;margin-bottom:.35rem;"></i><strong>Фильтры</strong><span>15+ правил под вас</span></div>
+        <div class="arrow">→</div>
+        <div class="step"><i data-lucide="zap" style="width:1.2rem;height:1.2rem;margin-bottom:.35rem;"></i><strong>Telegram</strong><span>Вы первыми</span></div>
+      </div>
+    </section>
+
+    <!-- 5 -->
+    <section class="slide" data-i="5">
+      <h1 class="wide">Никаких сложных настроек — мы всё сделаем за вас</h1>
+      <div class="grid-2" style="margin-top:1.25rem;">
+        <ul class="check-list">
+          <li><i data-lucide="check-circle-2"></i> Анализируем профиль, типичные заказы, бюджет и географию</li>
+          <li><i data-lucide="sliders-horizontal"></i> Настраиваем фильтры: ключевые слова, рейтинг, тип объекта, сроки…</li>
+          <li><i data-lucide="inbox"></i> Вы просто получаете готовый поток в Telegram — без лишних действий</li>
+        </ul>
+        <div class="filter-card">
+          <div class="fh"><i data-lucide="file-text" style="width:1rem;height:1rem;display:inline;vertical-align:-2px;"></i> Карточка после фильтров</div>
+          <div class="fb">
+            <div class="row"><span class="k">Тип работ</span><span class="v">Электрика · квартира</span></div>
+            <div class="row"><span class="k">Бюджет</span><span class="v">от 15 000 ₽</span></div>
+            <div class="row"><span class="k">Рейтинг</span><span class="v">⭐ клиент с отзывами</span></div>
+            <div class="row"><span class="k">Город</span><span class="v">Москва / МО</span></div>
+            <div class="row"><span class="k">Минус</span><span class="v">мусор отсеян</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 6 -->
+    <section class="slide" data-i="6">
+      <h1 class="wide">Работаем без риска бана</h1>
+      <p class="lead">Profi банит грубых парсеров. У нас — эмуляция человека, случайные паузы, контур под партнёра.</p>
+      <div class="levels">
+        <div class="level">
+          <div class="head"><i data-lucide="shield"></i> Light</div>
+          <div class="body"><strong>Базовая защита</strong>Тариф «Мастер»<br/>Имитация живого пользователя</div>
+        </div>
+        <div class="level">
+          <div class="head"><i data-lucide="shield-check"></i> Balanced</div>
+          <div class="body"><strong>Усиленный режим</strong>Тариф «Команда»<br/>Случайные паузы и ротация</div>
+        </div>
+        <div class="level">
+          <div class="head"><i data-lucide="lock"></i> Stealth</div>
+          <div class="body"><strong>Максимальная осторожность</strong>Тариф «Бизнес»<br/>Аккаунт Profi под защитой</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 7 -->
+    <section class="slide" data-i="7">
+      <h1 class="wide">Что меняется после подключения</h1>
+      <div class="chart-wrap">
+        <div>
+          <div class="bars" aria-label="График роста заявок">
+            <div class="bar-col">
+              <div class="bar was">2–3</div>
+              <div style="font-size:.85rem;color:var(--slate);font-weight:600;">Было · Profi</div>
+            </div>
+            <div class="bar-col">
+              <div class="bar now">25+</div>
+              <div style="font-size:.85rem;color:var(--slate);font-weight:600;">Стало · Leads</div>
+            </div>
+          </div>
+        </div>
+        <div class="grid-2" style="grid-template-columns:1fr;gap:.85rem;">
+          <div class="stat" style="text-align:left;display:flex;gap:1rem;align-items:center;">
+            <i data-lucide="trending-up" style="width:1.5rem;height:1.5rem;color:var(--teal);"></i>
+            <div><div class="n" style="font-size:1.35rem;">25+ лидов / день</div><div class="l">вместо 2–3 с ленты</div></div>
+          </div>
+          <div class="stat" style="text-align:left;display:flex;gap:1rem;align-items:center;">
+            <i data-lucide="coins" style="width:1.5rem;height:1.5rem;color:var(--teal);"></i>
+            <div><div class="n" style="font-size:1.35rem;">100–400 ₽</div><div class="l">vs 500–1500 ₽ в контексте</div></div>
+          </div>
+          <div class="stat" style="text-align:left;display:flex;gap:1rem;align-items:center;">
+            <i data-lucide="clock" style="width:1.5rem;height:1.5rem;color:var(--teal);"></i>
+            <div><div class="n" style="font-size:1.35rem;">Экономия времени</div><div class="l">не скроллите мусор</div></div>
+          </div>
+          <div class="stat" style="text-align:left;display:flex;gap:1rem;align-items:center;">
+            <i data-lucide="target" style="width:1.5rem;height:1.5rem;color:var(--teal);"></i>
+            <div><div class="n" style="font-size:1.35rem;">Рост конверсии</div><div class="l">работаете с теми, кто платит</div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8 -->
+    <section class="slide" data-i="8">
+      <h1 class="wide">Leads.Konversus vs другие способы</h1>
+      <table class="compare">
+        <thead>
+          <tr>
+            <th></th>
+            <th>Обычный Profi</th>
+            <th>Контекстная реклама</th>
+            <th>Leads.Konversus</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Заявок в день</td>
+            <td>2–3</td>
+            <td>Зависит от бюджета</td>
+            <td class="win">20–25+</td>
+          </tr>
+          <tr>
+            <td>Фильтрация</td>
+            <td>Нет</td>
+            <td>Частичная</td>
+            <td class="win">15+ параметров</td>
+          </tr>
+          <tr>
+            <td>Цена за заявку</td>
+            <td>«Бесплатно», но нет потока</td>
+            <td>500–1500 ₽</td>
+            <td class="win">100–400 ₽</td>
+          </tr>
+          <tr>
+            <td>Риск бана</td>
+            <td>Нет</td>
+            <td>Нет</td>
+            <td class="win">Минимальный (антидетект)</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- 9 -->
+    <section class="slide" data-i="9">
+      <h1 class="wide">Выберите свой тариф</h1>
+      <div class="grid-3">
+        <div class="tariff">
+          <div class="top">
+            <h3><i data-lucide="user"></i> Мастер</h3>
+            <div class="price">19 990 ₽/мес</div>
+            <div class="who">Частники</div>
+          </div>
+          <ul>
+            <li><i data-lucide="check"></i> До 5 фильтров</li>
+            <li><i data-lucide="check"></i> 1 Telegram-уведомление</li>
+            <li><i data-lucide="check"></i> Антидетект Light</li>
+          </ul>
+        </div>
+        <div class="tariff">
+          <div class="top">
+            <h3><i data-lucide="users"></i> Команда</h3>
+            <div class="price">30 000 ₽/мес</div>
+            <div class="who">Малые организации</div>
+          </div>
+          <ul>
+            <li><i data-lucide="check"></i> До 10 фильтров</li>
+            <li><i data-lucide="check"></i> 2 менеджера в TG</li>
+            <li><i data-lucide="check"></i> Антидетект Balanced</li>
+          </ul>
+        </div>
+        <div class="tariff">
+          <div class="top">
+            <h3><i data-lucide="building-2"></i> Бизнес</h3>
+            <div class="price">50 000 ₽/мес</div>
+            <div class="who">Крупные организации</div>
+          </div>
+          <ul>
+            <li><i data-lucide="check"></i> Фильтры без лимита</li>
+            <li><i data-lucide="check"></i> Любое число менеджеров + API</li>
+            <li><i data-lucide="check"></i> Антидетект Stealth</li>
+          </ul>
+        </div>
+      </div>
+      <div class="trial"><i data-lucide="sparkles" style="width:1.1rem;height:1.1rem;display:inline;vertical-align:-2px;"></i>
+        Пробный период: 7 дней за 7 000 ₽ — без привязки к основному тарифу
+      </div>
+    </section>
+
+    <!-- 10 -->
+    <section class="slide" data-i="10">
+      <h1 class="wide">6 причин выбрать Leads.Konversus</h1>
+      <div class="grid-6">
+        <div class="reason"><div class="ico"><i data-lucide="eye"></i></div><h3>Полнота</h3><p>Все заказы, а не малая часть</p></div>
+        <div class="reason"><div class="ico"><i data-lucide="crosshair"></i></div><h3>Точность</h3><p>Фильтры под ваш бизнес, без мусора</p></div>
+        <div class="reason"><div class="ico"><i data-lucide="zap"></i></div><h3>Скорость</h3><p>Telegram — вы первыми</p></div>
+        <div class="reason"><div class="ico"><i data-lucide="coins"></i></div><h3>Экономия</h3><p>100–400 ₽ vs 500–1500 ₽ в рекламе</p></div>
+        <div class="reason"><div class="ico"><i data-lucide="shield"></i></div><h3>Безопасность</h3><p>Аккаунт Profi под защитой</p></div>
+        <div class="reason"><div class="ico"><i data-lucide="puzzle"></i></div><h3>Простота</h3><p>Мы всё настраиваем за вас</p></div>
+      </div>
+    </section>
+
+    <!-- 11 -->
+    <section class="slide dark center" data-i="11">
+      <div class="brand" style="justify-content:center;"><i data-lucide="zap"></i> Leads.Konversus</div>
+      <h1>Начните получать 25+ квалифицированных заявок уже сегодня</h1>
+      <p class="lead" style="margin:1rem auto 0;">Пробная неделя за 7 000 ₽ — убедитесь, что заявки есть и они качественные.</p>
+      <p class="lead muted" style="margin:.5rem auto 0;">Сайт: leads.konversus.ru · напишите нам в Telegram</p>
+      <a class="cta-btn" href="https://leads.konversus.ru" target="_blank" rel="noopener">
+        Попробовать неделю <i data-lucide="arrow-right"></i>
+      </a>
+    </section>
+
+    <!-- 12 -->
+    <section class="slide dark center contacts" data-i="12">
+      <div class="brand" style="justify-content:center;"><i data-lucide="zap"></i> Leads.Konversus</div>
+      <h1>Остались вопросы? Мы на связи</h1>
+      <p class="lead" style="margin:1.5rem auto 0;font-size:1.25rem;">
+        Сайт: <a href="https://leads.konversus.ru" target="_blank" rel="noopener">leads.konversus.ru</a>
+      </p>
+      <p class="lead muted" style="margin:.75rem auto 0;">Telegram — менеджер / бот сервиса</p>
+      <p class="lead muted" style="margin:2rem auto 0;font-size:.95rem;">Спасибо за внимание · Zoom-презентация для партнёров</p>
+    </section>
+  </div>
+
+  <nav class="nav" aria-label="Навигация по слайдам">
+    <button type="button" id="prev"><i data-lucide="chevron-left"></i> Назад</button>
+    <span id="counter">1 / 13</span>
+    <button type="button" id="next">Вперёд <i data-lucide="chevron-right"></i></button>
+  </nav>
+
+  <script>
+    lucide.createIcons();
+    const slides = [...document.querySelectorAll(".slide")];
+    let i = 0;
+    const counter = document.getElementById("counter");
+    function show(n) {
+      i = Math.max(0, Math.min(slides.length - 1, n));
+      slides.forEach((s, idx) => s.classList.toggle("active", idx === i));
+      counter.textContent = (i + 1) + " / " + slides.length;
+      history.replaceState(null, "", "#" + (i + 1));
+    }
+    document.getElementById("prev").onclick = () => show(i - 1);
+    document.getElementById("next").onclick = () => show(i + 1);
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowRight" || e.key === " " || e.key === "PageDown") { e.preventDefault(); show(i + 1); }
+      if (e.key === "ArrowLeft" || e.key === "PageUp") { e.preventDefault(); show(i - 1); }
+      if (e.key === "Home") show(0);
+      if (e.key === "End") show(slides.length - 1);
+      if (e.key === "f" || e.key === "F") {
+        if (!document.fullscreenElement) document.documentElement.requestFullscreen?.();
+        else document.exitFullscreen?.();
+      }
+    });
+    const hash = parseInt(location.hash.replace("#", ""), 10);
+    show(Number.isFinite(hash) && hash >= 1 ? hash - 1 : 0);
+  </script>
+</body>
+</html>

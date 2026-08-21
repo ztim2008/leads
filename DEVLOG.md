@@ -617,3 +617,26 @@ Partner buys VPS, downloads zip, fills config.json (Profi login/password + Teleg
 - Создать учётку напарника в **Команда** и обкатать CRM
 - По желанию: 4.11.3; пресет «быстрее» на пилоте только осознанно
 - **Не** этап 6 AI, 4.9 бот, deep scan без команды
+
+## Итоги дня · 21 августа 2026 (вечер) — Zoom-колода партнёрам
+
+### Сделано
+- **Partner Zoom deck:** PowerPoint + HTML-презентация (13 слайдов: титул, аудитории A/B, проблема 10%/90%, решение, фильтры, антидетект, результаты, сравнение, тарифы, 6 УТП, CTA, контакты)
+- Lucide-иконки, диаграммы, таблица сравнения; HTML: ←/→, `F` fullscreen
+- Скрипт пересборки PPTX: `scripts/build-partner-pptx.py`
+- В колоде маркетинговые тарифы из брифа Zoom (отдельно от операторской экономики в LOGISTICS)
+
+### Файлы
+- `public/partner-zoom.html`, `public/Leads-Konversus-Partner-Zoom.pptx`
+- `public/presentations/partner-zoom/` (index.html, pptx, README)
+- `scripts/build-partner-pptx.py`
+
+### Production
+- `npm run build` ✅ · `localhost:3005` → **200**
+- Deck: `/partner-zoom.html` и `/Leads-Konversus-Partner-Zoom.pptx` → **200**
+- PM2: `leads-konversus` рестарт после билда; `profiOnHub: false`
+
+### Осталось / завтра
+- Создать учётку sales в **Команда**, обкатать CRM
+- При необходимости: выровнять слайд тарифов с реальной офертой; QR / ссылка TG-менеджера
+- **Не** этап 6 AI, 4.9, deep scan без команды
