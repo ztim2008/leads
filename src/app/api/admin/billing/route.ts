@@ -21,7 +21,7 @@ export async function GET() {
   if (!u || u.role !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const partners = await db.user.findMany({
-    where: { role: { not: "admin" } },
+    where: { role: "user" },
     include: {
       workspaces: {
         include: {

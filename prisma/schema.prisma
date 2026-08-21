@@ -20,15 +20,66 @@ model User {
   phone        String?
   telegram     String?
   avatar       String?
+  /// admin | sales | user (партнёр)
   role         String   @default("user")
+  /// false = вход запрещён (для sales / служебных учёток)
+  loginEnabled Boolean  @default(true) @map("login_enabled")
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  workspaces    Workspace[]
-  subscription  Subscription?
-  sessions      Session[]
+  workspaces       Workspace[]
+  subscription     Subscription?
+  sessions         Session[]
+  crmClientsOwned  CrmClient[] @relation("CrmOwner")
+  crmClientsCreated CrmClient[] @relation("CrmCreator")
 
   @@map("users")
+}
+
+/// Воронка «Наши клиенты» (потенциал → подключен). Не путать с партнёром-tenant.
+model CrmClient {
+  id               String    @id @default(uuid())
+  name             String
+  niche            String?
+  city             String?
+  /// lead | zoom | agreed | ready | connected | paused | rejected
+  status           String    @default("lead")
+  /// ads | profi | referral | zoom | other
+  source           String?   @map("lead_source")
+  notes            String?   @db.Text
+  nextStep         String?   @map("next_step")
+  nextStepAt       DateTime? @map("next_step_at")
+  ownerId          String?   @map("owner_id")
+  createdById      String?   @map("created_by_id")
+  /// Связь с уже подключённым партнёром (workspace)
+  linkedWorkspaceId String?  @unique @map("linked_workspace_id")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  owner            User?         @relation("CrmOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  createdBy        User?         @relation("CrmCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  linkedWorkspace  Workspace?    @relation(fields: [linkedWorkspaceId], references: [id], onDelete: SetNull)
+  contacts         CrmContact[]
+
+  @@index([status])
+  @@index([ownerId])
+  @@map("crm_clients")
+}
+
+model CrmContact {
+  id        String   @id @default(uuid())
+  clientId  String   @map("client_id")
+  /// telegram | phone | email | other
+  type      String
+  value     String
+  label     String?
+  isPrimary Boolean  @default(false) @map("is_primary")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  client CrmClient @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@map("crm_contacts")
 }
 
 model Session {
@@ -57,6 +108,7 @@ model Workspace {
   settings        Settings?
   subscription    Subscription?
   billingInvoices BillingInvoice[]
+  crmClient       CrmClient?
 
   @@map("workspaces")
 }

@@ -7,6 +7,9 @@ export async function POST(req: NextRequest) {
   const { email, password } = await req.json();
   const user = await db.user.findUnique({ where: { email } });
   if (!user?.passwordHash) return NextResponse.json({ error: "no password" }, { status: 401 });
+  if (user.loginEnabled === false) {
+    return NextResponse.json({ error: "disabled" }, { status: 403 });
+  }
   const ok = await compare(password, user.passwordHash);
   if (!ok) return NextResponse.json({ error: "wrong password" }, { status: 401 });
 

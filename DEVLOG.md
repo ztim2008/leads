@@ -589,3 +589,32 @@ Partner buys VPS, downloads zip, fills config.json (Profi login/password + Teleg
 **Открытые вопросы:**
 - Проверить в админке Крафтума, что блок «HTML-код» пропускает `<script>` (иначе — iframe-вариант).
 - На сайте дубль карточки «с террасой 2,3×7 м» (435 000 и 455 000) — уточнить у заказчика.
+
+## Итоги дня · 21 августа 2026
+
+### Сделано
+- **Sales-пакет:** Zoom-сценарий, CJM, SMS-питчи, шпаргалка HTML/PDF; переписаны `LOGISTICS.md`, Path E, `ONBOARDING-PATHS.md` под цены 5k/2k/1.7k/40₽ и роли напарник→админ
+- **CRM «Наши клиенты»** (`/dashboard/crm`): карточки, контакты, статусы воронки, заметки, дата следующего шага, фильтры «сегодня / просрочено»
+- **Роль `sales`:** напарник видит только свои карточки; админ — все (+ «Только мои»)
+- **Команда** (`/dashboard/admin/team`): создать sales, сброс пароля, вкл/выкл вход
+- UI: компактная таблица, добавление и карточка во всплывающих окнах
+- Списки партнёров/мониторинг фильтруют `role: "user"` (sales не путается с партнёрами)
+
+### Файлы
+- `prisma/schema.prisma`, `prisma/migrations/20260821120000_crm_clients_sales_role/`
+- `src/app/dashboard/crm/`, `src/app/api/crm/`, `src/components/crm/`
+- `src/app/dashboard/admin/team/`, `src/app/api/admin/team/`, `src/components/admin/team-admin-app.tsx`
+- `src/lib/auth/roles.ts`, `src/lib/crm/*`, `src/middleware.ts`, `src/app/dashboard/layout.tsx`
+- `docs/CJM_PARTNER_SALES.md`, `SALES_ZOOM_SCRIPT.md`, `SALES_SMS_PITCHES.md`, `CRM_SALES_ROLE.md`, `sales-cheat-sheet.*`, `LOGISTICS.md`, `PATH-E-ZERO-TOUCH.md`, `PLAN`, `DEVLOG`
+
+### Production
+- `npm run build` ✅ · `localhost:3005` → **200**
+- PM2: `leads-konversus` / `leads-health` **online**; `leads-profi` нет
+- `profiOnHub: false`; пилот не рестартили
+- Пилот RysyevIV: HB ~4 мин, CB **CLOSED**, lastError нет; сегодня **9** заявок; всего лидов **2337**; CRM-карточек: **1**
+- CRM-таблицы в БД применены (`db push` + SQL миграция в git)
+
+### Осталось / завтра
+- Создать учётку напарника в **Команда** и обкатать воронку
+- По желанию: 4.11.3 утренняя сводка
+- **Не** этап 6 AI и 4.9 бот без команды

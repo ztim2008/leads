@@ -52,7 +52,7 @@ export async function executeAction(
 
 async function listPartners(): Promise<{ ok: boolean; message: string }> {
   const partners = await db.user.findMany({
-    where: { role: { not: "admin" } },
+    where: { role: "user" },
     include: { subscription: true, workspaces: { include: { _count: { select: { leads: true } } } } },
     orderBy: { createdAt: "desc" },
     take: 20,

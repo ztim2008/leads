@@ -30,7 +30,13 @@ export default function AuthPage() {
 
     if (apiRes.ok) {
       const d = await apiRes.json().catch(() => ({}));
-      window.location.href = d.role === "admin" ? "/dashboard/admin/ops" : "/dashboard";
+      const role = d.role as string;
+      window.location.href =
+        role === "admin"
+          ? "/dashboard/admin/ops"
+          : role === "sales"
+            ? "/dashboard/crm"
+            : "/dashboard";
     } else {
       setError("Неверный email или пароль");
     }

@@ -10,11 +10,14 @@ import {
   Activity,
   Radio,
   SlidersHorizontal,
+  Users,
+  UserCog,
 } from "lucide-react";
 import ThemeToggle from "@/components/layout/theme-toggle";
 import StatusIndicator from "@/components/layout/status-indicator";
 import SignOutButton from "@/components/layout/signout-button";
 import ExitImpersonationButton from "@/components/layout/exit-impersonation-button";
+import { isAdminRole, isSalesRole, ROLE_LABELS } from "@/lib/auth/roles";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -41,10 +44,11 @@ export default async function DashboardLayout({ children }: { children: React.Re
     );
   }
 
-  const dbUser = await db.user.findUnique({ where: { id: user.id } });
+  await db.user.findUnique({ where: { id: user.id } });
   const isImpersonating = !!user.impersonatorId;
-  const isAdmin = user.role === "admin" && !isImpersonating;
-  const isPartner = !isAdmin;
+  const isAdmin = isAdminRole(user.role) && !isImpersonating;
+  const isSales = isSalesRole(user.role) && !isImpersonating;
+  const isPartner = !isAdmin && !isSales;
 
   const PARTNER_NAV = [
     { href: "/dashboard", label: "Обзор", icon: LayoutDashboard },
@@ -56,16 +60,20 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const ADMIN_OPERATOR_NAV = [
     { href: "/dashboard/admin/ops", label: "Пульт", icon: Radio },
     { href: "/dashboard/admin", label: "Партнёры", icon: Shield },
+    { href: "/dashboard/crm", label: "Клиенты", icon: Users },
     { href: "/dashboard/admin/billing", label: "Счета", icon: CreditCard },
+    { href: "/dashboard/admin/team", label: "Команда", icon: UserCog },
     { href: "/dashboard/admin/assistant", label: "Помощник", icon: Sparkles },
     { href: "/dashboard/admin/system", label: "Хаб", icon: Activity },
   ];
 
+  const SALES_NAV = [{ href: "/dashboard/crm", label: "Клиенты", icon: Users }];
+
   const roleLabel = isImpersonating
     ? `Просмотр: ${user.email}`
-    : isAdmin
-      ? "Администратор"
-      : "Партнёр";
+    : ROLE_LABELS[user.role || ""] || user.role || "—";
+
+  const homeHref = isAdmin ? "/dashboard/admin/ops" : isSales ? "/dashboard/crm" : "/dashboard";
 
   return (
     <div style={{ minHeight: "100vh", background: "var(--bg-layer)", display: "flex" }}>
@@ -85,7 +93,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       >
         <div style={{ padding: "20px 20px 16px" }}>
           <Link
-            href={isAdmin ? "/dashboard/admin/ops" : "/dashboard"}
+            href={homeHref}
             style={{
               display: "flex",
               alignItems: "center",
@@ -148,6 +156,40 @@ export default async function DashboardLayout({ children }: { children: React.Re
             </>
           )}
 
+          {isSales && (
+            <>
+              <div style={{ margin: "4px 0 8px 14px", fontSize: "var(--text-xs)", fontWeight: 700, color: "var(--ink-muted)", textTransform: "uppercase", letterSpacing: 1, opacity: 0.6 }}>
+                Продажи
+              </div>
+              <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 2 }}>
+                {SALES_NAV.map((item) => (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 12,
+                        padding: "10px 14px",
+                        borderRadius: "var(--radius-sm)",
+                        fontSize: "var(--text-sm)",
+                        fontWeight: 500,
+                        color: "var(--ink-body)",
+                        textDecoration: "none",
+                      }}
+                    >
+                      <item.icon size={18} strokeWidth={1.75} />
+                      {item.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+              <p style={{ margin: "12px 14px", fontSize: "0.65rem", color: "var(--ink-muted)", lineHeight: 1.4 }}>
+                Видны только ваши клиенты. Подключение в системе делает администратор.
+              </p>
+            </>
+          )}
+
           {(isPartner || isImpersonating) && (
             <>
               <div style={{ margin: "12px 0 8px 14px", fontSize: "var(--text-xs)", fontWeight: 700, color: "var(--ink-muted)", textTransform: "uppercase", letterSpacing: 1, opacity: 0.6 }}>
@@ -194,8 +236,8 @@ export default async function DashboardLayout({ children }: { children: React.Re
                 width: 28,
                 height: 28,
                 borderRadius: "var(--radius-sm)",
-                background: isAdmin ? "#7c3aed20" : "var(--accent-soft)",
-                color: isAdmin ? "#7c3aed" : "var(--accent)",
+                background: isAdmin ? "#7c3aed20" : isSales ? "#0d948820" : "var(--accent-soft)",
+                color: isAdmin ? "#7c3aed" : isSales ? "#0d9488" : "var(--accent)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -216,7 +258,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </div>
       </aside>
       <main style={{ flex: 1, minWidth: 0, padding: "32px 36px" }}>
-        {!isAdmin && (
+        {isPartner && (
           <div style={{ marginBottom: 24, display: "flex", justifyContent: "flex-end" }}>
             <StatusIndicator />
           </div>

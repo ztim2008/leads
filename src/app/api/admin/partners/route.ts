@@ -22,7 +22,7 @@ export async function GET() {
   if (guard.error) return guard.error;
 
   const partners = await db.user.findMany({
-    where: { role: { not: "admin" } },
+    where: { role: "user" },
     include: {
       workspaces: { include: { sources: true, settings: true, _count: { select: { leads: true } } } },
       subscription: true,

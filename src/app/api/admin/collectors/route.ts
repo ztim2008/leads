@@ -41,7 +41,7 @@ export async function GET() {
 
   // Lead stats
   const today = new Date(); today.setHours(0,0,0,0);
-  const partnerWs = { workspace: { user: { role: { not: "admin" as const } } } };
+  const partnerWs = { workspace: { user: { role: "user" as const } } };
   const [total, todayLeads, profiCount, kworkCount] = await Promise.all([
     db.lead.count({ where: partnerWs }),
     db.lead.count({ where: { createdAt: { gte: today }, ...partnerWs } }),

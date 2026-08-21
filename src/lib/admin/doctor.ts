@@ -174,7 +174,7 @@ export async function diagnose(): Promise<DoctorReport> {
   const todayStart = new Date(todayMsk.getTime() - 3 * 3600 * 1000);
 
   const sources = await db.source.findMany({
-    where: { platform: "profi", workspace: { user: { role: { not: "admin" } } } },
+    where: { platform: "profi", workspace: { user: { role: "user" } } },
     include: { workspace: { include: { settings: true, _count: { select: { leads: true } } } } },
   });
   const todayCounts = await db.lead.groupBy({
@@ -324,7 +324,7 @@ export async function healSafe(
 
   if (heals.has("clear_stale")) {
     const sources = await db.source.findMany({
-      where: { platform: "profi", workspace: { user: { role: { not: "admin" } } } },
+      where: { platform: "profi", workspace: { user: { role: "user" } } },
     });
     for (const s of sources) {
       const cfg = (s.config as Record<string, unknown>) || {};

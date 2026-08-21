@@ -6,8 +6,10 @@ import { usePathname } from "next/navigation";
 const TABS = [
   { href: "/dashboard/admin/ops", label: "Пульт" },
   { href: "/dashboard/admin", label: "Все партнёры", exact: true },
+  { href: "/dashboard/crm", label: "Клиенты" },
   { href: "/dashboard/admin/new", label: "+ Подключить" },
   { href: "/dashboard/admin/billing", label: "Счета" },
+  { href: "/dashboard/admin/team", label: "Команда" },
   { href: "/dashboard/admin/assistant", label: "Помощник" },
   { href: "/dashboard/admin/system", label: "Хаб" },
 ];

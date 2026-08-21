@@ -16,9 +16,9 @@ export default async function AdminPartnersPage() {
     );
   }
 
-  const partnerCount = await db.user.count({ where: { role: { not: "admin" } } });
+  const partnerCount = await db.user.count({ where: { role: "user" } });
   const leadsTotal = await db.lead.count({
-    where: { workspace: { user: { role: { not: "admin" } } } },
+    where: { workspace: { user: { role: "user" } } },
   });
 
   return (

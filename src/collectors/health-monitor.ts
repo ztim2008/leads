@@ -97,7 +97,7 @@ async function adminChannel() {
 async function getPartnersLegacy() {
   try {
     const wss = await db.workspace.findMany({
-      where: { user: { role: { not: "admin" } } },
+      where: { user: { role: "user" } },
       include: {
         user: { select: { email: true } },
         settings: { select: { telegramChatId: true, telegramToken: true } },
@@ -140,7 +140,7 @@ type FleetRow = {
 
 async function fleetSnapshot(): Promise<FleetRow[]> {
   const sources = await db.source.findMany({
-    where: { platform: "profi", workspace: { user: { role: { not: "admin" } } } },
+    where: { platform: "profi", workspace: { user: { role: "user" } } },
     include: { workspace: { include: { user: { select: { email: true, role: true } } } } },
   });
   const todayMsk = new Date(Date.now() + 3 * 3600 * 1000);
@@ -202,7 +202,7 @@ async function fleetSnapshot(): Promise<FleetRow[]> {
 
 async function alertOfflineAgents(admin: { token: string; chat: string }) {
   const sources = await db.source.findMany({
-    where: { platform: "profi", enabled: true, workspace: { user: { role: { not: "admin" } } } },
+    where: { platform: "profi", enabled: true, workspace: { user: { role: "user" } } },
   });
   for (const s of sources) {
     const cfg = (s.config as Record<string, unknown>) || {};
