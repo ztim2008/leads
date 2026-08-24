@@ -1,7 +1,9 @@
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth/auth";
 import PartnerFiltersForm from "@/components/dashboard/partner-filters-form";
+import ReplyTemplatesForm from "@/components/dashboard/reply-templates-form";
 import { filtersFromConfig } from "@/lib/leads/partner-filters";
+import { parseReplyTemplates } from "@/lib/leads/reply-templates";
 
 export default async function SettingsPage() {
   const session = await auth();
@@ -14,7 +16,7 @@ export default async function SettingsPage() {
       <div>
         <h1 style={{ fontSize: "var(--text-2xl)", fontWeight: 700, marginBottom: 8 }}>Настройки</h1>
         <p style={{ color: "var(--ink-muted)", fontSize: "var(--text-sm)" }}>
-          Фильтры партнёра — в кабинете партнёра (войти как он или открыть «Просмотр»).
+          Фильтры и шаблоны отклика — в кабинете партнёра (войти как он или открыть «Просмотр»).
           Интервал Profi и стоп сбора — только с Пульта, без смены входа.
         </p>
       </div>
@@ -29,14 +31,16 @@ export default async function SettingsPage() {
   const source = await db.source.findFirst({ where: { workspaceId: workspace.id, platform: "profi" } });
   const cfg = (source?.config as Record<string, unknown>) || {};
   const initial = filtersFromConfig(cfg, settings as unknown as Record<string, unknown>);
+  const replyTemplates = parseReplyTemplates(settings.responseTemplate);
 
   return (
     <div>
-      <h1 style={{ fontSize: "var(--text-2xl)", fontWeight: 700, marginBottom: 4 }}>Фильтры</h1>
+      <h1 style={{ fontSize: "var(--text-2xl)", fontWeight: 700, marginBottom: 4 }}>Фильтры и шаблоны</h1>
       <p style={{ color: "var(--ink-muted)", fontSize: "var(--text-sm)", marginBottom: 16 }}>
         Плюс и минус отдельно для заголовка и для текста. «Сайт» = сайты, сайтов, сайтами.
       </p>
       <PartnerFiltersForm workspaceId={workspace.id} initial={initial} />
+      <ReplyTemplatesForm workspaceId={workspace.id} initial={replyTemplates} />
     </div>
   );
 }

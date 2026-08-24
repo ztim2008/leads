@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { auth } from "@/lib/auth/auth";
 import { applyPartnerFilters } from "@/lib/leads/partner-filters";
+import {
+  sanitizeReplyTemplatesInput,
+  serializeReplyTemplates,
+} from "@/lib/leads/reply-templates";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -21,6 +25,17 @@ export async function POST(req: Request) {
   }
 
   if (user.role !== "admin") {
+    if (Object.prototype.hasOwnProperty.call(fields, "replyTemplates")) {
+      const list = sanitizeReplyTemplatesInput(fields.replyTemplates);
+      const serialized = serializeReplyTemplates(list);
+      await db.settings.upsert({
+        where: { workspaceId: workspace.id },
+        create: { workspaceId: workspace.id, responseTemplate: serialized },
+        update: { responseTemplate: serialized },
+      });
+      return NextResponse.json({ ok: true, replyTemplates: list });
+    }
+
     const filters = await applyPartnerFilters(workspace.id, {
       titleKeywords: fields.titleKeywords,
       titleMinusKeywords: fields.titleMinusKeywords,
@@ -34,6 +49,12 @@ export async function POST(req: Request) {
       clientGender: fields.clientGender,
     });
     return NextResponse.json({ ok: true, filters });
+  }
+
+  if (Object.prototype.hasOwnProperty.call(fields, "replyTemplates")) {
+    const list = sanitizeReplyTemplatesInput(fields.replyTemplates);
+    fields.responseTemplate = serializeReplyTemplates(list);
+    delete fields.replyTemplates;
   }
 
   await db.settings.upsert({

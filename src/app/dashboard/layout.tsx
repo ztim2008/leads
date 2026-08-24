@@ -53,7 +53,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const PARTNER_NAV = [
     { href: "/dashboard", label: "Обзор", icon: LayoutDashboard },
     { href: "/dashboard/leads", label: "Заявки", icon: Inbox },
-    { href: "/dashboard/settings", label: "Фильтры", icon: SlidersHorizontal },
+    { href: "/dashboard/settings", label: "Фильтры · шаблоны", icon: SlidersHorizontal },
     { href: "/dashboard/billing", label: "Счёт", icon: CreditCard },
   ];
 
@@ -220,7 +220,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
               </ul>
               {isPartner && !isImpersonating && (
                 <p style={{ margin: "12px 14px", fontSize: "0.65rem", color: "var(--ink-muted)", lineHeight: 1.4 }}>
-                  Фильтры заявок — в разделе «Фильтры». Profi и VPS настраивает администратор.
+                  Фильтры и шаблоны отклика — в разделе «Фильтры · шаблоны». Profi и VPS настраивает администратор.
                 </p>
               )}
             </>

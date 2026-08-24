@@ -3,6 +3,10 @@ import { sendTrackedLeadNotification } from "@/lib/telegram/delivery";
 import { extractBudget } from "@/lib/connectors/profi";
 import { matchedKeyword, parseFeedCard } from "@/lib/leads/parse-feed-card";
 import { evaluateLeadFilters, filtersFromConfig } from "@/lib/leads/partner-filters";
+import {
+  fillAllReplyTemplates,
+  parseReplyTemplates,
+} from "@/lib/leads/reply-templates";
 import { assertCollectionAllowed, recordNewLead } from "@/lib/billing/quota";
 import { writeFileSync } from "fs";
 import { join } from "path";
@@ -81,6 +85,19 @@ export async function saveAndNotify(lead: any, source: any, s: any, responseText
   if (s?.telegramChatId && s?.telegramToken && s?.telegramAlerts !== false) {
     const budgetStr = parsed.budgetLabel || fmtBudget(budgetMin) || fmtBudget(budgetMax) || "не указан";
     const blob = `${lead.title || ""} ${lead.description || ""}`;
+    const responsePrice = lead.responsePrice || parsed.responsePrice;
+    const templates = parseReplyTemplates(s?.responseTemplate);
+    const replyTexts = fillAllReplyTemplates(templates, {
+      author,
+      title: lead.title,
+      city,
+      budget: budgetStr,
+      reviewCount,
+      responsePrice,
+      url: lead.url,
+    });
+    const legacyText =
+      typeof responseText === "string" && responseText.trim() ? responseText.trim() : undefined;
     sendTrackedLeadNotification({
       workspaceId: source.workspaceId,
       sourceId: source.id,
@@ -95,7 +112,7 @@ export async function saveAndNotify(lead: any, source: any, s: any, responseText
         city: city || undefined,
         remote: parsed.remote,
         responses: parsed.responses,
-        responsePrice: lead.responsePrice || parsed.responsePrice,
+        responsePrice,
         ageLabel: parsed.ageLabel,
         matchedKeyword: matchedKeyword(
           blob,
@@ -107,6 +124,8 @@ export async function saveAndNotify(lead: any, source: any, s: any, responseText
         reviewCount: reviewCount ?? undefined,
         newbie: parsed.newbie,
         riskHint: parsed.riskHint,
+        replyTexts: replyTexts.length ? replyTexts : undefined,
+        responseText: replyTexts.length ? undefined : legacyText,
       },
     }).then((ok: boolean) => {
       if (!ok) console.error("[shared] Telegram send FAILED for", lead.title?.slice(0, 40));

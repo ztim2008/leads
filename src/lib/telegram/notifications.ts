@@ -1,4 +1,4 @@
-// Telegram-уведомления v5.1 — заголовок + чипы + суть задачи + сигнал по заказчику
+// Telegram-уведомления v5.2 — карточка + блок «Текст отклика» + copy_text
 
 export interface LeadNotification {
   platform: string;
@@ -20,12 +20,15 @@ export interface LeadNotification {
   reviewCount?: number;
   newbie?: boolean;
   riskHint?: string;
+  /** Заполненные шаблоны партнёра (без AI). */
+  replyTexts?: Array<{ name: string; text: string }>;
   /** @deprecated */
   reasoning?: string;
   responseText?: string;
 }
 
 const DEFAULT_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN || "";
+const TG_COPY_MAX = 256;
 
 export function formatLeadTelegram(lead: LeadNotification): string {
   const hot =
@@ -66,6 +69,18 @@ export function formatLeadTelegram(lead: LeadNotification): string {
 
   if (lead.riskHint) lines.push(`⚠ ${escapeHtml(lead.riskHint)}`);
 
+  const replies = resolveReplyTexts(lead);
+  if (replies.length) {
+    lines.push("");
+    lines.push("✍️ <b>Текст отклика</b>");
+    lines.push("<i>Скопируйте и вставьте на Profi сами. Авто-отправки нет.</i>");
+    for (const r of replies) {
+      lines.push("");
+      lines.push(`<b>${escapeHtml(r.name)}</b>`);
+      lines.push(`<pre>${escapeHtml(r.text.slice(0, 3500))}</pre>`);
+    }
+  }
+
   return lines.join("\n");
 }
 
@@ -78,10 +93,7 @@ export async function sendLeadNotification(
   if (!token || !chatId || !lead.url) return false;
 
   const text = formatLeadTelegram(lead);
-  const buttons: Array<Array<{ text: string; url?: string }>> = [[{ text: "Открыть на Profi", url: lead.url }]];
-  if (lead.platform && !/profi/i.test(lead.platform)) {
-    buttons[0][0].text = "Открыть заказ";
-  }
+  const buttons = buildKeyboard(lead);
 
   try {
     const body = {
@@ -117,6 +129,37 @@ export async function sendLeadNotification(
     console.error("[telegram] Ошибка:", error);
     return false;
   }
+}
+
+type TgButton = {
+  text: string;
+  url?: string;
+  copy_text?: { text: string };
+};
+
+function buildKeyboard(lead: LeadNotification): TgButton[][] {
+  const openLabel = lead.platform && !/profi/i.test(lead.platform) ? "Открыть заказ" : "Открыть на Profi";
+  const rows: TgButton[][] = [[{ text: openLabel, url: lead.url }]];
+
+  const copyRow: TgButton[] = [];
+  for (const r of resolveReplyTexts(lead)) {
+    if (r.text.length === 0 || r.text.length > TG_COPY_MAX) continue;
+    const label = `📋 ${r.name}`.slice(0, 64);
+    copyRow.push({ text: label, copy_text: { text: r.text } });
+    if (copyRow.length >= 3) break;
+  }
+  if (copyRow.length) rows.push(copyRow);
+  return rows;
+}
+
+function resolveReplyTexts(lead: LeadNotification): Array<{ name: string; text: string }> {
+  if (lead.replyTexts?.length) {
+    return lead.replyTexts.filter((r) => r.text?.trim()).slice(0, 3);
+  }
+  if (lead.responseText?.trim()) {
+    return [{ name: "Отклик", text: lead.responseText.trim() }];
+  }
+  return [];
 }
 
 function escapeHtml(text: string): string {

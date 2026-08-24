@@ -4,6 +4,10 @@
 import { db } from "@/lib/db";
 import { sendTrackedLeadNotification } from "@/lib/telegram/delivery";
 import { matchedKeyword, parseFeedCard } from "@/lib/leads/parse-feed-card";
+import {
+  fillAllReplyTemplates,
+  parseReplyTemplates,
+} from "@/lib/leads/reply-templates";
 import { assertCollectionAllowed, recordNewLead } from "@/lib/billing/quota";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -67,6 +71,21 @@ export async function POST(req: NextRequest) {
       if (settings?.telegramChatId && settings?.telegramToken && settings?.telegramAlerts !== false) {
         const parsed = parseFeedCard(String(lead.description || ""), String(lead.title || ""));
         const blob = `${lead.title || ""} ${lead.description || ""}`;
+        const budget =
+          parsed.budgetLabel ||
+          (lead.budgetMin ? Number(lead.budgetMin).toLocaleString("ru-RU") + " ₽" : "не указан");
+        const responsePrice = lead.responsePrice || parsed.responsePrice;
+        const author = lead.author || parsed.author;
+        const reviewCount = lead.reviewCount ?? parsed.reviewCount;
+        const replyTexts = fillAllReplyTemplates(parseReplyTemplates(settings.responseTemplate), {
+          author,
+          title: lead.title,
+          city: lead.city || parsed.city,
+          budget,
+          reviewCount,
+          responsePrice,
+          url: lead.url,
+        });
         sendTrackedLeadNotification({
           workspaceId: source.workspaceId,
           sourceId: source.id,
@@ -76,20 +95,21 @@ export async function POST(req: NextRequest) {
           lead: {
             platform: source.platform,
             title: lead.title || "",
-            budget: parsed.budgetLabel || (lead.budgetMin ? Number(lead.budgetMin).toLocaleString("ru-RU") + " ₽" : "не указан"),
+            budget,
             url: lead.url || "",
             city: lead.city || parsed.city,
             remote: parsed.remote,
             responses: parsed.responses,
-            responsePrice: lead.responsePrice || parsed.responsePrice,
+            responsePrice,
             ageLabel: parsed.ageLabel,
             matchedKeyword: matchedKeyword(blob, settings.keywords),
             clientHint: parsed.clientHint,
             taskSnippet: parsed.taskSnippet,
-            author: lead.author || parsed.author,
-            reviewCount: lead.reviewCount ?? parsed.reviewCount,
+            author: author || undefined,
+            reviewCount: reviewCount ?? undefined,
             newbie: parsed.newbie,
             riskHint: parsed.riskHint,
+            replyTexts: replyTexts.length ? replyTexts : undefined,
           },
         }).catch(() => {});
       }
