@@ -640,3 +640,32 @@ Partner buys VPS, downloads zip, fills config.json (Profi login/password + Teleg
 - Создать учётку sales в **Команда**, обкатать CRM
 - При необходимости: выровнять слайд тарифов с реальной офертой; QR / ссылка TG-менеджера
 - **Не** этап 6 AI, 4.9, deep scan без команды
+
+## Итоги дня · 24 августа 2026
+
+### Сделано
+- Утро: `git pull` up to date, хаб HTTP **200**, PM2 `leads-konversus` / `leads-health` online, `leads-profi` нет; `profiOnHub: false`
+- Пилот RysyevIV: HB свежий, CB **CLOSED**, агент `running` (не рестартили)
+- **Шаблоны отклика 1–3** в кабинете партнёра + блок «Текст отклика» в TG с `copy_text` (≤256); без AI и без авто-отправки на Profi — коммит `cd9911b`
+- Обсуждение тарифов / deep scan по цене отклика — **не внедряли**; полу-автомат шаблонов — да
+- **konversus.ru `/portfolio`**: витрина сервисов и сайтов со скриншотами Nordic, SEO (sitemap + JSON-LD + OG), оффер «Портфолио · Тимофеев Алексей», тексты с title/description сайтов; demo.nordic-builder.ru убран. Deploy `konversus-fpb`. Коммит на avitos: `e31ffe9` (push через ключ nordicbuilder)
+
+### Файлы (leads)
+- `src/lib/leads/reply-templates.ts` (+test), `src/components/dashboard/reply-templates-form.tsx`
+- `src/lib/telegram/notifications.ts`, `src/collectors/shared.ts`, `src/app/api/settings/route.ts`, settings/layout
+
+### Файлы (konversus.ru)
+- `src/app/portfolio/`, `src/data/nordic-portfolio.ts`, `portfolio/services/*.jpg`
+- nav/footer/about/sitemap, `scripts/capture-nordic-portfolio.mjs`
+
+### Production
+- leads: `npm run build` ✅ · `localhost:3005` → **200** · PM2 konversus+health **online**
+- Пилот на закрытие: сегодня **18** заявок, всего **327**, CB **CLOSED**, HB ~5 мин, lastError нет
+- konversus.ru `/portfolio` → **200**
+
+### Осталось / завтра
+- Обкатать CRM: создать sales в **Команда**
+- Партнёр: завести 1–3 шаблона отклика и проверить copy в TG
+- По желанию: 4.11.3 утренняя сводка; TG «счёт не оплачен»
+- **Не** этап 6 AI, 4.9 бот, deep scan, рестарт `leads-agent-v2` без команды
+
