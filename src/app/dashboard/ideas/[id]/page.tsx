@@ -8,6 +8,9 @@ import Link from "next/link";
 import IdeaStatusControl from "@/components/ideas/idea-status-control";
 import IdeaComments from "@/components/ideas/idea-comments";
 import IdeaStatusBadge from "@/components/ideas/idea-status-badge";
+import IdeaAnalysisPanel from "@/components/ideas/idea-analysis";
+import { parseIdeaAnalysis } from "@/lib/ideas/analyze";
+import type { IdeaAnalysis } from "@/lib/ideas/analysis-types";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -161,29 +164,17 @@ export default async function IdeaDetailPage({ params }: Props) {
         </p>
       </div>
 
-      <div
-        style={{
-          border: "1px dashed var(--border)",
-          borderRadius: "var(--radius-lg)",
-          background: "var(--bg-surface)",
-          padding: 18,
-          marginBottom: 20,
-        }}
-      >
-        <h2
-          style={{
-            fontSize: "var(--text-sm)",
-            fontWeight: 700,
-            color: "var(--ink-heading)",
-            margin: "0 0 6px",
-          }}
-        >
-          Анализ агента
-        </h2>
-        <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--ink-muted)" }}>
-          Анализ — скоро. Граф и рекомендации появятся на следующем шаге.
-        </p>
-      </div>
+      <IdeaAnalysisPanel
+        ideaId={idea.id}
+        initialAnalysis={
+          idea.analysis
+            ? (parseIdeaAnalysis(idea.analysis, idea.title) as IdeaAnalysis)
+            : null
+        }
+        analyzedAt={idea.analyzedAt?.toISOString() ?? null}
+        status={idea.status}
+        canRefresh
+      />
 
       <div
         style={{

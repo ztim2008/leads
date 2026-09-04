@@ -80,6 +80,10 @@ export default function IdeaCreateForm() {
         />
       </label>
 
+      <p style={{ margin: 0, fontSize: "var(--text-xs)", color: "var(--ink-muted)", lineHeight: 1.45 }}>
+        После создания агент разложит идею на за/против, сильные/слабые стороны, риски и следующие шаги.
+      </p>
+
       {error && (
         <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--red)" }}>{error}</p>
       )}
@@ -99,7 +103,7 @@ export default function IdeaCreateForm() {
             cursor: busy ? "wait" : "pointer",
           }}
         >
-          {busy ? "Сохраняю…" : "Создать идею"}
+          {busy ? "Создаю и анализирую…" : "Создать идею"}
         </button>
         <button
           type="button"

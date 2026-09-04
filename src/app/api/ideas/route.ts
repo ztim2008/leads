@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireIdeasUser } from "@/lib/ideas/guard";
 import { isIdeaStatus, parseTags } from "@/lib/ideas/constants";
 import { displayName, loadUsersByIds } from "@/lib/ideas/users";
+import { runIdeaAnalysis } from "@/lib/ideas/analyze";
 import { db } from "@/lib/db";
 
 /** GET /api/ideas?status=draft — список идей */
@@ -77,16 +78,32 @@ export async function POST(req: NextRequest) {
     },
   });
 
+  // MVP: сразу разбор агентом (последовательно, надёжнее фона)
+  let analysis = null;
+  let analyzedAt: string | null = null;
+  let status = idea.status;
+  try {
+    const result = await runIdeaAnalysis(idea.id, { force: true });
+    analysis = result.analysis;
+    const refreshed = await db.idea.findUnique({ where: { id: idea.id } });
+    analyzedAt = refreshed?.analyzedAt?.toISOString() ?? null;
+    status = refreshed?.status ?? "ready";
+  } catch (e) {
+    console.error("[api/ideas] auto-analyze failed", e instanceof Error ? e.message : e);
+  }
+
   return NextResponse.json(
     {
       idea: {
         id: idea.id,
         title: idea.title,
         body: idea.body,
-        status: idea.status,
+        status,
         tags: idea.tags,
         createdById: idea.createdById,
         createdAt: idea.createdAt.toISOString(),
+        analysis,
+        analyzedAt,
       },
     },
     { status: 201 },
