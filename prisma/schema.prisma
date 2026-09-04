@@ -335,9 +335,44 @@ model AppConfig {
   supportTelegram  String? @map("support_telegram")
   supportEmail     String? @map("support_email")
 
+  /// Whitelist email для Ideas Board («Партнеры идеи»). Админы имеют доступ всегда.
+  ideasBoardEmails String[] @default([]) @map("ideas_board_emails")
+
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("app_config")
+}
+
+/// Доска идей основателя + выбранных партнёров (MVP step 1: схема + доступ).
+model Idea {
+  id          String   @id @default(uuid())
+  title       String
+  body        String   @db.Text
+  status      String   @default("draft")
+  tags        String[] @default([])
+  createdById String   @map("created_by_id")
+  analysis    Json?
+  analyzedAt  DateTime? @map("analyzed_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  comments    IdeaComment[]
+
+  @@index([createdById])
+  @@index([status])
+  @@map("ideas")
+}
+
+model IdeaComment {
+  id        String   @id @default(uuid())
+  ideaId    String   @map("idea_id")
+  authorId  String   @map("author_id")
+  body      String   @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  idea      Idea     @relation(fields: [ideaId], references: [id], onDelete: Cascade)
+
+  @@index([ideaId])
+  @@index([authorId])
+  @@map("idea_comments")
 }
 
 model CrashLog {

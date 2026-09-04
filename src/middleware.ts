@@ -10,7 +10,8 @@ export default async function middleware(req: NextRequest) {
     if (
       path.startsWith("/dashboard") ||
       path.startsWith("/api/admin") ||
-      path.startsWith("/api/crm")
+      path.startsWith("/api/crm") ||
+      path.startsWith("/api/ideas")
     ) {
       return NextResponse.redirect(new URL("/auth", req.url));
     }
@@ -28,6 +29,7 @@ export default async function middleware(req: NextRequest) {
   const isSales = isSalesRole(payload.role);
   const isAdminRoute = path.startsWith("/dashboard/admin") || path.startsWith("/api/admin");
   const isCrmRoute = path.startsWith("/dashboard/crm") || path.startsWith("/api/crm");
+  const isIdeasRoute = path.startsWith("/dashboard/ideas") || path.startsWith("/api/ideas");
 
   if (isAdminRoute && !isAdmin) {
     return NextResponse.redirect(new URL(homePathForRole(payload.role), req.url));
@@ -37,7 +39,10 @@ export default async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL(homePathForRole(payload.role), req.url));
   }
 
-  // Напарник — только CRM, не кабинет партнёра и не корень дашборда
+  // Ideas: whitelist проверяется на странице/API (DB). Здесь — только не редиректить админа/sales с пути.
+  // (полный canAccessIdeas — в page + requireIdeasUser)
+
+  // Напарник — только CRM (+ Ideas если whitelist на уровне page), не кабинет партнёра
   if (isSales) {
     const partnerUi = [
       "/dashboard/leads",
@@ -47,14 +52,15 @@ export default async function middleware(req: NextRequest) {
       "/dashboard/billing",
     ];
     if (
-      path === "/dashboard" ||
-      partnerUi.some((p) => path === p || path.startsWith(p + "/"))
+      !isIdeasRoute &&
+      (path === "/dashboard" ||
+        partnerUi.some((p) => path === p || path.startsWith(p + "/")))
     ) {
       return NextResponse.redirect(new URL("/dashboard/crm", req.url));
     }
   }
 
-  // Админ — оператор, не сборщик
+  // Админ — оператор, не сборщик (Ideas Board — исключение: админ всегда может открыть)
   const partnerUi = [
     "/dashboard/leads",
     "/dashboard/sources",
@@ -62,7 +68,11 @@ export default async function middleware(req: NextRequest) {
     "/dashboard/analytics",
     "/dashboard/billing",
   ];
-  if (isAdmin && (path === "/dashboard" || partnerUi.some((p) => path === p || path.startsWith(p + "/")))) {
+  if (
+    isAdmin &&
+    !isIdeasRoute &&
+    (path === "/dashboard" || partnerUi.some((p) => path === p || path.startsWith(p + "/")))
+  ) {
     return NextResponse.redirect(new URL("/dashboard/admin/ops", req.url));
   }
 
@@ -74,5 +84,5 @@ export default async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/api/admin/:path*", "/api/crm/:path*"],
+  matcher: ["/dashboard/:path*", "/api/admin/:path*", "/api/crm/:path*", "/api/ideas/:path*"],
 };

@@ -12,6 +12,7 @@ import {
   type FlowTone,
 } from "@/components/admin/collector-flow-map";
 import SystemDoctor from "@/components/admin/system-doctor";
+import IdeasBoardAccessPanel from "@/components/admin/ideas-board-access-panel";
 
 type PartnerRow = {
   id: string;
@@ -245,6 +246,8 @@ export default function OpsConsole() {
       </p>
 
       <SystemDoctor />
+
+      <IdeasBoardAccessPanel />
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(120px, 1fr))", gap: 10, marginBottom: 20 }}>
         <Stat label="Партнёры" value={String(fleet.total)} />

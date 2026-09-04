@@ -12,12 +12,14 @@ import {
   SlidersHorizontal,
   Users,
   UserCog,
+  Lightbulb,
 } from "lucide-react";
 import ThemeToggle from "@/components/layout/theme-toggle";
 import StatusIndicator from "@/components/layout/status-indicator";
 import SignOutButton from "@/components/layout/signout-button";
 import ExitImpersonationButton from "@/components/layout/exit-impersonation-button";
 import { isAdminRole, isSalesRole, ROLE_LABELS } from "@/lib/auth/roles";
+import { canAccessIdeas } from "@/lib/ideas/access";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -49,6 +51,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const isAdmin = isAdminRole(user.role) && !isImpersonating;
   const isSales = isSalesRole(user.role) && !isImpersonating;
   const isPartner = !isAdmin && !isSales;
+  const showIdeasNav = await canAccessIdeas(user.email, isImpersonating ? "user" : user.role);
 
   const PARTNER_NAV = [
     { href: "/dashboard", label: "Обзор", icon: LayoutDashboard },
@@ -68,6 +71,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   ];
 
   const SALES_NAV = [{ href: "/dashboard/crm", label: "Клиенты", icon: Users }];
+  const IDEAS_NAV = [{ href: "/dashboard/ideas", label: "Партнеры идеи", icon: Lightbulb }];
 
   const roleLabel = isImpersonating
     ? `Просмотр: ${user.email}`
@@ -223,6 +227,37 @@ export default async function DashboardLayout({ children }: { children: React.Re
                   Фильтры и шаблоны отклика — в разделе «Фильтры · шаблоны». Profi и VPS настраивает администратор.
                 </p>
               )}
+            </>
+          )}
+
+          {showIdeasNav && (
+            <>
+              <div style={{ margin: "12px 0 8px 14px", fontSize: "var(--text-xs)", fontWeight: 700, color: "var(--ink-muted)", textTransform: "uppercase", letterSpacing: 1, opacity: 0.6 }}>
+                Партнеры идеи
+              </div>
+              <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 2 }}>
+                {IDEAS_NAV.map((item) => (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 12,
+                        padding: "10px 14px",
+                        borderRadius: "var(--radius-sm)",
+                        fontSize: "var(--text-sm)",
+                        fontWeight: 500,
+                        color: "var(--ink-body)",
+                        textDecoration: "none",
+                      }}
+                    >
+                      <item.icon size={18} strokeWidth={1.75} />
+                      {item.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             </>
           )}
         </nav>
