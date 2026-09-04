@@ -669,3 +669,33 @@ Partner buys VPS, downloads zip, fills config.json (Profi login/password + Teleg
 - По желанию: 4.11.3 утренняя сводка; TG «счёт не оплачен»
 - **Не** этап 6 AI, 4.9 бот, deep scan, рестарт `leads-agent-v2` без команды
 
+
+## Итоги дня · 4 сентября 2026
+
+### Сделано
+- **Ideas Board MVP** на хабе:
+  - доступ: schema + whitelist, grant с Пульта (ops), middleware/guard
+  - навигация «Партнеры идеи» → `/dashboard/ideas`
+  - CRUD: список, создание, карточка, комментарии, смена статуса
+  - анализ агента (таблицы/граф) + seed **3** стартовых идеи
+- Коммиты: `aa097c9` access · `510a0bb` CRUD · `f4b5954` analysis+seed
+- Закрытие дня: DEVLOG + PLAN (2½.14 ✅), build, deploy, push, rollback-тег, snapshot
+
+### Файлы
+- Prisma: `prisma/schema.prisma`, migration Ideas Board
+- Access/ops: `src/lib/ideas/access.ts`, `guard.ts`, `api/admin/ideas-access`, `ideas-board-access-panel`, `ops-console`, `middleware`, `dashboard/layout`
+- CRUD UI/API: `src/app/dashboard/ideas/**`, `src/app/api/ideas/**`, `src/components/ideas/**`, `src/lib/ideas/constants.ts`, `users.ts`
+- Analysis: `src/lib/ideas/analyze.ts`, `analysis-types.ts`, `idea-analysis.tsx`, `api/ideas/[id]/analyze`, `scripts/seed-ideas-board.ts`
+- Docs: `DEVLOG.md`, `docs/PLAN_2026-08-10.md` (2½.14)
+
+### Production
+- `npm run build` ✅ · `localhost:3005` → **200**
+- PM2: `leads-konversus` restart после билда · `leads-health` online · `leads-profi` нет
+- `profiOnHub: false` (не трогали)
+- Ideas Board live: `/dashboard/ideas` (redirect 307 без сессии — ожидаемо)
+
+### Осталось / завтра
+- Выдать доступ партнёрам (email whitelist / ops grant) и обкатать Ideas Board
+- Polish graph UI анализа
+- По желанию: sales в **Команда**, CRM; 4.11.3
+- **Не** этап 6 AI, 4.9 бот, deep scan, Playwright/Profi на хабе, рестарт `leads-agent-v2` без команды
