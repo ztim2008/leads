@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Scroll-фильм · демо механики</title>
+  <script src="https://unpkg.com/lucide@0.469.0"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #070706;
+      --ink: #f7f3ea;
+      --muted: #a89f8d;
+      --gold: #d4af37;
+      --gold-2: #f0d78c;
+      --line: rgba(212, 175, 55, 0.2);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html.lenis, html.lenis body { height: auto; }
+    .lenis.lenis-smooth { scroll-behavior: auto !important; }
+    body {
+      font-family: Manrope, system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+      overflow-x: hidden;
+    }
+
+    /* Progress */
+    .progress {
+      position: fixed; top: 0; left: 0; height: 3px; width: 0%;
+      background: linear-gradient(90deg, #8a7020, var(--gold-2), var(--gold));
+      z-index: 100; box-shadow: 0 0 12px rgba(212,175,55,.5);
+    }
+    .hint {
+      position: fixed; bottom: 1.25rem; left: 50%; transform: translateX(-50%);
+      z-index: 90; display: flex; align-items: center; gap: .4rem;
+      font-size: .72rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase;
+      color: var(--gold-2); opacity: .75; pointer-events: none;
+      transition: opacity .4s;
+    }
+    .hint svg { width: .9rem; height: .9rem; animation: bob 1.4s ease-in-out infinite; }
+    .hint.hide { opacity: 0; }
+    @keyframes bob {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(4px); }
+    }
+    .scene-label {
+      position: fixed; top: 1.1rem; right: 1.2rem; z-index: 90;
+      font-size: .7rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase;
+      color: var(--muted); border: 1px solid var(--line); padding: .35rem .65rem; border-radius: 999px;
+      background: rgba(7,7,6,.7); backdrop-filter: blur(8px);
+    }
+
+    /* Stage — pinned viewport */
+    .film {
+      position: relative;
+      height: 600vh; /* scroll runway for 5 scenes */
+    }
+    .stage {
+      position: sticky; top: 0; height: 100vh; width: 100%;
+      overflow: hidden;
+      background:
+        radial-gradient(900px 500px at 20% 0%, rgba(212,175,55,.14), transparent 55%),
+        radial-gradient(700px 400px at 90% 80%, rgba(138,112,32,.1), transparent 50%),
+        #070706;
+    }
+    .cam {
+      position: absolute; inset: 0;
+      will-change: transform;
+      transform-style: preserve-3d;
+      perspective: 1200px;
+    }
+    .scene {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      padding: 2rem 1.5rem;
+      opacity: 0;
+      pointer-events: none;
+      will-change: transform, opacity;
+    }
+    .scene.is-live { pointer-events: auto; }
+
+    .panel {
+      width: min(720px, 100%);
+      text-align: center;
+    }
+    .eyebrow {
+      display: inline-flex; align-items: center; gap: .4rem;
+      color: var(--gold); font-size: .72rem; font-weight: 700;
+      letter-spacing: .16em; text-transform: uppercase; margin-bottom: .9rem;
+    }
+    .eyebrow svg { width: .9rem; height: .9rem; }
+    h1, h2 {
+      font-family: "Cormorant Garamond", Georgia, serif;
+      font-weight: 700; line-height: 1.08; letter-spacing: -0.02em;
+    }
+    h1 {
+      font-size: clamp(2.2rem, 6vw, 3.6rem);
+      background: linear-gradient(135deg, #fff8e7, var(--gold-2) 50%, var(--gold));
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+      max-width: 14ch; margin: 0 auto;
+    }
+    h2 {
+      font-size: clamp(1.8rem, 4.5vw, 2.8rem);
+      color: var(--ink); max-width: 16ch; margin: 0 auto;
+    }
+    .lead {
+      margin: 1rem auto 0; color: var(--muted); font-size: 1.05rem;
+      max-width: 34rem; line-height: 1.5;
+    }
+    .lead strong { color: var(--ink); }
+
+    /* Visual props (pseudo-3D cards) */
+    .props {
+      position: absolute; inset: 0; pointer-events: none;
+      overflow: hidden;
+    }
+    .orb {
+      position: absolute; border-radius: 50%;
+      filter: blur(2px);
+      background: radial-gradient(circle at 30% 30%, rgba(240,215,140,.35), rgba(212,175,55,.05) 60%, transparent);
+    }
+    .orb.a { width: 420px; height: 420px; top: -80px; left: -60px; }
+    .orb.b { width: 360px; height: 360px; bottom: -100px; right: -40px; opacity: .7; }
+    .card3d {
+      position: absolute;
+      width: min(280px, 42vw);
+      padding: 1.1rem 1.15rem;
+      border-radius: 16px;
+      background: rgba(18,16,12,.88);
+      border: 1px solid var(--line);
+      box-shadow: 0 30px 60px rgba(0,0,0,.45), 0 0 40px rgba(212,175,55,.08);
+      backdrop-filter: blur(10px);
+      text-align: left;
+    }
+    .card3d .n {
+      font-family: "Cormorant Garamond", Georgia, serif;
+      font-size: 2.4rem; font-weight: 700; color: var(--gold-2); line-height: 1;
+    }
+    .card3d .t { margin-top: .35rem; font-size: .85rem; color: var(--muted); }
+    .card3d.bad .n { color: #f87171; }
+    .phone {
+      position: absolute;
+      width: min(260px, 48vw);
+      padding: 10px; border-radius: 24px;
+      background: linear-gradient(160deg, #2a2418, #12100c);
+      border: 1px solid rgba(212,175,55,.35);
+      box-shadow: 0 40px 80px rgba(0,0,0,.55), 0 0 50px rgba(212,175,55,.12);
+    }
+    .phone-in {
+      border-radius: 16px; overflow: hidden; background: #0e1621;
+    }
+    .tg-bar {
+      background: #17212b; padding: .55rem .7rem;
+      display: flex; gap: .45rem; align-items: center; font-size: .78rem;
+    }
+    .av {
+      width: 1.6rem; height: 1.6rem; border-radius: 50%;
+      background: linear-gradient(135deg, var(--gold-2), #8a7020);
+      display: grid; place-items: center; font-size: .55rem; font-weight: 800; color: #1a1408;
+    }
+    .bubble { padding: .7rem; font-size: .78rem; }
+    .bubble .ttl { font-weight: 800; margin: .25rem 0; color: #fff; }
+    .bubble .row { color: #a8b8c7; margin: .15rem 0; display: flex; gap: .3rem; align-items: center; }
+    .bubble .row svg { width: .8rem; height: .8rem; color: var(--gold); }
+
+    .chips {
+      display: flex; flex-wrap: wrap; gap: .45rem; justify-content: center;
+      margin-top: 1.25rem;
+    }
+    .chip {
+      font-size: .78rem; font-weight: 600; color: #fde68a;
+      border: 1px solid var(--line); background: rgba(212,175,55,.08);
+      padding: .4rem .7rem; border-radius: 999px;
+      display: inline-flex; align-items: center; gap: .35rem;
+    }
+    .chip svg { width: .85rem; height: .85rem; color: var(--gold); }
+
+    /* CTA form */
+    .form {
+      margin: 1.4rem auto 0; max-width: 420px; text-align: left;
+      padding: 1.25rem; border-radius: 18px;
+      background: rgba(18,16,12,.9); border: 1px solid rgba(212,175,55,.35);
+      box-shadow: 0 0 60px rgba(212,175,55,.12);
+      pointer-events: auto;
+    }
+    .form label {
+      display: block; font-size: .72rem; font-weight: 700; letter-spacing: .08em;
+      text-transform: uppercase; color: var(--gold-2); margin: .65rem 0 .3rem;
+    }
+    .form input, .form select {
+      width: 100%; padding: .7rem .8rem; border-radius: 10px;
+      border: 1px solid var(--line); background: #0c0b09; color: var(--ink);
+      font: inherit; outline: none;
+    }
+    .form input:focus, .form select:focus { border-color: var(--gold); }
+    .form button {
+      margin-top: 1rem; width: 100%; padding: .85rem;
+      border: 0; border-radius: 12px; cursor: pointer; font-weight: 800;
+      color: #1a1408; font-size: 1rem;
+      background: linear-gradient(90deg, #f0d78c, #d4af37 55%, #b8962e);
+      box-shadow: 0 12px 30px rgba(212,175,55,.3);
+    }
+    .form .note { margin-top: .65rem; font-size: .75rem; color: var(--muted); text-align: center; }
+
+    .tech-note {
+      position: absolute; bottom: 3.5rem; left: 50%; transform: translateX(-50%);
+      width: min(560px, 92%); text-align: center;
+      font-size: .7rem; color: #6b6356; line-height: 1.4;
+      opacity: 0;
+    }
+
+    @media (max-width: 700px) {
+      .card3d { display: none; }
+      .phone { position: relative; margin: 1.2rem auto 0; }
+      .scene { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <div class="progress" id="progress"></div>
+  <div class="scene-label" id="sceneLabel">Сцена 1 / 5</div>
+  <div class="hint" id="hint"><i data-lucide="chevrons-down"></i> скролльте — это пульт камеры</div>
+
+  <div class="film" id="film">
+    <div class="stage">
+      <div class="props" aria-hidden="true">
+        <div class="orb a" id="orbA"></div>
+        <div class="orb b" id="orbB"></div>
+      </div>
+      <div class="cam" id="cam">
+
+        <!-- Scene 1 -->
+        <section class="scene" data-scene="1" id="s1">
+          <div class="panel">
+            <div class="eyebrow"><i data-lucide="clapperboard"></i> scroll-фильм · демо</div>
+            <h1>Сайт, которым управляет скролл</h1>
+            <p class="lead">
+              Вы не «читаете страницу». Вы <strong>ведёте камеру</strong> через сцены —
+              от боли до заявки. Один непрерывный кадр.
+            </p>
+          </div>
+          <div class="card3d bad" id="cardBad" style="top:22%; left:8%;">
+            <div class="n">2–3</div>
+            <div class="t">заявки в день — то, что обычно «видят»</div>
+          </div>
+        </section>
+
+        <!-- Scene 2 -->
+        <section class="scene" data-scene="2" id="s2">
+          <div class="panel">
+            <div class="eyebrow"><i data-lucide="eye-off"></i> сцена 02</div>
+            <h2>Алгоритм прячет рынок</h2>
+            <p class="lead">
+              Пока вы листаете крохи, <strong>остальные ~90%</strong> заказов уже разбирают другие.
+              Боль не в «нет клиентов» — в том, что вам не показывают поле.
+            </p>
+          </div>
+          <div class="card3d" id="cardPie" style="top:28%; right:7%;">
+            <div class="n">10%</div>
+            <div class="t">столько рынка вы реально видите без полного потока</div>
+          </div>
+        </section>
+
+        <!-- Scene 3 -->
+        <section class="scene" data-scene="3" id="s3">
+          <div class="panel">
+            <div class="eyebrow"><i data-lucide="sparkles"></i> сцена 03</div>
+            <h2>Поток приходит к вам</h2>
+            <p class="lead">
+              Подходящие заказы — в Telegram. Вы не охотитесь в ленте:
+              <strong>выбираете задачу и клиента</strong>, за которого готовы платить.
+            </p>
+            <div class="chips">
+              <span class="chip"><i data-lucide="inbox"></i> сами приходят</span>
+              <span class="chip"><i data-lucide="filter"></i> только своё</span>
+              <span class="chip"><i data-lucide="zap"></i> первыми</span>
+            </div>
+          </div>
+          <div class="phone" id="phone" style="top:18%; right:6%;">
+            <div class="phone-in">
+              <div class="tg-bar">
+                <div class="av">LK</div>
+                <div>
+                  <div style="font-weight:700;">Leads · заявки</div>
+                  <div style="font-size:.65rem;color:#6d7f8f;">только что</div>
+                </div>
+              </div>
+              <div class="bubble">
+                <div style="font-size:.62rem;letter-spacing:.1em;color:#6d7f8f;font-weight:700;">НОВАЯ ЗАЯВКА</div>
+                <div class="ttl">Строительство ангара 18×30</div>
+                <div class="row"><i data-lucide="wallet"></i> <b style="color:#e8f0f7;">от 2,8 млн ₽</b></div>
+                <div class="row"><i data-lucide="map-pin"></i> МО · Чехов</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Scene 4 -->
+        <section class="scene" data-scene="4" id="s4">
+          <div class="panel">
+            <div class="eyebrow"><i data-lucide="scale"></i> сцена 04</div>
+            <h2>Почему это выгоднее рекламы</h2>
+            <p class="lead">
+              Не покупаете клики вслепую. Получаете <strong>уже тёплый спрос</strong> из Profi —
+              отфильтрованный под ваш бизнес, с ценой заявки ниже контекста.
+            </p>
+            <div class="chips">
+              <span class="chip"><i data-lucide="badge-russian-ruble"></i> 100–400 ₽ / заявка</span>
+              <span class="chip"><i data-lucide="trending-up"></i> 25+ лидов / день</span>
+              <span class="chip"><i data-lucide="trophy"></i> статус «выбираю»</span>
+            </div>
+          </div>
+          <div class="card3d" id="cardWin" style="bottom:18%; left:8%;">
+            <div class="n">25+</div>
+            <div class="t">квалифицированных лидов в день вместо крох с ленты</div>
+          </div>
+        </section>
+
+        <!-- Scene 5 -->
+        <section class="scene" data-scene="5" id="s5">
+          <div class="panel">
+            <div class="eyebrow"><i data-lucide="gem"></i> финал</div>
+            <h2>Увидьте поток на себе</h2>
+            <p class="lead">Оставьте контакт — покажем, как выглядят ваши заявки.</p>
+            <form class="form" id="leadForm" onsubmit="return false;">
+              <label for="name">Имя</label>
+              <input id="name" name="name" placeholder="Алексей" autocomplete="name" />
+              <label for="niche">Ниша</label>
+              <select id="niche" name="niche">
+                <option>Строительство / ремонт</option>
+                <option>Юристы / бухгалтеры</option>
+                <option>Другое</option>
+              </select>
+              <label for="contact">Telegram или телефон</label>
+              <input id="contact" name="contact" placeholder="@username или +7…" autocomplete="tel" />
+              <button type="submit" id="submitBtn">Хочу получать заказы</button>
+              <p class="note" id="formNote">Демо-форма: заявка никуда не уходит — только UX финала сцены.</p>
+            </form>
+          </div>
+        </section>
+
+      </div>
+      <p class="tech-note" id="techNote">
+        Стек демо: Lenis (smooth scroll) + GSAP ScrollTrigger (scrub timeline). Без Three.js — псевдо-3D на transform/opacity.
+      </p>
+    </div>
+  </div>
+
+  <!-- Lenis + GSAP -->
+  <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.18/dist/lenis.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+  <script>
+    lucide.createIcons();
+
+    // --- Smooth scroll (Lenis) + GSAP ticker bridge ---
+    const lenis = new Lenis({
+      duration: 1.15,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      smoothWheel: true,
+    });
+    lenis.on("scroll", ScrollTrigger.update);
+    gsap.ticker.add((time) => lenis.raf(time * 1000));
+    gsap.ticker.lagSmoothing(0);
+    gsap.registerPlugin(ScrollTrigger);
+
+    const progress = document.getElementById("progress");
+    const sceneLabel = document.getElementById("sceneLabel");
+    const hint = document.getElementById("hint");
+    const techNote = document.getElementById("techNote");
+
+    const s1 = document.getElementById("s1");
+    const s2 = document.getElementById("s2");
+    const s3 = document.getElementById("s3");
+    const s4 = document.getElementById("s4");
+    const s5 = document.getElementById("s5");
+    const cardBad = document.getElementById("cardBad");
+    const cardPie = document.getElementById("cardPie");
+    const phone = document.getElementById("phone");
+    const cardWin = document.getElementById("cardWin");
+    const orbA = document.getElementById("orbA");
+    const orbB = document.getElementById("orbB");
+    const cam = document.getElementById("cam");
+
+    // Initial states
+    gsap.set([s1, s2, s3, s4, s5], { opacity: 0, y: 40, scale: 0.96 });
+    gsap.set(s1, { opacity: 1, y: 0, scale: 1 });
+    gsap.set(cardBad, { opacity: 0, x: -40, rotateY: 18 });
+    gsap.set(cardPie, { opacity: 0, x: 50, rotateY: -16 });
+    gsap.set(phone, { opacity: 0, y: 60, scale: 0.9, rotateY: -12 });
+    gsap.set(cardWin, { opacity: 0, y: 40, rotateX: 12 });
+    gsap.set(techNote, { opacity: 0 });
+
+    const tl = gsap.timeline({
+      scrollTrigger: {
+        trigger: "#film",
+        start: "top top",
+        end: "bottom bottom",
+        scrub: 0.65, // scroll = remote for animation
+        onUpdate: (self) => {
+          progress.style.width = (self.progress * 100).toFixed(2) + "%";
+          const p = self.progress;
+          let scene = 1;
+          if (p > 0.18) scene = 2;
+          if (p > 0.38) scene = 3;
+          if (p > 0.58) scene = 4;
+          if (p > 0.78) scene = 5;
+          sceneLabel.textContent = "Сцена " + scene + " / 5";
+          hint.classList.toggle("hide", p > 0.06);
+        },
+      },
+    });
+
+    // Continuous "camera" drift through the whole film
+    tl.to(cam, { y: -40, scale: 1.04, ease: "none" }, 0);
+    tl.to(orbA, { x: 80, y: 60, scale: 1.15, ease: "none" }, 0);
+    tl.to(orbB, { x: -60, y: -40, scale: 1.2, ease: "none" }, 0);
+
+    // --- Scene 1: intro + zoom ---
+    tl.to(cardBad, { opacity: 1, x: 0, rotateY: 0, duration: 0.12, ease: "none" }, 0.02);
+    tl.to(s1, { opacity: 0, y: -30, scale: 1.06, duration: 0.12, ease: "none" }, 0.14);
+    tl.to(cardBad, { opacity: 0, x: -30, scale: 1.1, duration: 0.1, ease: "none" }, 0.16);
+
+    // --- Scene 2: problem / camera continues ---
+    tl.fromTo(s2, { opacity: 0, y: 50, scale: 0.94 }, { opacity: 1, y: 0, scale: 1, duration: 0.12, ease: "none" }, 0.18);
+    tl.to(cardPie, { opacity: 1, x: 0, rotateY: 0, duration: 0.12, ease: "none" }, 0.22);
+    tl.to(s2, { opacity: 0, y: -35, scale: 1.05, duration: 0.12, ease: "none" }, 0.34);
+    tl.to(cardPie, { opacity: 0, x: 40, duration: 0.1, ease: "none" }, 0.36);
+
+    // --- Scene 3: object change (phone enters) ---
+    tl.fromTo(s3, { opacity: 0, y: 45, scale: 0.95 }, { opacity: 1, y: 0, scale: 1, duration: 0.12, ease: "none" }, 0.38);
+    tl.to(phone, { opacity: 1, y: 0, scale: 1, rotateY: 0, duration: 0.14, ease: "none" }, 0.42);
+    tl.to(s3, { opacity: 0, y: -30, scale: 1.04, duration: 0.12, ease: "none" }, 0.54);
+    tl.to(phone, { opacity: 0, y: -40, scale: 1.08, duration: 0.1, ease: "none" }, 0.56);
+
+    // --- Scene 4: new angle / advantages ---
+    tl.fromTo(s4, { opacity: 0, y: 40, scale: 0.95 }, { opacity: 1, y: 0, scale: 1, duration: 0.12, ease: "none" }, 0.58);
+    tl.to(cardWin, { opacity: 1, y: 0, rotateX: 0, duration: 0.12, ease: "none" }, 0.62);
+    tl.to(s4, { opacity: 0, y: -35, scale: 1.05, duration: 0.12, ease: "none" }, 0.74);
+    tl.to(cardWin, { opacity: 0, y: -20, duration: 0.1, ease: "none" }, 0.76);
+
+    // --- Scene 5: CTA ---
+    tl.fromTo(s5, { opacity: 0, y: 50, scale: 0.94 }, { opacity: 1, y: 0, scale: 1, duration: 0.14, ease: "none" }, 0.78);
+    tl.to(techNote, { opacity: 1, duration: 0.1, ease: "none" }, 0.9);
+    // hold final
+    tl.to({}, { duration: 0.08 }, 0.95);
+
+    // Form demo UX
+    document.getElementById("leadForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const note = document.getElementById("formNote");
+      note.textContent = "✓ Спасибо! В боевой версии заявка уйдёт менеджеру. Здесь — только демо финала.";
+      note.style.color = "#f0d78c";
+    });
+  </script>
+</body>
+</html>

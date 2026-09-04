@@ -670,6 +670,42 @@ Partner buys VPS, downloads zip, fills config.json (Profi login/password + Teleg
 - **Не** этап 6 AI, 4.9 бот, deep scan, рестарт `leads-agent-v2` без команды
 
 
+## 2026-09-04 — Client project launch playbook
+
+### Сделано
+- Поэтапный план запуска клиентского сервиса: Beget (почта клиента) → домен/DNS → каталог/БД/PM2/SSL на хабе → Cursor Remote SSH → эквайринг/бот → сдача.
+- Чеклист-галочки: `scripts/client-bridge/checklist-launch.md`.
+
+### Файлы
+- `docs/CLIENT_PROJECT_LAUNCH.md`
+- `scripts/client-bridge/checklist-launch.md`, `README.md`
+- Ссылки: `docs/CLIENT_HOSTING_BRIDGE.md`, `AGENTS.md`
+
+
+## 2026-09-04 — Client hosting bridge
+
+### Сделано
+- Зафиксирован операционный **мост** «свой VPS → хостинг клиента (Timeweb/Beget)»:
+  - по умолчанию **вариант A** (домен у клиента, приложение на хабе);
+  - **B** — деплой на мини-VPS клиента по SSH;
+  - **C** — rsync на shared только для PHP/статики.
+- Скрипты и чеклисты в `scripts/client-bridge/`, npm: `client-bridge:deploy` / `client-bridge:rsync`.
+
+### Файлы
+- `docs/CLIENT_HOSTING_BRIDGE.md`
+- `scripts/client-bridge/*` (deploy-to-vps.sh, rsync-shared.sh, nginx/proxy/env examples, checklists)
+- `AGENTS.md` (ссылка в таблице документов)
+- `.gitignore` (`scripts/client-bridge/deploy.env`)
+- `package.json` (npm scripts)
+
+### Production
+- Код хаба/PM2 не трогали; только docs + scripts.
+- `profiOnHub: false` без изменений.
+
+### Дальше
+- На первом реальном клиенте: пройти `checklist-variant-a.md` (или B) и при необходимости донастроить tenant/vhost.
+
+
 ## Итоги дня · 4 сентября 2026
 
 ### Сделано
@@ -699,3 +735,36 @@ Partner buys VPS, downloads zip, fills config.json (Profi login/password + Teleg
 - Polish graph UI анализа
 - По желанию: sales в **Команда**, CRM; 4.11.3
 - **Не** этап 6 AI, 4.9 бот, deep scan, Playwright/Profi на хабе, рестарт `leads-agent-v2` без команды
+
+
+## Итоги дня · 4 сентября 2026 (вечер) — Мария / leads-pilot-2
+
+### Сделано
+- Подготовка второго партнёра **Мария** (новый контур, не копия RysyevIV на том же IP):
+  - Beget VPS **leads-pilot-2**: IP `83.222.24.212`, host `kdhmkjaist`, Ubuntu 26.04, SSH с хаба по ключу ✅
+  - `leads-agent-v2` **не** ставили (нужен SOURCE_ID после onboard)
+  - Лимит согласован: **700**; пароль входа сгенерирован (только в чате сессии — **не** в git/DEVLOG)
+  - В админку **не** заводили: нет Email + Profi логин/пароль
+- Telegram: зафиксировали рабочую схему без нового BotFather —
+  партнёр: `/start` у **`@leadskonversus_bot`** → Chat ID; при onboard подставить токен сервиса (как у пилота).
+  Полный этап **4.9** не начинали.
+- Доки дня (ранее в сессии): client hosting bridge + client project launch playbook + `scripts/client-bridge/`
+
+### Отложено
+- **Онбординг Марии → ~через 2 дня (~06.09.2026):** ждать Email, Profi логин/пароль, Chat ID после `/start`.
+  Затем: `operator:onboard` → install на `83.222.24.212` → `operator:verify`.
+
+### Файлы
+- `DEVLOG.md`, `docs/PLAN_2026-08-10.md` (4.12 ⏸️, журнал)
+- `docs/CLIENT_HOSTING_BRIDGE.md`, `docs/CLIENT_PROJECT_LAUNCH.md`, `scripts/client-bridge/*`, `AGENTS.md`, `.gitignore`, `package.json`
+- (демо) `public/partner-pitch.html`, `public/scroll-film-demo.html` — если в коммите дня
+
+### Production
+- `npm run build` ✅ · `localhost:3005` → **200**
+- PM2: `leads-konversus` + `leads-health` online · Profi на хабе **off** (`profiOnHub: false`)
+- Пилот-1 RysyevIV не трогали; pilot-2 только SSH/ключ, без Playwright
+
+### Осталось / через ~2 дня
+- Мария: Email + Profi + `/start` @leadskonversus_bot → Chat ID → полный onboard + install
+- Ideas Board: whitelist партнёрам; polish graph
+- **Не** этап 6 AI, полный 4.9 webhook, deep scan, рестарт `leads-agent-v2` без команды

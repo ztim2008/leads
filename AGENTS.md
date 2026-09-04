@@ -133,6 +133,8 @@ pm2 save
 | [docs/TZ_LEADS_AI_V2.md](docs/TZ_LEADS_AI_V2.md) | ТЗ agent v2 |
 | [docs/ANTI_BLOCK_PLAN.md](docs/ANTI_BLOCK_PLAN.md) | Анти-блокировка Profi |
 | [docs/PARTNER-ONBOARDING.md](docs/PARTNER-ONBOARDING.md) | Онбординг партнёров |
+| [docs/CLIENT_HOSTING_BRIDGE.md](docs/CLIENT_HOSTING_BRIDGE.md) | Мост: свой VPS → домен/хостинг клиента (Timeweb/Beget) |
+| [docs/CLIENT_PROJECT_LAUNCH.md](docs/CLIENT_PROJECT_LAUNCH.md) | Поэтапный запуск: Beget → домен → среда → Cursor-агент |
 | [docs/devlog.md](docs/devlog.md) | Архив (июнь–июль 2026), только чтение |
 
 <!-- BEGIN:nextjs-agent-rules -->
