@@ -768,3 +768,21 @@ Partner buys VPS, downloads zip, fills config.json (Profi login/password + Teleg
 - Мария: Email + Profi + `/start` @leadskonversus_bot → Chat ID → полный onboard + install
 - Ideas Board: whitelist партнёрам; polish graph
 - **Не** этап 6 AI, полный 4.9 webhook, deep scan, рестарт `leads-agent-v2` без команды
+
+
+## 2026-09-18 — Мария / leads-pilot-2: отказ, offboard
+
+### Сделано
+- Партнёр **Мария** отказалась от подключения — контур **закрыт** (PLAN 4.12 ❌).
+- В админке/БД **нечего удалять**: user/source/settings не создавали; `operator:onboard` не вызывали.
+- Agent на VPS не ставили (`/opt/leads-agent-v2` не было).
+- Документ: **`docs/PARTNER_OFFBOARD.md`** — как корректно удалять партнёра (VPS → админка 🗑 → Beget → DEVLOG); сценарий B для черновиков.
+- Ссылки: `AGENTS.md`, `OPERATOR_AGENT.md`, `PARTNER-ONBOARDING.md`, карта docs в PLAN.
+- SSH на `83.222.24.212` с хаба: **timeout** (хост уже недоступен / выключен) — в Beget проверить, что VPS снят с биллинга.
+
+### Не трогали
+- Пилот-1 RysyevIV, `profiOnHub: false`, PM2 хаба.
+
+### Дальше
+- Убедиться в панели Beget, что **leads-pilot-2** удалён/выключен (если ещё числится).
+- Новый партнёр — только новым VPS + полный onboard по skill.

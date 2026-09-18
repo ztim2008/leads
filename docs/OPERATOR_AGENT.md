@@ -144,6 +144,13 @@ flowchart LR
 
 ---
 
+## Удаление партнёра
+
+См. **[PARTNER_OFFBOARD.md](PARTNER_OFFBOARD.md)** — порядок: stop VPS-агента → админка 🗑 → снять VPS в Beget → DEVLOG.  
+Черновик без onboard (как Мария 18.09.2026): в админке нечего удалять, только VPS в панели хостинга.
+
+---
+
 ## Файлы
 
 | Путь | Назначение |
@@ -153,3 +160,4 @@ flowchart LR
 | `scripts/operator/onboard.ts` | создание в БД |
 | `scripts/operator/verify.ts` | чеклист |
 | `docs/PARTNER-ONBOARDING.md` | детальный онбординг |
+| `docs/PARTNER_OFFBOARD.md` | корректное удаление партнёра |
