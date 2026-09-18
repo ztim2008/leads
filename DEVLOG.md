@@ -786,3 +786,30 @@ Partner buys VPS, downloads zip, fills config.json (Profi login/password + Teleg
 ### Дальше
 - Убедиться в панели Beget, что **leads-pilot-2** удалён/выключен (если ещё числится).
 - Новый партнёр — только новым VPS + полный onboard по skill.
+
+
+## Итоги дня · 18 сентября 2026
+
+### Сделано
+- **Мария / leads-pilot-2** — отказ клиента, контур закрыт (PLAN 4.12 ❌). В БД не создавали; `docs/PARTNER_OFFBOARD.md` (сценарий B).
+- **Пульт / поток:** зелёный Agent v2 = heartbeat жив; при паузе сбора подпись `online · пауза` (не серый «как offline»).
+- **Принудительная пауза/старт сбора** на Пульте (кнопка у партнёра): `source.enabled` + `force: true`, независимо от оплаты/квоты; PM2 на VPS не трогаем.
+- Пилот RysyevIV: agent online на VPS, HB ок, сбор выкл (квота **700/700**), lifecycle `paused` — ожидаемо.
+- Коммиты: `d16b715` / `d4414b4` offboard · `7faed21` flow+force pause
+
+### Файлы
+- `docs/PARTNER_OFFBOARD.md`, `DEVLOG.md`, `docs/PLAN_2026-08-10.md`, `AGENTS.md`, `docs/OPERATOR_AGENT.md`, `docs/PARTNER-ONBOARDING.md`, skill onboard
+- `src/components/admin/ops-console.tsx`
+- `src/lib/billing/quota.ts`, `src/app/api/admin/billing/route.ts`
+- `src/app/api/v2/agent/config/route.ts`, `…/leads/route.ts`, `src/app/api/agent/leads/route.ts`, `src/collectors/shared.ts`
+
+### Production
+- `npm run build` ✅ · `localhost:3005` → **200**
+- PM2: `leads-konversus` restart после фикса · `leads-health` online · Profi на хабе **off**
+- `profiOnHub: false`
+
+### Осталось / завтра
+- Beget: убедиться, что leads-pilot-2 снят с биллинга
+- Пилот: по решению — ▶ Возобновить сбор и/или поднять лимит / продлить месяц
+- Ideas Board whitelist; по желанию 4.11.3
+- **Не** этап 6 AI, полный 4.9, deep scan, рестарт `leads-agent-v2` без команды
