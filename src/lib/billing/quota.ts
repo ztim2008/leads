@@ -174,24 +174,24 @@ export async function haltCollection(
   }
 }
 
-/** Increment counter after a new lead; halt if limit reached */
+/** Increment counter after a new lead; halt once when crossing the monthly limit */
 export async function recordNewLead(workspaceId: string): Promise<QuotaStatus> {
   const sub = await getSubscription(workspaceId);
   if (!sub) return quotaStatusFromSub(null);
 
-  const status = quotaStatusFromSub(sub);
-  if (!status.allowed) return status;
-
-  const newUsed = sub.leadsUsedMonth + 1;
+  const prevUsed = sub.leadsUsedMonth;
+  const newUsed = prevUsed + 1;
   await db.subscription.update({
     where: { id: sub.id },
     data: { leadsUsedMonth: newUsed },
   });
 
-  if (newUsed >= sub.leadsPerMonth) {
+  // Авто-стоп только при первом пересечении лимита.
+  // После админского force (source снова enabled) сверх-лимит не глушим каждый лид.
+  if (prevUsed < sub.leadsPerMonth && newUsed >= sub.leadsPerMonth) {
     await haltCollection(workspaceId, "quota_exceeded");
     return {
-      ...status,
+      ...quotaStatusFromSub(await getSubscription(workspaceId)),
       used: newUsed,
       remaining: 0,
       allowed: false,
@@ -199,8 +199,9 @@ export async function recordNewLead(workspaceId: string): Promise<QuotaStatus> {
     };
   }
 
+  const refreshed = await getSubscription(workspaceId);
   return {
-    ...status,
+    ...quotaStatusFromSub(refreshed),
     used: newUsed,
     remaining: Math.max(0, sub.leadsPerMonth - newUsed),
   };
@@ -344,7 +345,11 @@ export async function setUnlimitedBilling(workspaceId: string): Promise<Subscrip
   return updated;
 }
 
-export async function setCollectionEnabled(workspaceId: string, enabled: boolean): Promise<void> {
+export async function setCollectionEnabled(
+  workspaceId: string,
+  enabled: boolean,
+  opts?: { force?: boolean },
+): Promise<void> {
   const sub = await db.subscription.findFirst({ where: { workspaceId } });
   if (!sub) return;
 
@@ -355,7 +360,8 @@ export async function setCollectionEnabled(workspaceId: string, enabled: boolean
 
   if (enabled) {
     const status = quotaStatusFromSub(await getSubscription(workspaceId));
-    if (status.allowed) {
+    // force=true — админская принудительная пауза/старт, независимо от квоты/оплаты
+    if (opts?.force || status.allowed) {
       await db.source.updateMany({
         where: { workspaceId },
         data: { enabled: true, status: "active" },

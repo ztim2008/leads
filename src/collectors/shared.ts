@@ -7,7 +7,7 @@ import {
   fillAllReplyTemplates,
   parseReplyTemplates,
 } from "@/lib/leads/reply-templates";
-import { assertCollectionAllowed, recordNewLead } from "@/lib/billing/quota";
+import { recordNewLead } from "@/lib/billing/quota";
 import { writeFileSync } from "fs";
 import { join } from "path";
 import type { Prisma } from "@prisma/client";
@@ -48,9 +48,6 @@ export async function saveAndNotify(lead: any, source: any, s: any, responseText
 
   const exists = await db.lead.findUnique({ where: { externalId: extId } });
   if (exists) return null;
-
-  const quota = await assertCollectionAllowed(source.workspaceId);
-  if (!quota.allowed) return null;
 
   const author = lead.author || parsed.author || null;
   const reviewCount =

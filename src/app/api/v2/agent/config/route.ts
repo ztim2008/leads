@@ -22,7 +22,9 @@ export async function GET(req: NextRequest) {
   }
 
   const quota = await getQuotaStatus(source.workspaceId);
-  const collectionPaused = !source.enabled || !quota.allowed;
+  // Техпауза админа = source.enabled. Квота/оплата — в quota.*; не блокируют HB-агента,
+  // если админ принудительно включил сбор (force toggle на Пульте).
+  const collectionPaused = !source.enabled;
 
   const cfg = (source.config as Record<string, unknown>) || {};
   const s = source.workspace.settings;

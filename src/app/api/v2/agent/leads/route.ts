@@ -1,7 +1,6 @@
 import { db } from "@/lib/db";
 import { saveAndNotify } from "@/collectors/shared";
 import { agentUnauthorized, verifyAgentSecret } from "@/lib/agent/auth";
-import { assertCollectionAllowed } from "@/lib/billing/quota";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
@@ -19,18 +18,18 @@ export async function POST(req: NextRequest) {
     if (!source) {
       return NextResponse.json({ error: "source not found" }, { status: 404 });
     }
-
-    const quota = await assertCollectionAllowed(source.workspaceId);
-    if (!quota.allowed) {
+    if (!source.enabled) {
       return NextResponse.json({
         ok: false,
         saved: 0,
         skipped: (leads || []).length,
-        quotaExceeded: true,
-        reason: quota.reason,
+        reason: "source_disabled",
         version: 2,
       });
     }
+
+    // Техпауза = !source.enabled. Квота/оплата не режут приём при force-включении.
+    // Авто-стоп по лимиту — один раз при пересечении в recordNewLead.
 
     const settings = source.workspace.settings;
     const cfg = (source.config as Record<string, unknown>) || {};

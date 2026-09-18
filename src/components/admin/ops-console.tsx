@@ -25,6 +25,7 @@ type PartnerRow = {
     expiresAt?: string | null;
   } | null;
   workspace?: {
+    id?: string;
     leadsCount?: number;
     leadsToday?: number;
     leadsYesterday?: number;
@@ -99,10 +100,28 @@ function buildFlow(p: PartnerRow | undefined): { nodes: FlowNode[]; events: Flow
   const err = a?.lastError || src?.lastError || null;
   const archived = a?.lastErrorArchived || src?.lastErrorArchived || null;
 
-  const agentTone: FlowTone = !src ? "off" : cbBad ? "bad" : !src.enabled ? "off" : online ? "ok" : "warn";
-  const profiTone: FlowTone = cbBad ? "bad" : err && /login_failed/i.test(err) ? "bad" : online ? "ok" : "warn";
+  // Agent/VPS цвет = жизнь процесса (heartbeat), не «сбор вкл».
+  // Пауза сбора (source.enabled) — в meta/subtitle, иначе «online» серый путает.
+  const agentTone: FlowTone = !src ? "off" : cbBad ? "bad" : online ? "ok" : "warn";
+  const profiTone: FlowTone = cbBad
+    ? "bad"
+    : err && /login_failed/i.test(err)
+      ? "bad"
+      : !src?.enabled
+        ? "off"
+        : online
+          ? "ok"
+          : "warn";
   const tgTone: FlowTone = !hasTg ? "warn" : tgMismatch ? "warn" : "ok";
   const vpsTone: FlowTone = src?.config?._vpsIp ? (online ? "ok" : "warn") : "off";
+  const collecting = !!src?.enabled;
+  const agentSub = !src
+    ? "не установлен"
+    : online
+      ? collecting
+        ? "online"
+        : "online · пауза"
+      : "offline";
 
   return {
     nodes: [
@@ -110,13 +129,13 @@ function buildFlow(p: PartnerRow | undefined): { nodes: FlowNode[]; events: Flow
         id: "vps",
         title: "VPS",
         subtitle: src?.config?._vpsIp || "нет IP",
-        meta: src?.enabled ? "сбор вкл" : "сбор выкл",
+        meta: collecting ? "сбор вкл" : "сбор выкл",
         tone: vpsTone,
       },
       {
         id: "agent",
         title: "Agent v2",
-        subtitle: online ? "online" : src ? "offline" : "не установлен",
+        subtitle: agentSub,
         meta: `${a?.lifecycle || "—"} · HB ${ageShort(a?.lastHeartbeat)}`,
         tone: agentTone,
       },
@@ -124,7 +143,7 @@ function buildFlow(p: PartnerRow | undefined): { nodes: FlowNode[]; events: Flow
         id: "profi",
         title: "Profi",
         subtitle: src?.config?.login || "нет логина",
-        meta: cb ? `CB ${cb}` : "CB —",
+        meta: !collecting ? "сбор выкл" : cb ? `CB ${cb}` : "CB —",
         tone: profiTone,
       },
       {
@@ -178,6 +197,7 @@ export default function OpsConsole() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState<string | null>(null);
   const [accessCard, setAccessCard] = useState<PartnerAccessCard | null>(null);
+  const [toggleBusy, setToggleBusy] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -190,6 +210,26 @@ export default function OpsConsole() {
       setLoading(false);
     }
   }, []);
+
+  async function forceCollection(workspaceId: string, enabled: boolean) {
+    const label = enabled ? "принудительно ВКЛЮЧИТЬ сбор" : "принудительно ОСТАНОВИТЬ сбор";
+    if (!confirm(`${label}?\nНезависимо от квоты и оплаты. Агент на VPS останется online.`)) return;
+    setToggleBusy(workspaceId);
+    try {
+      const r = await fetch("/api/admin/billing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "toggle", workspaceId, enabled, force: true }),
+      });
+      const d = await r.json();
+      if (!r.ok || d.error) alert(d.error || "Ошибка");
+      await load();
+    } catch {
+      alert("Сеть / ошибка запроса");
+    } finally {
+      setToggleBusy(null);
+    }
+  }
 
   useEffect(() => {
     load();
@@ -283,7 +323,7 @@ export default function OpsConsole() {
             <span style={{ fontSize: "var(--text-xs)", color: "var(--ink-muted)" }}>клик по строке ниже — другой партнёр</span>
           </div>
           <CollectorFlowMap
-            caption="VPS → Agent v2 → Profi → Хаб → Telegram. Цвет = живой статус, не скрипт."
+            caption="VPS → Agent v2 → Profi → Хаб → Telegram. Зелёный Agent = heartbeat жив; «пауза» = сбор выкл (квота/админ), не offline."
             nodes={flow.nodes}
             events={flow.events}
           />
@@ -383,7 +423,12 @@ export default function OpsConsole() {
                             <p style={{ fontWeight: 650, marginBottom: 8 }}>Детали</p>
                             <p>Profi: {src?.config?.login || "—"}</p>
                             <p>SOURCE: <code>{src?.id || "—"}</code></p>
-                            <p>Сбор: {src?.enabled ? "вкл" : "выкл"}</p>
+                            <p>Сбор: {src?.enabled ? "вкл" : "выкл"}
+                              {p.subscription?.collectionEnabled === false ? " · flag collectionEnabled=off" : ""}
+                              {(p.subscription?.leadsUsedMonth ?? 0) >= (p.subscription?.leadsPerMonth ?? Infinity)
+                                ? ` · квота ${p.subscription?.leadsUsedMonth}/${p.subscription?.leadsPerMonth}`
+                                : ""}
+                            </p>
                             <p>
                               Последняя ошибка:{" "}
                               {a?.lastError || src?.lastError
@@ -396,24 +441,55 @@ export default function OpsConsole() {
                           </div>
                           <div>
                             <p style={{ fontWeight: 650, marginBottom: 8 }}>Действия</p>
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                openAccess(p.id);
-                              }}
-                              style={{
-                                padding: "8px 14px",
-                                borderRadius: "var(--radius-sm)",
-                                border: "1px solid var(--border)",
-                                background: "var(--bg-surface)",
-                                cursor: "pointer",
-                                fontWeight: 600,
-                                fontSize: "var(--text-xs)",
-                              }}
-                            >
-                              Карточка доступа
-                            </button>
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openAccess(p.id);
+                                }}
+                                style={{
+                                  padding: "8px 14px",
+                                  borderRadius: "var(--radius-sm)",
+                                  border: "1px solid var(--border)",
+                                  background: "var(--bg-surface)",
+                                  cursor: "pointer",
+                                  fontWeight: 600,
+                                  fontSize: "var(--text-xs)",
+                                }}
+                              >
+                                Карточка доступа
+                              </button>
+                              {p.workspace?.id && (
+                                <button
+                                  type="button"
+                                  disabled={toggleBusy === p.workspace.id}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    forceCollection(p.workspace!.id!, !src?.enabled);
+                                  }}
+                                  style={{
+                                    padding: "8px 14px",
+                                    borderRadius: "var(--radius-sm)",
+                                    border: `1px solid ${src?.enabled ? "var(--amber)" : "var(--green)"}`,
+                                    background: src?.enabled ? "#f59e0b14" : "var(--green-soft)",
+                                    color: src?.enabled ? "var(--amber)" : "var(--green)",
+                                    cursor: toggleBusy === p.workspace.id ? "wait" : "pointer",
+                                    fontWeight: 700,
+                                    fontSize: "var(--text-xs)",
+                                  }}
+                                >
+                                  {toggleBusy === p.workspace.id
+                                    ? "…"
+                                    : src?.enabled
+                                      ? "⏸ Пауза сбора"
+                                      : "▶ Возобновить сбор"}
+                                </button>
+                              )}
+                            </div>
+                            <p style={{ fontSize: "var(--text-xs)", color: "var(--ink-muted)", marginBottom: 10 }}>
+                              Пауза/старт — принудительно, без учёта оплаты. PM2 на VPS не трогаем.
+                            </p>
                             {src?.id && (
                               <PollIntervalControl
                                 sourceId={src.id}

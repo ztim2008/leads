@@ -92,7 +92,7 @@ export async function POST(req: Request) {
   if (!u || u.role !== "admin") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const body = await req.json();
-  const { action, workspaceId, leadsPerMonth, enabled } = body;
+  const { action, workspaceId, leadsPerMonth, enabled, force } = body;
 
   if (action === "set_defaults") {
     const cur = pricesFromConfig(await getAppConfig());
@@ -136,7 +136,7 @@ export async function POST(req: Request) {
       await setUnlimitedBilling(workspaceId);
       break;
     case "toggle":
-      await setCollectionEnabled(workspaceId, Boolean(enabled));
+      await setCollectionEnabled(workspaceId, Boolean(enabled), { force: Boolean(force) });
       break;
     case "set_limit": {
       const limit = parseInt(String(leadsPerMonth)) || 500;
