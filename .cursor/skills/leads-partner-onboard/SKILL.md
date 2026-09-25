@@ -152,5 +152,6 @@ leads_count=0 сразу после install — норма, не ошибка.
 
 Единый бот 4.9 (фильтры в TG), AES паролей, рестарт Playwright на хабе, закрытие дня (это `AGENTS.md`).
 
-**Удаление партнёра** — не этот скилл: [docs/PARTNER_OFFBOARD.md](../../../docs/PARTNER_OFFBOARD.md)
+**Пауза** (учётка жива, VPS снять, потом reconnect): [docs/PARTNER_PAUSE.md](../../../docs/PARTNER_PAUSE.md)  
+**Удаление** — не этот скилл: [docs/PARTNER_OFFBOARD.md](../../../docs/PARTNER_OFFBOARD.md)
 (stop VPS-агента → админка 🗑 → Beget → DEVLOG).

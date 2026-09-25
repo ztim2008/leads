@@ -140,9 +140,10 @@ curl -fsSL https://leads.konversus.ru/agent/setup.sh | bash -s "SOURCE_ID"
 
 ---
 
-## Удаление партнёра
+## Пауза и удаление
 
-Если клиент отказался или контур больше не нужен — **не** оставлять `leads-agent-v2` online и не забывать VPS в Beget.
+- **Пауза** (стоп оплаты VPS, учётка остаётся; позже «посадить партнёра на новый сервер»): **[PARTNER_PAUSE.md](PARTNER_PAUSE.md)**
+- **Удаление** (клиент ушёл насовсем): **[PARTNER_OFFBOARD.md](PARTNER_OFFBOARD.md)**  
+  (stop агента на VPS → 🗑 в админке → удалить VPS → DEVLOG).
 
-Полный чеклист: **[PARTNER_OFFBOARD.md](PARTNER_OFFBOARD.md)**  
-(сначала stop агента на VPS → 🗑 в админке → удалить VPS → DEVLOG).
+Не оставлять `leads-agent-v2` online и не забывать VPS в Beget — иначе капает тариф.

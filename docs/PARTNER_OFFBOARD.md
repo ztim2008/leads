@@ -1,9 +1,10 @@
 # Удаление партнёра (offboard)
 
 > Когда клиент отказался, ушёл или аккаунт больше не нужен.  
-> **Не** путать с Phase 0 / Profi на хабе — Playwright только на VPS партнёра.
+> **Не** путать с Phase 0 / Profi на хабе — Playwright только на VPS партнёра.  
+> Нужна только остановка оплаты с сохранением учётки → [PARTNER_PAUSE.md](PARTNER_PAUSE.md).
 
-Связано: [PARTNER-ONBOARDING.md](PARTNER-ONBOARDING.md) · [OPERATOR_AGENT.md](OPERATOR_AGENT.md) · skill `leads-partner-onboard`.
+Связано: [PARTNER-ONBOARDING.md](PARTNER-ONBOARDING.md) · [OPERATOR_AGENT.md](OPERATOR_AGENT.md) · [PARTNER_PAUSE.md](PARTNER_PAUSE.md) · skill `leads-partner-onboard`.
 
 ---
 

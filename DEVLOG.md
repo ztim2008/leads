@@ -788,6 +788,22 @@ Partner buys VPS, downloads zip, fills config.json (Profi login/password + Teleg
 - Новый партнёр — только новым VPS + полный onboard по skill.
 
 
+## 2026-09-25 — Пауза leads-pilot-1 (не offboard)
+
+### Сделано
+- Пилот `pilot@leads.konversus.ru` / Profi `RysyevIV` — **пауза**, учётка и source **не** удаляли.
+- VPS `159.194.213.198` (Beget host `mspjepvaoq`, имя `leads-pilot-1`): `pm2 stop` + `delete` `leads-agent-v2`, `pm2 save --force`.
+- Сбор уже `enabled: false`. `SOURCE_ID` для reconnect: `24fe85d0-2e95-4b48-a5ad-dad019c1681d`.
+- Документ: **`docs/PARTNER_PAUSE.md`** (пауза + переподключение); ссылки в `AGENTS.md`, `PARTNER_OFFBOARD.md`, PLAN 2.8.
+
+### Оплата VPS
+- Удалить сервер вручную в Beget (`leads-pilot-1` / `mspjepvaoq` / `159.194.213.198`) — с хаба панели нет.
+
+### Дальше
+- Beget: удалить `leads-pilot-1` (иначе платим).
+- Переподключение: в чат «партнёр X на сервер Y» + IP/SSH/Profi — агент по `PARTNER_PAUSE` (тот же SOURCE_ID) или skill onboard (новый партнёр).
+
+
 ## Итоги дня · 18 сентября 2026
 
 ### Сделано
