@@ -804,6 +804,34 @@ Partner buys VPS, downloads zip, fills config.json (Profi login/password + Teleg
 - Переподключение: в чат «партнёр X на сервер Y» + IP/SSH/Profi — агент по `PARTNER_PAUSE` (тот же SOURCE_ID) или skill onboard (новый партнёр).
 
 
+## Итоги дня · 25 сентября 2026
+
+### Сделано
+- **Пауза пилота** `pilot@leads.konversus.ru` / `RysyevIV` — не offboard: учётка и source живы, сбор выкл.
+- На VPS `159.194.213.198` (`leads-pilot-1` / `mspjepvaoq`): `leads-agent-v2` stop + delete из PM2, dump пустой.
+- Канон **`docs/PARTNER_PAUSE.md`**: пауза → удалить VPS → потом «партнёр X на сервер Y» + логины → reconnect тем же `SOURCE_ID`.
+- Ссылки: `AGENTS.md`, `PARTNER_OFFBOARD`, `PARTNER-ONBOARDING`, `OPERATOR_AGENT`, skill onboard, PLAN (2.8 / 4.3–4.5 / журнал).
+- Коммит playbook: `ebc6008`; тег `rollback-2026-09-25`.
+
+### Файлы
+- `docs/PARTNER_PAUSE.md` (new)
+- `DEVLOG.md`, `docs/PLAN_2026-08-10.md`, `AGENTS.md`
+- `docs/PARTNER_OFFBOARD.md`, `docs/PARTNER-ONBOARDING.md`, `docs/OPERATOR_AGENT.md`
+- `.cursor/skills/leads-partner-onboard/SKILL.md`
+
+### Production
+- `npm run build` ✅ · `localhost:3005` → **200**
+- PM2 хаба: `leads-konversus` online · `leads-health` online · Profi на хабе **off**
+- `profiOnHub: false` · deploy/restart хаба **не** делали (только docs + stop на VPS пилота)
+- Пилот VPS: PM2 без `leads-agent-v2`
+
+### Осталось / завтра
+- **Beget:** удалить `leads-pilot-1` (и проверить pilot-2), иначе капает тариф
+- Когда готов новый сервер — блок в чат (email / IP / SSH / Profi) → reconnect по PARTNER_PAUSE
+- Ideas Board whitelist; по желанию 4.11.3
+- **Не** этап 6 AI, полный 4.9, deep scan без команды
+
+
 ## Итоги дня · 18 сентября 2026
 
 ### Сделано
