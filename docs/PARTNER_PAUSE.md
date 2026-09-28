@@ -109,22 +109,20 @@ npm run operator:verify -- partner@email.ru
 
 ---
 
-## Кейс: пилот `leads-pilot-1` (25.09.2026)
+## Кейс: пилот `leads-pilot-1` (пауза 25.09 → reconnect 28.09.2026)
 
 | Поле | Значение |
 |------|----------|
 | Email | `pilot@leads.konversus.ru` |
 | Profi | `RysyevIV` |
 | SOURCE_ID | `24fe85d0-2e95-4b48-a5ad-dad019c1681d` |
-| Старый VPS | Beget `leads-pilot-1`, host `mspjepvaoq`, IP `159.194.213.198` |
-| Агент | остановлен и удалён из PM2 (25.09.2026) |
-| Сбор | `enabled: false` |
+| Старый VPS | Beget `leads-pilot-1`, host `mspjepvaoq`, IP `159.194.213.198` (не использовать) |
+| Текущий VPS | Luminescent Nerys, host `lhkancxoyb`, IP `93.188.186.13` |
+| Агент | `leads-agent-v2` online с 28.09.2026, CB CLOSED |
+| Сбор | включён (месяц продлён админом, период до 10.11.2026) |
 | Учётка | **не** удалять |
 
-**Снять с оплаты:** в [Beget](https://cp.beget.com) → VPS → `leads-pilot-1` / `mspjepvaoq` / `159.194.213.198` → **Удалить**.
-
-**Reconnect later:** новый VPS → сохранить IP для `pilot@…` →  
-`curl -fsSL https://leads.konversus.ru/agent/v2/install.sh | bash -s "24fe85d0-2e95-4b48-a5ad-dad019c1681d"` → verify → ▶ сбор.
+Старый сервер в панели хостинга не поднимать. Повторный reconnect — тот же `SOURCE_ID`, новый IP в `config._vpsIp`.
 
 ---
 

@@ -142,7 +142,11 @@ export async function POST(req: Request) {
       const limit = parseInt(String(leadsPerMonth)) || 500;
       const sub = await db.subscription.findFirst({ where: { workspaceId } });
       if (sub) {
+        const wasAtCap = sub.leadsUsedMonth >= sub.leadsPerMonth;
         await db.subscription.update({ where: { id: sub.id }, data: { leadsPerMonth: limit } });
+        if (wasAtCap && sub.leadsUsedMonth < limit && sub.billingMode !== "paused") {
+          await setCollectionEnabled(workspaceId, true);
+        }
       }
       break;
     }

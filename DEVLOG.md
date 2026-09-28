@@ -804,6 +804,45 @@ Partner buys VPS, downloads zip, fills config.json (Profi login/password + Teleg
 - Переподключение: в чат «партнёр X на сервер Y» + IP/SSH/Profi — агент по `PARTNER_PAUSE` (тот же SOURCE_ID) или skill onboard (новый партнёр).
 
 
+## 2026-09-28 — Reconnect пилота RysyevIV
+
+### Сделано
+- Пилот `pilot@leads.konversus.ru` / Profi `RysyevIV` снова на VPS. `operator:onboard` не вызывали — тот же source.
+- Новый сервер: Luminescent Nerys, host `lhkancxoyb`, IP `93.188.186.13`. Старый `159.194.213.198` не используем.
+- `SOURCE_ID` `24fe85d0-2e95-4b48-a5ad-dad019c1681d`. `install.sh`, `leads-agent-v2` online, вход Profi ок, CB **CLOSED**, заявка ушла в Telegram (`1600729589`).
+- Месяц продлил админ (кнопка «Продлить»): лимит на «Счетах» был числом без подписи. Период до 10.11.2026, счётчик с нуля.
+- Подпись **«Лимит заявок в месяц»** на Пульте (раскрытая строка) и на Счетах. Если потолок поднимают выше исчерпанного счётчика и биллинг не на паузе — сбор включается снова. Срок оплаты эта правка не двигает.
+
+### Не трогали
+- `profiOnHub: false`. Playwright / `leads-profi` на хабе не запускали. Агент на VPS после успешного входа не рестартили.
+
+
+## Итоги дня · 28 сентября 2026
+
+### Сделано
+- **Reconnect пилота** `pilot@leads.konversus.ru` / `RysyevIV`: агент на `93.188.186.13`, заявки партнёру в Telegram идут.
+- Лимит месяца виден на Пульте и в Счетах (раньше голое число без подписи).
+- Кейс в `docs/PARTNER_PAUSE.md` и статусы PLAN 2.8 / 4.3 / 4.5 обновлены под новый IP.
+
+### Файлы
+- `src/components/admin/ops-console.tsx`
+- `src/app/dashboard/admin/billing/page.tsx`
+- `src/app/api/admin/billing/route.ts`
+- `DEVLOG.md`, `docs/PLAN_2026-08-10.md`, `docs/PARTNER_PAUSE.md`
+
+### Production
+- `npm run build` ✅ · `localhost:3005` → **200**
+- PM2: `leads-konversus` restart после подписи лимита · `leads-health` online · Profi на хабе **off**
+- `profiOnHub: false`
+- Пилот VPS: `leads-agent-v2` online, CB CLOSED, сбор вкл, квота после продления месяца
+
+### Осталось / завтра
+- Старый VPS `159.194.213.198` в панели не поднимать
+- Пилот не рестартить, пока вход живой и CB CLOSED
+- Ideas Board whitelist; по желанию 4.11.3
+- **Не** этап 6 AI, полный 4.9, deep scan без команды
+
+
 ## Итоги дня · 25 сентября 2026
 
 ### Сделано

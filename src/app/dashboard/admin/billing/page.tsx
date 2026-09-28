@@ -233,16 +233,21 @@ export default function BillingLimitsPage() {
               )}
 
               <div style={{ marginTop: 14, display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
-                <input
-                  type="number"
-                  defaultValue={q?.limit ?? 500}
-                  title="Лимит заявок / месяц"
-                  style={inp}
-                  onBlur={(e) => {
-                    const v = parseInt(e.target.value) || 500;
-                    if (v !== q?.limit) action(p.workspaceId, "set_limit", { leadsPerMonth: v });
-                  }}
-                />
+                <label style={{ display: "inline-flex", alignItems: "center", gap: 8, fontSize: "var(--text-sm)", fontWeight: 650 }}>
+                  Лимит заявок в месяц
+                  <input
+                    type="number"
+                    min={1}
+                    defaultValue={q?.limit ?? 500}
+                    key={`${p.workspaceId}-limit-${q?.limit ?? 0}`}
+                    aria-label="Лимит заявок в месяц"
+                    style={inp}
+                    onBlur={(e) => {
+                      const v = parseInt(e.target.value) || 500;
+                      if (v !== q?.limit) action(p.workspaceId, "set_limit", { leadsPerMonth: v });
+                    }}
+                  />
+                </label>
                 <button
                   type="button"
                   onClick={() => action(p.workspaceId, "toggle", { enabled: !q?.collectionEnabled })}
@@ -303,6 +308,9 @@ export default function BillingLimitsPage() {
                   Сброс заявок
                 </button>
               </div>
+              <p style={{ marginTop: 8, fontSize: "var(--text-xs)", color: "var(--ink-muted)" }}>
+                Лимит сохраняется, когда уводите курсор из поля. Срок оплаты не двигается. «Сброс заявок» обнуляет счётчик. «Продлить (оплачено)» открывает следующий месяц.
+              </p>
             </div>
           );
         })}

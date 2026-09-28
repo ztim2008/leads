@@ -211,6 +211,21 @@ export default function OpsConsole() {
     }
   }, []);
 
+  async function setMonthLimit(workspaceId: string, leadsPerMonth: number) {
+    try {
+      const r = await fetch("/api/admin/billing", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "set_limit", workspaceId, leadsPerMonth }),
+      });
+      const d = await r.json();
+      if (!r.ok || d.error) alert(d.error || "Не сохранилось");
+      await load();
+    } catch {
+      alert("Сеть / ошибка запроса");
+    }
+  }
+
   async function forceCollection(workspaceId: string, enabled: boolean) {
     const label = enabled ? "принудительно ВКЛЮЧИТЬ сбор" : "принудительно ОСТАНОВИТЬ сбор";
     if (!confirm(`${label}?\nНезависимо от квоты и оплаты. Агент на VPS останется online.`)) return;
@@ -422,6 +437,35 @@ export default function OpsConsole() {
                           <div>
                             <p style={{ fontWeight: 650, marginBottom: 8 }}>Детали</p>
                             <p>Profi: {src?.config?.login || "—"}</p>
+                            <label
+                              style={{ display: "flex", alignItems: "center", gap: 8, margin: "8px 0", fontWeight: 650 }}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              Лимит заявок в месяц
+                              <input
+                                type="number"
+                                min={1}
+                                key={`${p.id}-limit-${limit}`}
+                                defaultValue={limit || 500}
+                                aria-label="Лимит заявок в месяц"
+                                style={{
+                                  width: 88,
+                                  padding: "6px 8px",
+                                  borderRadius: "var(--radius-sm)",
+                                  border: "1px solid var(--border)",
+                                  fontSize: "var(--text-sm)",
+                                  fontWeight: 650,
+                                }}
+                                onClick={(e) => e.stopPropagation()}
+                                onBlur={(e) => {
+                                  const v = parseInt(e.target.value);
+                                  if (p.workspace?.id && v > 0 && v !== limit) setMonthLimit(p.workspace.id, v);
+                                }}
+                              />
+                              <span style={{ fontWeight: 450, color: "var(--ink-muted)", fontSize: "var(--text-xs)" }}>
+                                сейчас {used} из {limit || "—"}
+                              </span>
+                            </label>
                             <p>SOURCE: <code>{src?.id || "—"}</code></p>
                             <p>Сбор: {src?.enabled ? "вкл" : "выкл"}
                               {p.subscription?.collectionEnabled === false ? " · flag collectionEnabled=off" : ""}
