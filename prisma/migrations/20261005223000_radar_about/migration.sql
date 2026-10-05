@@ -1,0 +1,1 @@
+ALTER TABLE "job_radar_profile" ADD COLUMN IF NOT EXISTS "about" TEXT NOT NULL DEFAULT '';

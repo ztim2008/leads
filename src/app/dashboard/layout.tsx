@@ -9,6 +9,7 @@ import {
   CreditCard,
   Activity,
   Radio,
+  Radar,
   SlidersHorizontal,
   Users,
   UserCog,
@@ -156,6 +157,30 @@ export default async function DashboardLayout({ children }: { children: React.Re
                     </Link>
                   </li>
                 ))}
+              </ul>
+              <div style={{ margin: "16px 0 8px 14px", fontSize: "var(--text-xs)", fontWeight: 700, color: "var(--ink-muted)", textTransform: "uppercase", letterSpacing: 1, opacity: 0.6 }}>
+                Радар
+              </div>
+              <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                <li>
+                  <Link
+                    href="/dashboard/radar"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 12,
+                      padding: "10px 14px",
+                      borderRadius: "var(--radius-sm)",
+                      fontSize: "var(--text-sm)",
+                      fontWeight: 500,
+                      color: "var(--ink-body)",
+                      textDecoration: "none",
+                    }}
+                  >
+                    <Radar size={18} strokeWidth={1.75} />
+                    Job Radar
+                  </Link>
+                </li>
               </ul>
             </>
           )}

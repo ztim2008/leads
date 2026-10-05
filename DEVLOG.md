@@ -896,3 +896,47 @@ Partner buys VPS, downloads zip, fills config.json (Profi login/password + Teleg
 - Пилот: по решению — ▶ Возобновить сбор и/или поднять лимит / продлить месяц
 - Ideas Board whitelist; по желанию 4.11.3
 - **Не** этап 6 AI, полный 4.9, deep scan, рестарт `leads-agent-v2` без команды
+
+
+## 2026-10-05 — Job Radar (HH для админа)
+
+### Сделано
+- Личный контур вакансий, отдельно от заявок партнёров. Таблицы `job_radar_profile` и `job_vacancies`.
+- Сбор с публичных страниц HH (`HH-Lux-InitialState`). `api.hh.ru` с хаба и с VPS пилота — 403 ddos-guard. Сервер клиента под API не подключаем.
+- Профиль: дизайнер карточек маркетплейсов, порог 70 000 ₽. Вилка проходит по верхней границе (55–80 остаётся).
+- Две оценки: совпадение и надёжность. Свежесть — время создания HH и первый просмотр, не поднятие в поиске.
+- Telegram через бота из Settings админа (`leadskonversus_bot`), не через `TELEGRAM_BOT_TOKEN` из `.env`.
+- Утренний разбор 08:00–08:20 МСК, кнопка «Отклик» (черновик, без автоотправки), статусы «откликнулся» / скрыть с причиной, число откликов. Мгновенная карточка только если откликов ≤ 5 или число неизвестно.
+- Канон для следующих сессий: `docs/JOB_RADAR.md`. Jabka не подключали.
+
+### Не трогали
+- `profiOnHub: false`. Агент пилота на `93.188.186.13` не рестартили.
+
+
+## Итоги дня · 5 октября 2026
+
+### Сделано
+- **Job Radar** для админа: HH, лента `/dashboard/radar`, PM2 `leads-radar`.
+- Утро, черновик отклика в Telegram, причины скрытия, счётчик откликов.
+- Документация, чтобы следующая сессия не искала: `docs/JOB_RADAR.md`, ссылки в `AGENTS.md`, skill connect, PLAN (R.1–R.3 ✅, Jabka ⏸️).
+
+### Файлы
+- `docs/JOB_RADAR.md`, `docs/NEXT_SESSION_2026-10-05.md`
+- `AGENTS.md`, `DEVLOG.md`, `docs/PLAN_2026-08-10.md`
+- `.cursor/skills/leads-konversus-connect/SKILL.md`
+- `prisma/schema.prisma`, миграции `20261005210000_job_radar`, `20261005223000_radar_about`, `20261005224500_radar_digest`
+- `src/lib/radar/*`, `src/collectors/hh-radar.ts`, `src/app/dashboard/radar/**`, `src/components/radar/**`
+- `src/app/api/radar/**`, `ecosystem.config.cjs`, `src/app/dashboard/layout.tsx`
+
+### Production
+- `npm run build` ✅ · `localhost:3005` → **200**
+- PM2: `leads-konversus` restart · `leads-radar` online · `leads-health` online · Profi на хабе **off**
+- `profiOnHub: false`
+- Пилот VPS не трогали
+
+### Осталось / завтра
+- Утром проверить, что разбор в 08:00–08:20 пришёл, если за ночь были подходящие вакансии
+- Новые кнопки Telegram только на новых карточках. Старое тестовое сообщение со ссылкой «Скрыть» не переписывали
+- Jabka не подключать без команды
+- Пилот `93.188.186.13` не рестартить
+- **Не** этап 6 AI, полный 4.9, deep scan без команды

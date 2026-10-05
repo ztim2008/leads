@@ -1,7 +1,7 @@
 # Инструкция для агентов — leads.konversus.ru
 
 **GitHub:** https://github.com/ztim2008/leads  
-**Production:** https://leads.konversus.ru · PM2 `leads-konversus` · порт `3005`
+**Production:** https://leads.konversus.ru · PM2 `leads-konversus` · порт `3005` · сбор вакансий `leads-radar`
 
 ---
 
@@ -12,7 +12,8 @@
 3. **Политика:** `src/config/hub.ts` → `profiOnHub: false` — **нельзя нарушать**.
 4. **Git:** `git pull origin main` → `git status` — не затирай чужие изменения.
 5. **Лог:** прочитай последний блок в [DEVLOG.md](DEVLOG.md) (единственный канонический девлог).
-6. **Подключение партнёра:** skill [`.cursor/skills/leads-partner-onboard/SKILL.md`](.cursor/skills/leads-partner-onboard/SKILL.md) → [docs/OPERATOR_AGENT.md](docs/OPERATOR_AGENT.md) + `npm run operator:onboard`.
+6. **Вакансии админа:** [docs/JOB_RADAR.md](docs/JOB_RADAR.md) — не искать заново. Не мешать с заявками партнёров.
+7. **Подключение партнёра:** skill [`.cursor/skills/leads-partner-onboard/SKILL.md`](.cursor/skills/leads-partner-onboard/SKILL.md) → [docs/OPERATOR_AGENT.md](docs/OPERATOR_AGENT.md) + `npm run operator:onboard`.
 
 ---
 
@@ -106,6 +107,7 @@ git add -A && git commit -m "feat: ..." && git push origin main
 - **Никогда** `pm2 start leads-profi` / не снимать guard в `profi-watcher.ts`.
 - **Никогда** восстанавливать `worker.ts` — удалён в Phase 0.
 - При ошибке входа Profi: **circuit breaker → стоп**, не авто-рестарт.
+- **Job Radar** не писать в `Lead` / `saveAndNotify`. Не ходить в `api.hh.ru` и не рестартить агент пилота ради радара. Канон: [docs/JOB_RADAR.md](docs/JOB_RADAR.md).
 
 ---
 
@@ -115,6 +117,8 @@ git add -A && git commit -m "feat: ..." && git push origin main
 cd /var/www/www-root/data/www/leads.konversus.ru
 npm run build
 pm2 restart leads-konversus
+# если менялся сборщик вакансий:
+pm2 restart leads-radar
 curl -s -o /dev/null -w "%{http_code}" http://localhost:3005/
 pm2 save
 ```
@@ -137,6 +141,7 @@ pm2 save
 | [docs/PARTNER_OFFBOARD.md](docs/PARTNER_OFFBOARD.md) | Удаление партнёра: VPS stop → админка 🗑 → Beget |
 | [docs/CLIENT_HOSTING_BRIDGE.md](docs/CLIENT_HOSTING_BRIDGE.md) | Мост: свой VPS → домен/хостинг клиента (Timeweb/Beget) |
 | [docs/CLIENT_PROJECT_LAUNCH.md](docs/CLIENT_PROJECT_LAUNCH.md) | Поэтапный запуск: Beget → домен → среда → Cursor-агент |
+| [docs/JOB_RADAR.md](docs/JOB_RADAR.md) | Вакансии HH для админа. Отдельно от заявок партнёров |
 | [docs/devlog.md](docs/devlog.md) | Архив (июнь–июль 2026), только чтение |
 
 <!-- BEGIN:nextjs-agent-rules -->

@@ -375,6 +375,76 @@ model IdeaComment {
   @@map("idea_comments")
 }
 
+/// Личный контур админа: поиск вакансий. Не связан с заявками партнёров.
+model JobRadarProfile {
+  id             String    @id @default("default")
+  enabled        Boolean   @default(true)
+  specialization String    @default("Дизайнер карточек для маркетплейсов")
+  about          String    @default("") @db.Text
+  directions     String[]  @default([])
+  skills         String[]  @default([])
+  formats        String[]  @default([])
+  exclusions     String[]  @default([])
+  searchQueries  String[]  @default([]) @map("search_queries")
+  salaryMin      Int       @default(70000) @map("salary_min")
+  requireSalary  Boolean   @default(true) @map("require_salary")
+  remoteOnly     Boolean   @default(true) @map("remote_only")
+  matchMin       Int       @default(85) @map("match_min")
+  trustMin       Int       @default(70) @map("trust_min")
+  dailyAlertCap  Int       @default(5) @map("daily_alert_cap")
+  quietStart     String    @default("23:00") @map("quiet_start")
+  quietEnd       String    @default("08:00") @map("quiet_end")
+  alertsEnabled  Boolean   @default(true) @map("alerts_enabled")
+  telegramChatId String?   @map("telegram_chat_id")
+  lastCheckAt    DateTime? @map("last_check_at")
+  lastError      String?   @map("last_error")
+  lastNewCount   Int       @default(0) @map("last_new_count")
+  lastDigestAt   DateTime? @map("last_digest_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  @@map("job_radar_profile")
+}
+
+model JobVacancy {
+  id                   String    @id @default(uuid())
+  source               String    @default("hh")
+  externalId           String    @map("external_id")
+  title                String
+  company              String?
+  companyUrl           String?   @map("company_url")
+  url                  String
+  salaryFrom           Int?      @map("salary_from")
+  salaryTo             Int?      @map("salary_to")
+  salaryCurrency       String?   @map("salary_currency")
+  salaryGross          Boolean?  @map("salary_gross")
+  area                 String?
+  remote               Boolean   @default(false)
+  employment           String?
+  description          String    @db.Text
+  publishedAt          DateTime? @map("published_at")
+  firstSeenAt          DateTime  @default(now()) @map("first_seen_at")
+  employerTrusted      Boolean?  @map("employer_trusted")
+  employerVacancyCount Int?      @map("employer_vacancy_count")
+  responsesCount       Int?      @map("responses_count")
+  matchScore           Int?      @map("match_score")
+  trustScore           Int?      @map("trust_score")
+  trustChecks          Json?     @map("trust_checks")
+  fitReasons           String[]  @default([]) @map("fit_reasons")
+  whyFit               String?   @map("why_fit") @db.Text
+  /// new | opened | hidden | applied
+  status               String    @default("new")
+  /// role | pay | seen
+  hideReason           String?   @map("hide_reason")
+  notifiedAt           DateTime? @map("notified_at")
+  replyDraft           String?   @map("reply_draft") @db.Text
+  createdAt            DateTime  @default(now()) @map("created_at")
+  updatedAt            DateTime  @updatedAt @map("updated_at")
+
+  @@unique([source, externalId])
+  @@index([status, firstSeenAt])
+  @@map("job_vacancies")
+}
+
 model CrashLog {
   id        String   @id @default(uuid())
   service   String

@@ -14,7 +14,7 @@ description: Bootstrap work on leads.konversus.ru — SSH host, project path, op
 | Путь на сервере | `/var/www/www-root/data/www/leads.konversus.ru` |
 | Сервер | `109.196.165.106` (hostname: `fiwksyqpwx`) |
 | GitHub | https://github.com/ztim2008/leads |
-| PM2 | `leads-konversus` (порт `3005`), `leads-health` |
+| PM2 | `leads-konversus` (порт `3005`), `leads-health`, `leads-radar` |
 | **Запрещено** | Playwright/Profi на хабе — `profiOnHub: false` |
 
 ---
@@ -69,6 +69,7 @@ pm2 list | grep leads
 2. [docs/PLAN_2026-08-10.md](../../../docs/PLAN_2026-08-10.md) — план и статусы ⚪🟡✅
 3. Последний блок в [DEVLOG.md](../../../DEVLOG.md)
 4. `src/config/hub.ts` — политика хаба
+5. [docs/JOB_RADAR.md](../../../docs/JOB_RADAR.md) — если задача про вакансии, HH или радар
 
 Если доступен MCP `move_agent_to_root` — переключи workspace на  
 `/var/www/www-root/data/www/leads.konversus.ru`.
@@ -83,6 +84,9 @@ pm2 list | grep leads
 ❌ Авто-рестарт при ошибке входа Profi
 ✅ Profi только через VPS-агент (Phase 1+)
 ✅ Закрытие дня по AGENTS.md § «Закрытие дня»
+❌ Вакансии радара в Lead / saveAndNotify
+❌ api.hh.ru с хаба, VPS пилота или сервера клиента
+✅ Радар: docs/JOB_RADAR.md
 ```
 
 ---
@@ -93,8 +97,9 @@ pm2 list | grep leads
 
 ```
 Подключись к leads.konversus.ru по skill leads-konversus-connect.
-Прочитай AGENTS.md, PLAN_2026-08-10.md и docs/NEXT_SESSION_2026-08-14.md.
-Пилот RysyevIV online — наблюдение 4.6, не рестартить агент.
+Прочитай AGENTS.md, PLAN_2026-08-10.md, последний блок DEVLOG и docs/JOB_RADAR.md.
+Хендофф: docs/NEXT_SESSION_2026-10-05.md.
+Пилот RysyevIV на 93.188.186.13 — не рестартить агент.
 ```
 
 Подключение **нового партнёра** — отдельный skill:  
