@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { parseSearchHits } from "./hh";
 import { parseRadarTap } from "./actions-parse";
-import { aiTitleOk, passesHardFilter, tildaTitleOk } from "./filter";
+import { aiTitleOk, isVideoVacancy, passesHardFilter, tildaTitleOk } from "./filter";
 import { canPushVacancy, fewResponses, responsesLabel, shouldSendDigest, worthInstantPush } from "./responses";
 import { allocatePushSlots } from "./tracks";
 import { scoreMatch } from "./match";
@@ -35,10 +35,10 @@ describe("job radar filter", () => {
     assert.equal(decision.ok, true);
   });
 
-  it("отсекает зарплату ниже порога и офис", () => {
+  it("низкая зарплата остаётся, офис и менеджер нет", () => {
     assert.equal(
       passesHardFilter({ ...vacancy, salaryFrom: 40000, salaryTo: 60000 }, profile).ok,
-      false,
+      true,
     );
     assert.equal(passesHardFilter({ ...vacancy, remote: false }, profile).ok, false);
     assert.equal(
@@ -89,14 +89,16 @@ describe("job radar filter", () => {
     assert.equal(passesHardFilter(tilda, { ...profile, requireSalary: false }, "tilda").ok, true);
     assert.equal(tildaTitleOk("Администратор сайта-афиши на Tilda"), false);
     assert.equal(aiTitleOk("AI-креатор / Дизайнер"), true);
-    assert.equal(aiTitleOk("ИИ-монтажёр для продвижения продукта"), true);
+    assert.equal(aiTitleOk("ИИ-монтажёр для продвижения продукта"), false);
+    assert.equal(isVideoVacancy("AI-креатор видеоконтента"), true);
+    assert.equal(aiTitleOk("AI-креатор видеоконтента"), false);
     assert.equal(aiTitleOk("Менеджер по продажам обучения по Нейросетям"), false);
     assert.equal(aiTitleOk("Продуктовый дизайнер Middle+ / UX/UI в AI-сервис"), false);
     assert.equal(aiTitleOk("AI-креатор (Adult)"), false);
     assert.equal(aiTitleOk("Fullstack Software Engineer (AI & Video / Agents)"), false);
     assert.equal(
       passesHardFilter({ ...vacancy, title: "AI-дизайнер обложек", salaryFrom: 20000, salaryTo: 25000 }, profile, "ai").ok,
-      false,
+      true,
     );
   });
 });
@@ -148,30 +150,39 @@ describe("job radar hh page", () => {
 describe("job radar replies and digest", () => {
   it("мало откликов и подписи", () => {
     assert.equal(fewResponses(1), true);
-    assert.equal(fewResponses(5), true);
-    assert.equal(fewResponses(12), false);
+    assert.equal(fewResponses(3), true);
+    assert.equal(fewResponses(4), false);
     assert.equal(fewResponses(null), true);
     assert.equal(responsesLabel(1), "1 отклик");
     assert.equal(responsesLabel(2), "2 отклика");
     assert.equal(responsesLabel(11), "11 откликов");
   });
 
-  it("пуш за 10 дней, если откликов не больше 500", () => {
+  it("пуш только за сегодня и не больше 3 откликов", () => {
     const now = new Date("2026-10-06T06:00:00Z");
     assert.equal(
       worthInstantPush({
-        publishedAt: new Date("2026-10-03T06:00:00Z"),
+        publishedAt: new Date("2026-10-06T04:00:00Z"),
         firstSeenAt: now,
-        responsesCount: 234,
+        responsesCount: 3,
         now,
       }),
       true,
     );
     assert.equal(
       worthInstantPush({
-        publishedAt: new Date("2026-09-29T06:00:00Z"),
+        publishedAt: new Date("2026-10-06T04:00:00Z"),
         firstSeenAt: now,
-        responsesCount: 753,
+        responsesCount: 4,
+        now,
+      }),
+      false,
+    );
+    assert.equal(
+      worthInstantPush({
+        publishedAt: new Date("2026-10-05T06:00:00Z"),
+        firstSeenAt: now,
+        responsesCount: 1,
         now,
       }),
       false,
@@ -200,7 +211,7 @@ describe("job radar replies and digest", () => {
     const now = new Date("2026-10-06T06:00:00Z");
     assert.equal(
       canPushVacancy({
-        publishedAt: new Date("2026-10-04T06:00:00Z"),
+        publishedAt: new Date("2026-10-06T04:00:00Z"),
         firstSeenAt: now,
         responsesCount: 3,
         salaryFrom: null,
@@ -211,9 +222,9 @@ describe("job radar replies and digest", () => {
     );
     assert.equal(
       canPushVacancy({
-        publishedAt: new Date("2026-10-04T06:00:00Z"),
+        publishedAt: new Date("2026-10-06T04:00:00Z"),
         firstSeenAt: now,
-        responsesCount: 40,
+        responsesCount: 4,
         salaryFrom: null,
         salaryTo: null,
         now,

@@ -1,4 +1,3 @@
-import { salaryBelowFloor } from "./money";
 import { norm, termHit } from "./text";
 import type { RadarTrack } from "./tracks";
 
@@ -76,15 +75,18 @@ export function tildaTitleOk(title: string): boolean {
   return /разработчик|дизайнер|верстальщик|верстк/.test(text);
 }
 
+export function isVideoVacancy(title: string): boolean {
+  return /видео|video|монтаж|рилс|reels|shorts|тикток|tiktok/.test(norm(title));
+}
+
 export function aiTitleOk(title: string): boolean {
   const text = norm(title);
+  if (isVideoVacancy(title)) return false;
   if (/machine learning|data scientist|python|обучени|по продаж|software|fullstack|разработчик|adult|порн|эротич/.test(text)) {
     return false;
   }
-  if (/менеджер/.test(text) && !/дизайнер|креатор|монтаж/.test(text)) return false;
-  return /(ai|ии)[-\s/]?(дизайнер|креатор|монтаж|видео|video|creative)|(дизайнер|креатор|монтаж)[-\s/]?(ai|ии)|нейросет\w* (видео|video|монтаж)|(видео|video)[-\s/]?(ai|ии|монтаж)/.test(
-    text,
-  );
+  if (/менеджер/.test(text) && !/дизайнер|креатор/.test(text)) return false;
+  return /(ai|ии)[-\s/]?(дизайнер|креатор)|(дизайнер|креатор)[-\s/]?(ai|ии)/.test(text);
 }
 
 export function passesHardFilter(
@@ -117,10 +119,6 @@ export function passesHardFilter(
     if (["программирование", "frontend", "офис", "продажи"].some((key) => item.includes(key))) continue;
     if (item.length >= 4 && title.includes(item)) return { ok: false, reason: raw };
   }
-
-  const below = salaryBelowFloor(vacancy.salaryFrom, vacancy.salaryTo, vacancy.salaryCurrency, profile.salaryMin);
-  if (below === true) return { ok: false, reason: "зарплата ниже минимума" };
-  if (below == null && profile.requireSalary) return { ok: false, reason: "зарплата не указана" };
 
   if (track === "tilda") {
     if (!tildaTitleOk(vacancy.title)) return { ok: false, reason: "в заголовке другая роль" };

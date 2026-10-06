@@ -14,7 +14,7 @@ export const TRACK_QUOTA: Record<RadarTrack, number> = {
 };
 
 export const DEFAULT_TILDA_QUERIES = ["Tilda", "Тильда"];
-export const DEFAULT_AI_QUERIES = ["AI-дизайнер", "AI-креатор", "ИИ-монтажёр", "AI видео"];
+export const DEFAULT_AI_QUERIES = ["AI-дизайнер", "AI-креатор"];
 
 export function asTrack(value: string | null | undefined): RadarTrack {
   if (value === "tilda" || value === "ai" || value === "cards") return value;
@@ -23,7 +23,7 @@ export function asTrack(value: string | null | undefined): RadarTrack {
 
 export function trackTerms(track: RadarTrack): string[] {
   if (track === "tilda") return ["Tilda", "Тильда", "сайт", "лендинг", "верстка"];
-  if (track === "ai") return ["AI-дизайнер", "AI-креатор", "нейросети", "видео", "Midjourney"];
+  if (track === "ai") return ["AI-дизайнер", "AI-креатор", "нейросети", "Midjourney"];
   return [];
 }
 

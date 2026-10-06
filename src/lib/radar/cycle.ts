@@ -1,14 +1,14 @@
 import { db } from "@/lib/db";
 import { loadHubEnv } from "@/lib/telegram/bot-token";
 import { refineMatchScore, radarApiKey } from "./ai";
-import { passesHardFilter } from "./filter";
+import { isVideoVacancy, passesHardFilter } from "./filter";
 import { fetchEmployerVacancyCount, fetchHhVacancy, searchHh } from "./hh";
 import { scoreMatch } from "./match";
 import { resolveRadarDelivery } from "./delivery";
 import { digestKeyboard, formatRadarDigest, formatRadarTelegram, radarKeyboard, type RadarAlert } from "./notify";
-import { canPushVacancy, digestSince, fewResponses, shouldSendDigest } from "./responses";
+import { canPushVacancy, digestSince, fewResponses, publishedToday, shouldSendDigest } from "./responses";
 import { ensureRadarProfile } from "./profile";
-import { allocatePushSlots, asTrack, trackTerms, type RadarTrack } from "./tracks";
+import { allocatePushSlots, asTrack, DEFAULT_AI_QUERIES, trackTerms, type RadarTrack } from "./tracks";
 import { freshness, hhTimestamp, inQuietHours, startOfMskDay } from "./time";
 import { buildTrustChecks, trustScore } from "./trust";
 
@@ -26,10 +26,25 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+async function dropStaleAndVideo(): Promise<void> {
+  const start = startOfMskDay();
+  await db.jobVacancy.deleteMany({
+    where: { OR: [{ publishedAt: null }, { publishedAt: { lt: start } }, { responsesCount: { gt: 3 } }] },
+  });
+  const ai = await db.jobVacancy.findMany({ where: { track: "ai" }, select: { id: true, title: true } });
+  const videoIds = ai.filter((row) => isVideoVacancy(row.title)).map((row) => row.id);
+  if (videoIds.length) await db.jobVacancy.deleteMany({ where: { id: { in: videoIds } } });
+}
+
 export async function runRadarCycle(): Promise<RadarCycleResult> {
   loadHubEnv();
   const profile = await ensureRadarProfile();
   if (!profile.enabled) return { scanned: 0, fresh: 0, saved: 0, notified: 0 };
+  await dropStaleAndVideo();
+  if (profile.aiQueries.some((query) => /видео|монтаж|video/i.test(query))) {
+    await db.jobRadarProfile.update({ where: { id: profile.id }, data: { aiQueries: DEFAULT_AI_QUERIES } });
+    profile.aiQueries = DEFAULT_AI_QUERIES;
+  }
 
   let scanned = 0;
   let saved = 0;
@@ -58,6 +73,7 @@ export async function runRadarCycle(): Promise<RadarCycleResult> {
         area: "113",
         currency: "RUR",
         search_field: "name",
+        search_period: "1",
       });
       if (profile.remoteOnly) params.set("schedule", "remote");
       // Зарплату режем локально: HH по нижней границе прячет вилку 60–100 при пороге 70.
@@ -68,6 +84,13 @@ export async function runRadarCycle(): Promise<RadarCycleResult> {
           where: { source_externalId: { source: "hh", externalId: hit.id } },
           select: { id: true },
         });
+        const publishedAtHit = hit.publishedAt ? new Date(hit.publishedAt) : null;
+        if (!publishedToday(publishedAtHit) || !fewResponses(hit.responsesCount)) {
+          if (exists && ((hit.responsesCount != null && hit.responsesCount > 3) || !publishedToday(publishedAtHit))) {
+            await db.jobVacancy.delete({ where: { id: exists.id } });
+          }
+          continue;
+        }
         if (exists) {
           if (hit.responsesCount != null) {
             await db.jobVacancy.update({
@@ -77,7 +100,7 @@ export async function runRadarCycle(): Promise<RadarCycleResult> {
           }
           continue;
         }
-        const createdMs = hit.publishedAt ? new Date(hit.publishedAt).getTime() : 0;
+        const createdMs = publishedAtHit ? publishedAtHit.getTime() : 0;
         if (!createdMs || Date.now() - createdMs > maxAgeMs) continue;
         considered += 1;
         const preview = passesHardFilter(
@@ -240,8 +263,6 @@ async function sendMorningDigest(profile: Awaited<ReturnType<typeof ensureRadarP
       status: { in: ["new", "opened"] },
       notifiedAt: null,
       source: "hh",
-      matchScore: { gte: profile.matchMin },
-      trustScore: { gte: profile.trustMin },
       firstSeenAt: { gte: since },
     },
     orderBy: [{ matchScore: "desc" }, { firstSeenAt: "desc" }],
@@ -289,8 +310,6 @@ async function notifyPending(profile: Awaited<ReturnType<typeof ensureRadarProfi
       status: "new",
       notifiedAt: null,
       source: "hh",
-      matchScore: { gte: profile.matchMin },
-      trustScore: { gte: profile.trustMin },
     },
     orderBy: [{ publishedAt: "desc" }, { firstSeenAt: "desc" }],
     take: 80,

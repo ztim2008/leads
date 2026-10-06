@@ -149,7 +149,7 @@ export async function searchHh(params: URLSearchParams): Promise<HhSearchHit[]> 
     area: params.get("area") || "113",
     order_by: "publication_time",
     items_on_page: "20",
-    search_period: "30",
+    search_period: params.get("search_period") || "1",
     currency_code: "RUR",
   });
   if (params.get("schedule") === "remote") query.set("work_format", "REMOTE");

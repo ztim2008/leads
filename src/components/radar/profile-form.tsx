@@ -85,7 +85,7 @@ export default function ProfileForm({ profile }: { profile: Profile }) {
       <Field label="Тильда" hint="В заголовке нужны Tilda или Тильда и роль: разработчик, дизайнер, верстальщик.">
         <textarea value={tildaQueries} onChange={(e) => setTildaQueries(e.target.value)} rows={3} style={inputStyle} />
       </Field>
-      <Field label="ИИ" hint="AI-дизайнер, AI-креатор, монтаж и видео. Продажи курсов и разработка моделей не проходят.">
+      <Field label="ИИ" hint="AI-дизайнер и AI-креатор. Видео и монтаж не проходят.">
         <textarea value={aiQueries} onChange={(e) => setAiQueries(e.target.value)} rows={4} style={inputStyle} />
       </Field>
       {error && <p style={{ color: "var(--red)", fontSize: "var(--text-sm)", margin: 0 }}>{error}</p>}

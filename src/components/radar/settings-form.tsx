@@ -94,14 +94,10 @@ export default function SettingsForm({
         <Check label="Сбор HH включён" checked={form.enabled} onChange={(v) => patch("enabled", v)} />
         <Check label="Пуши в Telegram" checked={form.alertsEnabled} onChange={(v) => patch("alertsEnabled", v)} />
         <Check label="Только удалёнка" checked={form.remoteOnly} onChange={(v) => patch("remoteOnly", v)} />
-        <Check label="В ленту только если зарплата указана" checked={form.requireSalary} onChange={(v) => patch("requireSalary", v)} />
         <p style={{ margin: 0, fontSize: "var(--text-xs)", color: "var(--ink-muted)" }}>
-          Вилка проходит, если верх не ниже минимума. Без суммы вакансия остаётся в ленте и уходит в Telegram только если откликов мало. В день до 8 карточек, 4 Тильды и 4 ИИ. Пустой поток отдаёт слот другому.
+          В ленту попадают сегодняшние вакансии с числом откликов до 3. Зарплата, совпадение и надёжность на карточке есть, из отбора убраны. Вчерашнее удаляется само.
         </p>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-          <Num label="Минимум зарплаты, ₽" value={form.salaryMin} onChange={(v) => patch("salaryMin", v)} />
-          <Num label="Порог совпадения" value={form.matchMin} onChange={(v) => patch("matchMin", v)} />
-          <Num label="Порог надёжности" value={form.trustMin} onChange={(v) => patch("trustMin", v)} />
           <Num label="Пушей в день" value={form.dailyAlertCap} onChange={(v) => patch("dailyAlertCap", v)} />
           <label style={{ display: "grid", gap: 6, fontSize: "var(--text-sm)" }}>
             <span style={{ fontWeight: 650, color: "var(--ink-heading)" }}>Тихие часы, МСК</span>
