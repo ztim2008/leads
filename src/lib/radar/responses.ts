@@ -1,10 +1,52 @@
 import { mskClock } from "./time";
 
-/** Мгновенный пуш только если откликов ещё мало. Нет числа — не режем. */
+/** Мгновенный пуш «горячей» вакансии, если откликов ещё мало. Нет числа — не режем. */
 export const FEW_RESPONSES = 5;
+
+/** Свежая для пуша: опубликована не старше этого срока. */
+export const PUSH_MAX_AGE_MS = 10 * 24 * 60 * 60 * 1000;
+
+/** Пуш за последние дни, если откликов не слишком много. Нет числа — не режем. */
+export const PUSH_MAX_RESPONSES = 500;
 
 export function fewResponses(count: number | null | undefined): boolean {
   return count == null || count <= FEW_RESPONSES;
+}
+
+/**
+ * Карточка в Telegram: горячая с малым числом откликов
+ * или опубликованная за последние 10 дней и откликов не больше 500.
+ */
+export function worthInstantPush(input: {
+  publishedAt: Date | null;
+  firstSeenAt: Date;
+  responsesCount: number | null | undefined;
+  now?: Date;
+}): boolean {
+  const now = input.now ?? new Date();
+  const seenMin = (now.getTime() - input.firstSeenAt.getTime()) / 60000;
+  const pubMin = input.publishedAt ? (now.getTime() - input.publishedAt.getTime()) / 60000 : null;
+  const hot = pubMin != null && pubMin >= 0 && pubMin <= 45 && seenMin >= -1 && seenMin <= 45;
+  if (hot && fewResponses(input.responsesCount)) return true;
+  if (!input.publishedAt) return false;
+  const age = now.getTime() - input.publishedAt.getTime();
+  if (age < 0 || age > PUSH_MAX_AGE_MS) return false;
+  return input.responsesCount == null || input.responsesCount <= PUSH_MAX_RESPONSES;
+}
+
+/** Без зарплаты пуш только при малом числе откликов. С зарплатой — обычное окно. */
+export function canPushVacancy(input: {
+  publishedAt: Date | null;
+  firstSeenAt: Date;
+  responsesCount: number | null | undefined;
+  salaryFrom: number | null;
+  salaryTo: number | null;
+  now?: Date;
+}): boolean {
+  if (!worthInstantPush(input)) return false;
+  const hasSalary = input.salaryFrom != null || input.salaryTo != null;
+  if (hasSalary) return true;
+  return fewResponses(input.responsesCount);
 }
 
 export function responsesLabel(count: number | null | undefined): string | null {

@@ -1,5 +1,6 @@
 import { salaryBelowFloor } from "./money";
 import { norm, termHit } from "./text";
+import type { RadarTrack } from "./tracks";
 
 export type RadarFilterProfile = {
   salaryMin: number;
@@ -54,11 +55,43 @@ const BODY_EXCLUSIONS: { key: string; re: RegExp }[] = [
   { key: "продажи", re: /менеджер по продаж|отдел продаж|sales manager/i },
 ];
 
+const DESIGN_TITLE = /дизайнер|инфографик|графическ|иллюстратор|креатор/i;
+const MARKET_TITLE = /маркетплейс|карточк|инфографик|wildberries|вайлдберриз|\bozon\b|\bwb\b|ламода/i;
+
+/** Роль в заголовке: фраза из профиля или дизайнер + маркетплейс/карточки/инфографика. */
+export function titleIsDesignRole(title: string, roleTerms: string[]): boolean {
+  if (roleTerms.some((term) => termHit(title, term))) return true;
+  const text = norm(title);
+  return DESIGN_TITLE.test(text) && MARKET_TITLE.test(text);
+}
+
 function exclusionOn(exclusions: string[], key: string): boolean {
   return exclusions.some((item) => norm(item).includes(key));
 }
 
-export function passesHardFilter(vacancy: RadarVacancyText, profile: RadarFilterProfile): FilterDecision {
+export function tildaTitleOk(title: string): boolean {
+  const text = norm(title);
+  if (!/тильд|tilda/.test(text)) return false;
+  if (/контент-менеджер|администратор|smm|маркетолог|копирайтер/.test(text)) return false;
+  return /разработчик|дизайнер|верстальщик|верстк/.test(text);
+}
+
+export function aiTitleOk(title: string): boolean {
+  const text = norm(title);
+  if (/machine learning|data scientist|python|обучени|по продаж|software|fullstack|разработчик|adult|порн|эротич/.test(text)) {
+    return false;
+  }
+  if (/менеджер/.test(text) && !/дизайнер|креатор|монтаж/.test(text)) return false;
+  return /(ai|ии)[-\s/]?(дизайнер|креатор|монтаж|видео|video|creative)|(дизайнер|креатор|монтаж)[-\s/]?(ai|ии)|нейросет\w* (видео|video|монтаж)|(видео|video)[-\s/]?(ai|ии|монтаж)/.test(
+    text,
+  );
+}
+
+export function passesHardFilter(
+  vacancy: RadarVacancyText,
+  profile: RadarFilterProfile,
+  track: RadarTrack = "cards",
+): FilterDecision {
   const title = norm(vacancy.title);
   const body = norm(`${vacancy.title}\n${vacancy.description}`);
 
@@ -70,10 +103,12 @@ export function passesHardFilter(vacancy: RadarVacancyText, profile: RadarFilter
   }
 
   for (const rule of TITLE_EXCLUSIONS) {
+    if (track !== "cards" && (rule.key === "программирование" || rule.key === "frontend")) continue;
     if (!exclusionOn(profile.exclusions, rule.key)) continue;
     if (rule.re.test(title)) return { ok: false, reason: rule.key };
   }
   for (const rule of BODY_EXCLUSIONS) {
+    if (track !== "cards" && (rule.key === "программирование" || rule.key === "frontend")) continue;
     if (!exclusionOn(profile.exclusions, rule.key)) continue;
     if (rule.re.test(body)) return { ok: false, reason: rule.key };
   }
@@ -87,12 +122,21 @@ export function passesHardFilter(vacancy: RadarVacancyText, profile: RadarFilter
   if (below === true) return { ok: false, reason: "зарплата ниже минимума" };
   if (below == null && profile.requireSalary) return { ok: false, reason: "зарплата не указана" };
 
+  if (track === "tilda") {
+    if (!tildaTitleOk(vacancy.title)) return { ok: false, reason: "в заголовке другая роль" };
+    return { ok: true, hits: ["Tilda"] };
+  }
+  if (track === "ai") {
+    if (!aiTitleOk(vacancy.title)) return { ok: false, reason: "в заголовке другая роль" };
+    return { ok: true, hits: ["AI"] };
+  }
+
   const roleTerms = [
     ...profile.specialization.split(/[/|,]+/),
     ...profile.skills,
     ...profile.directions.filter((term) => !brandOnly(term)),
   ];
-  if (!roleTerms.some((term) => termHit(vacancy.title, term))) {
+  if (!titleIsDesignRole(vacancy.title, roleTerms)) {
     return { ok: false, reason: "в заголовке другая роль" };
   }
 

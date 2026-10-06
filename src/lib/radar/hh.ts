@@ -153,6 +153,8 @@ export async function searchHh(params: URLSearchParams): Promise<HhSearchHit[]> 
     currency_code: "RUR",
   });
   if (params.get("schedule") === "remote") query.set("work_format", "REMOTE");
+  const field = params.get("search_field");
+  if (field) query.set("search_field", field);
   const salary = params.get("salary");
   if (salary && params.get("only_with_salary") === "true") {
     query.set("salary", salary);

@@ -17,6 +17,7 @@ export default async function RadarSettingsPage() {
         remoteOnly: profile.remoteOnly,
         matchMin: profile.matchMin,
         trustMin: profile.trustMin,
+        salaryMin: profile.salaryMin,
         dailyAlertCap: profile.dailyAlertCap,
         quietStart: profile.quietStart,
         quietEnd: profile.quietEnd,

@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { hideVacancy, markApplied } from "@/lib/radar/actions";
 import { formatSalary } from "@/lib/radar/money";
 import { responsesLabel } from "@/lib/radar/responses";
+import { asTrack, TRACK_LABEL } from "@/lib/radar/tracks";
 import { freshness } from "@/lib/radar/time";
 import type { TrustCheck } from "@/lib/radar/trust";
 
@@ -26,6 +27,9 @@ export default async function RadarVacancyPage({ params }: { params: Promise<{ i
         К ленте
       </Link>
       <header style={{ display: "grid", gap: 6 }}>
+        <p style={{ margin: 0, color: "var(--accent)", fontSize: "var(--text-sm)", fontWeight: 650 }}>
+          {TRACK_LABEL[asTrack(vacancy.track)]}
+        </p>
         <h2 style={{ margin: 0, fontSize: "var(--text-xl)" }}>{vacancy.title}</h2>
         <p style={{ margin: 0, color: "var(--ink-body)" }}>
           {vacancy.company || "Компания не указана"}

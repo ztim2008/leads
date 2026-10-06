@@ -38,6 +38,8 @@ export async function PUT(req: NextRequest) {
     formats: list(body.formats, current.formats),
     exclusions: list(body.exclusions, current.exclusions),
     searchQueries: list(body.searchQueries, current.searchQueries),
+    tildaQueries: list(body.tildaQueries, current.tildaQueries),
+    aiQueries: list(body.aiQueries, current.aiQueries),
     salaryMin: body.salaryMin == null ? current.salaryMin : clampInt(body.salaryMin, 0, 1_000_000, current.salaryMin),
     matchMin: body.matchMin == null ? current.matchMin : clampInt(body.matchMin, 0, 100, current.matchMin),
     trustMin: body.trustMin == null ? current.trustMin : clampInt(body.trustMin, 0, 100, current.trustMin),

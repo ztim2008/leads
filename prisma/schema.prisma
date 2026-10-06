@@ -386,12 +386,14 @@ model JobRadarProfile {
   formats        String[]  @default([])
   exclusions     String[]  @default([])
   searchQueries  String[]  @default([]) @map("search_queries")
-  salaryMin      Int       @default(70000) @map("salary_min")
-  requireSalary  Boolean   @default(true) @map("require_salary")
+  tildaQueries   String[]  @default([]) @map("tilda_queries")
+  aiQueries      String[]  @default([]) @map("ai_queries")
+  salaryMin      Int       @default(50000) @map("salary_min")
+  requireSalary  Boolean   @default(false) @map("require_salary")
   remoteOnly     Boolean   @default(true) @map("remote_only")
   matchMin       Int       @default(85) @map("match_min")
   trustMin       Int       @default(70) @map("trust_min")
-  dailyAlertCap  Int       @default(5) @map("daily_alert_cap")
+  dailyAlertCap  Int       @default(15) @map("daily_alert_cap")
   quietStart     String    @default("23:00") @map("quiet_start")
   quietEnd       String    @default("08:00") @map("quiet_end")
   alertsEnabled  Boolean   @default(true) @map("alerts_enabled")
@@ -408,6 +410,8 @@ model JobRadarProfile {
 model JobVacancy {
   id                   String    @id @default(uuid())
   source               String    @default("hh")
+  /// cards | tilda | ai
+  track                String    @default("cards")
   externalId           String    @map("external_id")
   title                String
   company              String?
@@ -442,6 +446,7 @@ model JobVacancy {
 
   @@unique([source, externalId])
   @@index([status, firstSeenAt])
+  @@index([track, status])
   @@map("job_vacancies")
 }
 

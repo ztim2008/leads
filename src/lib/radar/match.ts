@@ -12,6 +12,7 @@ export type MatchInput = {
   directions: string[];
   skills: string[];
   salaryMin: number;
+  roleBonus?: boolean;
 };
 
 export function scoreMatch(input: MatchInput): { score: number; reasons: string[] } {
@@ -33,6 +34,10 @@ export function scoreMatch(input: MatchInput): { score: number; reasons: string[
   if (input.employment && /полн|full/i.test(input.employment)) {
     score += 5;
     reasons.push("постоянная работа");
+  }
+  if (input.roleBonus) {
+    score += 20;
+    reasons.push("роль в заголовке");
   }
   return { score: Math.min(100, score), reasons };
 }

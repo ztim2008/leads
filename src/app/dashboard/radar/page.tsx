@@ -5,35 +5,52 @@ import { hideVacancy, markApplied, restoreVacancy } from "@/lib/radar/actions";
 import { formatSalary } from "@/lib/radar/money";
 import { ensureRadarProfile } from "@/lib/radar/profile";
 import { hideReasonLabel, responsesLabel } from "@/lib/radar/responses";
+import { asTrack, TRACK_LABEL, type RadarTrack } from "@/lib/radar/tracks";
 import { freshness } from "@/lib/radar/time";
 
 export default async function RadarFeedPage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string }>;
+  searchParams: Promise<{ view?: string; track?: string }>;
 }) {
-  const { view } = await searchParams;
+  const { view, track: trackParam } = await searchParams;
   const hidden = view === "hidden";
   const applied = view === "applied";
+  const track: RadarTrack | null =
+    trackParam === "cards" || trackParam === "tilda" || trackParam === "ai" ? trackParam : null;
   const profile = await ensureRadarProfile();
   const rows = await db.jobVacancy.findMany({
-    where: { status: hidden ? "hidden" : applied ? "applied" : { notIn: ["hidden", "applied"] } },
+    where: {
+      status: hidden ? "hidden" : applied ? "applied" : { notIn: ["hidden", "applied"] },
+      ...(track ? { track } : {}),
+    },
     orderBy: { firstSeenAt: "desc" },
-    take: 50,
+    take: 80,
   });
+  const viewQuery = hidden ? "hidden" : applied ? "applied" : "";
 
   return (
     <div>
       <div style={{ display: "flex", gap: 16, marginBottom: 16, fontSize: "var(--text-sm)" }}>
-        <Link href="/dashboard/radar" style={tabStyle(!hidden && !applied)}>
+        <Link href={feedHref("", track)} style={tabStyle(!hidden && !applied)}>
           В ленте
         </Link>
-        <Link href="/dashboard/radar?view=applied" style={tabStyle(applied)}>
+        <Link href={feedHref("applied", track)} style={tabStyle(applied)}>
           Откликнулся
         </Link>
-        <Link href="/dashboard/radar?view=hidden" style={tabStyle(hidden)}>
+        <Link href={feedHref("hidden", track)} style={tabStyle(hidden)}>
           Скрытые
         </Link>
+      </div>
+      <div style={{ display: "flex", gap: 16, marginBottom: 16, fontSize: "var(--text-sm)" }}>
+        <Link href={feedHref(viewQuery, null)} style={tabStyle(track == null)}>
+          Все потоки
+        </Link>
+        {(["cards", "tilda", "ai"] as const).map((id) => (
+          <Link key={id} href={feedHref(viewQuery, id)} style={tabStyle(track === id)}>
+            {TRACK_LABEL[id]}
+          </Link>
+        ))}
       </div>
 
       {rows.length === 0 ? (
@@ -67,6 +84,9 @@ export default async function RadarFeedPage({
               >
                 <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "baseline" }}>
                   <Link href={`/dashboard/radar/${row.id}`} style={{ color: "var(--ink-heading)", fontWeight: 700, fontSize: "var(--text-base)" }}>
+                    <span style={{ color: "var(--accent)", fontWeight: 650, fontSize: "var(--text-xs)", marginRight: 8 }}>
+                      {TRACK_LABEL[asTrack(row.track)]}
+                    </span>
                     {row.title}
                   </Link>
                   <span style={{ color: "var(--ink-muted)", fontSize: "var(--text-xs)", whiteSpace: "nowrap" }}>
@@ -128,6 +148,14 @@ export default async function RadarFeedPage({
       )}
     </div>
   );
+}
+
+function feedHref(view: string, track: RadarTrack | null): string {
+  const params = new URLSearchParams();
+  if (view) params.set("view", view);
+  if (track) params.set("track", track);
+  const query = params.toString();
+  return query ? `/dashboard/radar?${query}` : "/dashboard/radar";
 }
 
 function tabStyle(active: boolean): CSSProperties {

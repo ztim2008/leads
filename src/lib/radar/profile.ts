@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { DEFAULT_AI_QUERIES, DEFAULT_TILDA_QUERIES } from "./tracks";
 
 export const RADAR_PROFILE_ID = "default";
 
@@ -11,13 +12,22 @@ export const DEFAULT_RADAR_PROFILE = {
   skills: ["Figma", "Photoshop", "Midjourney", "Runway", "Kling", "генерация изображений", "AI-видео", "AI-аватары"],
   formats: ["удалёнка", "долгосрочная работа"],
   exclusions: ["программирование", "frontend", "офис", "продажи"],
-  searchQueries: ["дизайнер карточек", "дизайнер маркетплейсов", "инфографика Wildberries", "дизайнер Ozon"],
-  salaryMin: 70000,
-  requireSalary: true,
+  searchQueries: [
+    "дизайнер карточек",
+    "инфографика",
+    "графический дизайнер маркетплейс",
+    "дизайнер маркетплейсов",
+    "дизайнер wildberries",
+    "дизайнер ozon",
+  ],
+  tildaQueries: DEFAULT_TILDA_QUERIES,
+  aiQueries: DEFAULT_AI_QUERIES,
+  salaryMin: 50000,
+  requireSalary: false,
   remoteOnly: true,
   matchMin: 85,
   trustMin: 70,
-  dailyAlertCap: 5,
+  dailyAlertCap: 15,
   quietStart: "23:00",
   quietEnd: "08:00",
   alertsEnabled: true,

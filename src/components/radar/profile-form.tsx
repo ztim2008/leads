@@ -10,7 +10,8 @@ type Profile = {
   formats: string[];
   exclusions: string[];
   searchQueries: string[];
-  salaryMin: number;
+  tildaQueries: string[];
+  aiQueries: string[];
 };
 
 export default function ProfileForm({ profile }: { profile: Profile }) {
@@ -21,7 +22,8 @@ export default function ProfileForm({ profile }: { profile: Profile }) {
   const [formats, setFormats] = useState(profile.formats.join("\n"));
   const [exclusions, setExclusions] = useState(profile.exclusions.join("\n"));
   const [searchQueries, setSearchQueries] = useState(profile.searchQueries.join("\n"));
-  const [salaryMin, setSalaryMin] = useState(String(profile.salaryMin));
+  const [tildaQueries, setTildaQueries] = useState(profile.tildaQueries.join("\n"));
+  const [aiQueries, setAiQueries] = useState(profile.aiQueries.join("\n"));
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -41,7 +43,8 @@ export default function ProfileForm({ profile }: { profile: Profile }) {
         formats,
         exclusions,
         searchQueries,
-        salaryMin: Number(salaryMin.replace(/\s/g, "")),
+        tildaQueries,
+        aiQueries,
       }),
     });
     const data = await res.json().catch(() => ({}));
@@ -73,14 +76,17 @@ export default function ProfileForm({ profile }: { profile: Profile }) {
       <Field label="Формат">
         <textarea value={formats} onChange={(e) => setFormats(e.target.value)} rows={3} style={inputStyle} />
       </Field>
-      <Field label="Минимум, ₽">
-        <input value={salaryMin} onChange={(e) => setSalaryMin(e.target.value)} inputMode="numeric" style={inputStyle} />
-      </Field>
       <Field label="Не интересно" hint="Эти слова в заголовке отсекаются до оценки">
         <textarea value={exclusions} onChange={(e) => setExclusions(e.target.value)} rows={4} style={inputStyle} />
       </Field>
-      <Field label="Поисковые запросы HH" hint="Каждый запрос — отдельный обход">
+      <Field label="Карточки" hint="Поиск по заголовку. Менеджер маркетплейса не проходит.">
         <textarea value={searchQueries} onChange={(e) => setSearchQueries(e.target.value)} rows={4} style={inputStyle} />
+      </Field>
+      <Field label="Тильда" hint="В заголовке нужны Tilda или Тильда и роль: разработчик, дизайнер, верстальщик.">
+        <textarea value={tildaQueries} onChange={(e) => setTildaQueries(e.target.value)} rows={3} style={inputStyle} />
+      </Field>
+      <Field label="ИИ" hint="AI-дизайнер, AI-креатор, монтаж и видео. Продажи курсов и разработка моделей не проходят.">
+        <textarea value={aiQueries} onChange={(e) => setAiQueries(e.target.value)} rows={4} style={inputStyle} />
       </Field>
       {error && <p style={{ color: "var(--red)", fontSize: "var(--text-sm)", margin: 0 }}>{error}</p>}
       {message && <p style={{ color: "var(--green)", fontSize: "var(--text-sm)", margin: 0 }}>{message}</p>}

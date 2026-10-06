@@ -48,12 +48,14 @@ export function buildTrustChecks(input: TrustInput): TrustCheck[] {
       label: input.employerVacancyCount >= 2 ? "есть история вакансий" : "мало истории вакансий",
     });
   }
-  checks.push(
-    {
+  if (input.salaryFrom != null || input.salaryTo != null) {
+    checks.push({
       id: "salary",
       ok: salaryOk,
       label: salaryOk ? "зарплата выглядит правдоподобно" : "зарплата не указана или странная",
-    },
+    });
+  }
+  checks.push(
     {
       id: "description",
       ok: text.trim().length >= 400,

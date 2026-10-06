@@ -6,8 +6,9 @@ import { fetchEmployerVacancyCount, fetchHhVacancy, searchHh } from "./hh";
 import { scoreMatch } from "./match";
 import { resolveRadarDelivery } from "./delivery";
 import { digestKeyboard, formatRadarDigest, formatRadarTelegram, radarKeyboard, type RadarAlert } from "./notify";
-import { digestSince, fewResponses, shouldSendDigest } from "./responses";
+import { canPushVacancy, digestSince, fewResponses, shouldSendDigest } from "./responses";
 import { ensureRadarProfile } from "./profile";
+import { allocatePushSlots, asTrack, trackTerms, type RadarTrack } from "./tracks";
 import { freshness, hhTimestamp, inQuietHours, startOfMskDay } from "./time";
 import { buildTrustChecks, trustScore } from "./trust";
 
@@ -40,7 +41,13 @@ export async function runRadarCycle(): Promise<RadarCycleResult> {
 
   try {
     const since = hhTimestamp(new Date(Date.now() - 6 * 60 * 60 * 1000));
-    for (const query of profile.searchQueries) {
+    const streams: { track: RadarTrack; queries: string[] }[] = [
+      { track: "cards", queries: profile.searchQueries },
+      { track: "tilda", queries: profile.tildaQueries },
+      { track: "ai", queries: profile.aiQueries },
+    ];
+    for (const stream of streams) {
+    for (const query of stream.queries) {
       const text = query.trim();
       if (!text) continue;
       const params = new URLSearchParams({
@@ -50,12 +57,10 @@ export async function runRadarCycle(): Promise<RadarCycleResult> {
         date_from: since,
         area: "113",
         currency: "RUR",
+        search_field: "name",
       });
       if (profile.remoteOnly) params.set("schedule", "remote");
-      if (profile.requireSalary) {
-        params.set("salary", String(profile.salaryMin));
-        params.set("only_with_salary", "true");
-      }
+      // Зарплату режем локально: HH по нижней границе прячет вилку 60–100 при пороге 70.
       const hits = await searchHh(params);
       scanned += hits.length;
       for (const hit of hits) {
@@ -85,6 +90,7 @@ export async function runRadarCycle(): Promise<RadarCycleResult> {
             remote: hit.remote,
           },
           profile,
+          stream.track,
         );
         if (!preview.ok && preview.reason !== "нет совпадения с профилем") continue;
 
@@ -116,6 +122,7 @@ export async function runRadarCycle(): Promise<RadarCycleResult> {
             remote,
           },
           profile,
+          stream.track,
         );
         if (!decision.ok) continue;
 
@@ -140,9 +147,10 @@ export async function runRadarCycle(): Promise<RadarCycleResult> {
           salaryFrom: hit.salaryFrom,
           salaryTo: hit.salaryTo,
           salaryCurrency: hit.salaryCurrency,
-          directions: profile.directions,
+          directions: [...profile.directions, ...trackTerms(stream.track)],
           skills: profile.skills,
           salaryMin: profile.salaryMin,
+          roleBonus: stream.track !== "cards",
         });
 
         let match = rules.score;
@@ -174,6 +182,7 @@ export async function runRadarCycle(): Promise<RadarCycleResult> {
         await db.jobVacancy.create({
           data: {
             source: "hh",
+            track: stream.track,
             externalId: hit.id,
             title: hit.title.slice(0, 300),
             company: hit.company,
@@ -201,6 +210,7 @@ export async function runRadarCycle(): Promise<RadarCycleResult> {
         });
         saved += 1;
       }
+    }
     }
   } catch (e) {
     error = e instanceof Error ? e.message : String(e);
@@ -259,11 +269,16 @@ async function notifyPending(profile: Awaited<ReturnType<typeof ensureRadarProfi
   if (!profile.alertsEnabled) return 0;
   if (inQuietHours(profile.quietStart, profile.quietEnd)) return 0;
 
-  const sentToday = await db.jobVacancy.count({
+  const sentRows = await db.jobVacancy.groupBy({
+    by: ["track"],
     where: { notifiedAt: { gte: startOfMskDay() } },
+    _count: true,
   });
-  let room = Math.max(0, profile.dailyAlertCap - sentToday);
+  const sentToday = sentRows.reduce((sum, row) => sum + row._count, 0);
+  const room = Math.max(0, profile.dailyAlertCap - sentToday);
   if (!room) return 0;
+  const already: Record<RadarTrack, number> = { cards: 0, tilda: 0, ai: 0 };
+  for (const row of sentRows) already[asTrack(row.track)] += row._count;
 
   const delivery = await resolveRadarDelivery(profile.telegramChatId);
   if (!delivery) return 0;
@@ -277,22 +292,31 @@ async function notifyPending(profile: Awaited<ReturnType<typeof ensureRadarProfi
       matchScore: { gte: profile.matchMin },
       trustScore: { gte: profile.trustMin },
     },
-    orderBy: { firstSeenAt: "desc" },
-    take: 8,
+    orderBy: [{ publishedAt: "desc" }, { firstSeenAt: "desc" }],
+    take: 80,
   });
+  const ready = pending.filter((row) =>
+    canPushVacancy({
+      publishedAt: row.publishedAt,
+      firstSeenAt: row.firstSeenAt,
+      responsesCount: row.responsesCount,
+      salaryFrom: row.salaryFrom,
+      salaryTo: row.salaryTo,
+    }),
+  );
+  const picked = allocatePushSlots(
+    ready.map((row) => ({ ...row, track: asTrack(row.track) })),
+    room,
+    already,
+  );
 
   let sent = 0;
-  for (const row of pending) {
-    if (!room) break;
-    const publishedAt = row.publishedAt;
-    const fresh = freshness(publishedAt, row.firstSeenAt);
-    if (!fresh.hot || !fewResponses(row.responsesCount)) continue;
+  for (const row of picked) {
     const alert = toAlert(row);
     const ok = await sendRadarAlert(token, chat, alert);
     if (!ok) continue;
     await db.jobVacancy.update({ where: { id: row.id }, data: { notifiedAt: new Date() } });
     sent += 1;
-    room -= 1;
   }
   return sent;
 }
@@ -314,6 +338,7 @@ function toAlert(row: {
   trustScore: number | null;
   fitReasons: string[];
   responsesCount: number | null;
+  track: string;
 }): RadarAlert {
   return {
     id: row.id,
@@ -332,6 +357,7 @@ function toAlert(row: {
     trustScore: row.trustScore || 0,
     fitReasons: row.fitReasons,
     responsesCount: row.responsesCount,
+    track: asTrack(row.track),
   };
 }
 

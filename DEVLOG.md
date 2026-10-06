@@ -940,3 +940,34 @@ Partner buys VPS, downloads zip, fills config.json (Profi login/password + Teleg
 - Jabka не подключать без команды
 - Пилот `93.188.186.13` не рестартить
 - **Не** этап 6 AI, полный 4.9, deep scan без команды
+
+
+## Итоги дня · 6 октября 2026
+
+### Сделано
+- Радар искал по всему тексту HH: в первых строках были менеджеры, в Telegram не уходило ничего. Поиск переведён на заголовок вакансии.
+- Три потока в одной ленте и одном чате: Карточки, Тильда, ИИ. Метка в Telegram и фильтр в ленте.
+- Лимит пушей 15 в сутки: до 8 карточек, до 4 Тильды, до 4 ИИ. Пустой поток отдаёт слот другому.
+- Порог зарплаты вынесен в настройки радара и снижен до 50 000 ₽. Вилка по верхней границе. Без суммы вакансия остаётся в ленте, пуш только если откликов мало.
+- Первый обход: в ленте карточки, Тильда и ИИ. Дневной лимит 15 выбран. Adult, UX в «AI-сервис» и разработчиков следующий обход в ИИ не берёт.
+- Тесты радара 16/16. Пилот и Profi не трогали.
+
+### Файлы
+- `docs/JOB_RADAR.md`, `DEVLOG.md`
+- `prisma/schema.prisma`, миграция `20261006093000_radar_tracks`
+- `src/lib/radar/tracks.ts`, `cycle.ts`, `filter.ts`, `hh.ts`, `match.ts`, `notify.ts`, `profile.ts`, `responses.ts`, `trust.ts`, `radar.test.ts`
+- `src/app/dashboard/radar/**`, `src/components/radar/profile-form.tsx`, `settings-form.tsx`
+- `src/app/api/radar/profile/route.ts`
+
+### Production
+- `npm run build` ✅ · `localhost:3005` → **200**
+- PM2: `leads-konversus` restart · `leads-radar` restart · `leads-health` online · Profi на хабе **off**
+- `profiOnHub: false`
+- Пилот VPS не трогали
+- Профиль: зарплата 50 000 ₽, пушей в день 15, без обязательной зарплаты
+
+### Осталось
+- Алексей тестирует ленту и пуши. Лишнее скрывать кнопкой в Telegram.
+- Jabka не подключать без команды
+- Пилот `93.188.186.13` не рестартить
+- **Не** этап 6 AI, полный 4.9, deep scan без команды

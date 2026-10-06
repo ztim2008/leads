@@ -13,7 +13,8 @@ export default async function RadarProfilePage() {
         formats: profile.formats,
         exclusions: profile.exclusions,
         searchQueries: profile.searchQueries,
-        salaryMin: profile.salaryMin,
+        tildaQueries: profile.tildaQueries,
+        aiQueries: profile.aiQueries,
       }}
     />
   );

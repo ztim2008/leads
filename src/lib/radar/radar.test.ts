@@ -2,8 +2,9 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { parseSearchHits } from "./hh";
 import { parseRadarTap } from "./actions-parse";
-import { passesHardFilter } from "./filter";
-import { fewResponses, responsesLabel, shouldSendDigest } from "./responses";
+import { aiTitleOk, passesHardFilter, tildaTitleOk } from "./filter";
+import { canPushVacancy, fewResponses, responsesLabel, shouldSendDigest, worthInstantPush } from "./responses";
+import { allocatePushSlots } from "./tracks";
 import { scoreMatch } from "./match";
 import { salaryBelowFloor } from "./money";
 import { freshness, inQuietHours } from "./time";
@@ -60,6 +61,44 @@ describe("job radar filter", () => {
     );
     assert.equal(withTeam.ok, true);
   });
+
+  it("пропускает графического дизайнера маркетплейсов и режет менеджера", () => {
+    const graphic = passesHardFilter(
+      {
+        ...vacancy,
+        title: "Графический дизайнер (маркетплейсы)",
+        description: "Инфографика и карточки товаров для Ozon",
+      },
+      profile,
+    );
+    assert.equal(graphic.ok, true);
+    assert.equal(
+      passesHardFilter({ ...vacancy, title: "Менеджер маркетплейса Ozon" }, profile).ok,
+      false,
+    );
+  });
+
+  it("тильда и визуальный ии проходят, продажи и админ сайта нет", () => {
+    const tilda = {
+      ...vacancy,
+      title: "Разработчик сайтов (Tilda/WordPress/Битрикс)",
+      salaryFrom: null,
+      salaryTo: null,
+    };
+    assert.equal(tildaTitleOk(tilda.title), true);
+    assert.equal(passesHardFilter(tilda, { ...profile, requireSalary: false }, "tilda").ok, true);
+    assert.equal(tildaTitleOk("Администратор сайта-афиши на Tilda"), false);
+    assert.equal(aiTitleOk("AI-креатор / Дизайнер"), true);
+    assert.equal(aiTitleOk("ИИ-монтажёр для продвижения продукта"), true);
+    assert.equal(aiTitleOk("Менеджер по продажам обучения по Нейросетям"), false);
+    assert.equal(aiTitleOk("Продуктовый дизайнер Middle+ / UX/UI в AI-сервис"), false);
+    assert.equal(aiTitleOk("AI-креатор (Adult)"), false);
+    assert.equal(aiTitleOk("Fullstack Software Engineer (AI & Video / Agents)"), false);
+    assert.equal(
+      passesHardFilter({ ...vacancy, title: "AI-дизайнер обложек", salaryFrom: 20000, salaryTo: 25000 }, profile, "ai").ok,
+      false,
+    );
+  });
 });
 
 describe("job radar scores", () => {
@@ -115,6 +154,89 @@ describe("job radar replies and digest", () => {
     assert.equal(responsesLabel(1), "1 отклик");
     assert.equal(responsesLabel(2), "2 отклика");
     assert.equal(responsesLabel(11), "11 откликов");
+  });
+
+  it("пуш за 10 дней, если откликов не больше 500", () => {
+    const now = new Date("2026-10-06T06:00:00Z");
+    assert.equal(
+      worthInstantPush({
+        publishedAt: new Date("2026-10-03T06:00:00Z"),
+        firstSeenAt: now,
+        responsesCount: 234,
+        now,
+      }),
+      true,
+    );
+    assert.equal(
+      worthInstantPush({
+        publishedAt: new Date("2026-09-29T06:00:00Z"),
+        firstSeenAt: now,
+        responsesCount: 753,
+        now,
+      }),
+      false,
+    );
+    assert.equal(
+      worthInstantPush({
+        publishedAt: new Date("2026-09-24T06:00:00Z"),
+        firstSeenAt: now,
+        responsesCount: 1922,
+        now,
+      }),
+      false,
+    );
+    assert.equal(
+      worthInstantPush({
+        publishedAt: new Date("2026-10-06T05:30:00Z"),
+        firstSeenAt: new Date("2026-10-06T05:40:00Z"),
+        responsesCount: 2,
+        now,
+      }),
+      true,
+    );
+  });
+
+  it("без зарплаты пуш только при малом числе откликов", () => {
+    const now = new Date("2026-10-06T06:00:00Z");
+    assert.equal(
+      canPushVacancy({
+        publishedAt: new Date("2026-10-04T06:00:00Z"),
+        firstSeenAt: now,
+        responsesCount: 3,
+        salaryFrom: null,
+        salaryTo: null,
+        now,
+      }),
+      true,
+    );
+    assert.equal(
+      canPushVacancy({
+        publishedAt: new Date("2026-10-04T06:00:00Z"),
+        firstSeenAt: now,
+        responsesCount: 40,
+        salaryFrom: null,
+        salaryTo: null,
+        now,
+      }),
+      false,
+    );
+  });
+
+  it("слоты потоков: квота, потом остаток другому", () => {
+    const item = (track: "cards" | "tilda" | "ai", n: number) => ({ track, n });
+    const pending = [
+      ...Array.from({ length: 10 }, (_, i) => item("cards", i)),
+      ...Array.from({ length: 2 }, (_, i) => item("tilda", i)),
+      item("ai", 0),
+    ];
+    const picked = allocatePushSlots(pending, 15, { cards: 0, tilda: 0, ai: 0 });
+    assert.equal(picked.filter((row) => row.track === "cards").length, 10);
+    assert.equal(picked.filter((row) => row.track === "tilda").length, 2);
+    assert.equal(picked.filter((row) => row.track === "ai").length, 1);
+    const rest = allocatePushSlots(pending, 7, { cards: 8, tilda: 0, ai: 0 });
+    assert.equal(rest.filter((row) => row.track === "cards").length, 4);
+    assert.equal(rest.filter((row) => row.track === "tilda").length, 2);
+    assert.equal(rest.filter((row) => row.track === "ai").length, 1);
   });
 
   it("утренний разбор только в первые 20 минут девятого часа", () => {
