@@ -12,6 +12,7 @@ type Profile = {
   searchQueries: string[];
   tildaQueries: string[];
   aiQueries: string[];
+  webQueries: string[];
 };
 
 export default function ProfileForm({ profile }: { profile: Profile }) {
@@ -24,6 +25,7 @@ export default function ProfileForm({ profile }: { profile: Profile }) {
   const [searchQueries, setSearchQueries] = useState(profile.searchQueries.join("\n"));
   const [tildaQueries, setTildaQueries] = useState(profile.tildaQueries.join("\n"));
   const [aiQueries, setAiQueries] = useState(profile.aiQueries.join("\n"));
+  const [webQueries, setWebQueries] = useState(profile.webQueries.join("\n"));
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
@@ -45,12 +47,13 @@ export default function ProfileForm({ profile }: { profile: Profile }) {
         searchQueries,
         tildaQueries,
         aiQueries,
+        webQueries,
       }),
     });
     const data = await res.json().catch(() => ({}));
     setSaving(false);
     if (!res.ok) setError(data.error || "Не сохранилось");
-    else setMessage("Профиль сохранён. Следующий обход HH возьмёт его.");
+    else setMessage("Профиль сохранён. Следующий обход возьмёт его.");
   }
 
   return (
@@ -81,6 +84,9 @@ export default function ProfileForm({ profile }: { profile: Profile }) {
       </Field>
       <Field label="Карточки" hint="Поиск по заголовку. Менеджер маркетплейса не проходит.">
         <textarea value={searchQueries} onChange={(e) => setSearchQueries(e.target.value)} rows={4} style={inputStyle} />
+      </Field>
+      <Field label="Сайты, сисадмин и ИИ" hint="Создание и поддержка сайтов, системный администратор, ИИ-технологии. Удалёнка по всей России.">
+        <textarea value={webQueries} onChange={(e) => setWebQueries(e.target.value)} rows={4} style={inputStyle} />
       </Field>
       <Field label="Тильда" hint="В заголовке нужны Tilda или Тильда и роль: разработчик, дизайнер, верстальщик.">
         <textarea value={tildaQueries} onChange={(e) => setTildaQueries(e.target.value)} rows={3} style={inputStyle} />

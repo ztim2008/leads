@@ -7,6 +7,7 @@ import { hideVacancy, markApplied } from "@/lib/radar/actions";
 import { formatSalary } from "@/lib/radar/money";
 import { responsesLabel } from "@/lib/radar/responses";
 import { asTrack, TRACK_LABEL } from "@/lib/radar/tracks";
+import { sourceLabel } from "@/lib/radar/sources";
 import { freshness } from "@/lib/radar/time";
 import type { TrustCheck } from "@/lib/radar/trust";
 
@@ -28,7 +29,7 @@ export default async function RadarVacancyPage({ params }: { params: Promise<{ i
       </Link>
       <header style={{ display: "grid", gap: 6 }}>
         <p style={{ margin: 0, color: "var(--accent)", fontSize: "var(--text-sm)", fontWeight: 650 }}>
-          {TRACK_LABEL[asTrack(vacancy.track)]}
+          {sourceLabel(vacancy.source)} · {TRACK_LABEL[asTrack(vacancy.track)]}
         </p>
         <h2 style={{ margin: 0, fontSize: "var(--text-xl)" }}>{vacancy.title}</h2>
         <p style={{ margin: 0, color: "var(--ink-body)" }}>
@@ -61,7 +62,7 @@ export default async function RadarVacancyPage({ params }: { params: Promise<{ i
         )}
         {vacancy.whyFit && <p style={{ margin: 0 }}>{vacancy.whyFit}</p>}
         <a href={vacancy.url} target="_blank" rel="noreferrer" style={{ fontWeight: 650 }}>
-          Открыть на HH
+          Открыть вакансию
         </a>
       </header>
 

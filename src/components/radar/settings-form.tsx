@@ -91,11 +91,11 @@ export default function SettingsForm({
         }}
         style={{ display: "grid", gap: 14 }}
       >
-        <Check label="Сбор HH включён" checked={form.enabled} onChange={(v) => patch("enabled", v)} />
+        <Check label="Сбор включён" checked={form.enabled} onChange={(v) => patch("enabled", v)} />
         <Check label="Пуши в Telegram" checked={form.alertsEnabled} onChange={(v) => patch("alertsEnabled", v)} />
         <Check label="Только удалёнка" checked={form.remoteOnly} onChange={(v) => patch("remoteOnly", v)} />
         <p style={{ margin: 0, fontSize: "var(--text-xs)", color: "var(--ink-muted)" }}>
-          В ленту попадают сегодняшние вакансии с числом откликов до 3. Зарплата, совпадение и надёжность на карточке есть, из отбора убраны. Вчерашнее удаляется само.
+          Удалёнка по всей России: город не выбирается. В ленту попадает только сегодня. На HH ещё и не больше 3 откликов, у «Работы в России» и Работа.ру числа откликов нет. Зарплата на карточке есть и отбор не режет. Вчерашнее удаляется само.
         </p>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <Num label="Пушей в день" value={form.dailyAlertCap} onChange={(v) => patch("dailyAlertCap", v)} />
@@ -121,7 +121,7 @@ export default function SettingsForm({
 
       <div style={{ borderTop: "1px solid var(--border)", paddingTop: 16 }}>
         <button type="button" onClick={() => void runNow()} disabled={running} style={buttonStyle}>
-          {running ? "Смотрю HH…" : "Проверить HH сейчас"}
+          {running ? "Смотрю вакансии…" : "Собрать сейчас"}
         </button>
         {runNote && <p style={{ fontSize: "var(--text-sm)", margin: "10px 0 0" }}>{runNote}</p>}
       </div>

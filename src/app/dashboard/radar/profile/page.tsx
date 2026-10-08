@@ -15,6 +15,7 @@ export default async function RadarProfilePage() {
         searchQueries: profile.searchQueries,
         tildaQueries: profile.tildaQueries,
         aiQueries: profile.aiQueries,
+        webQueries: profile.webQueries,
       }}
     />
   );

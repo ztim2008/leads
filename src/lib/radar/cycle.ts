@@ -3,6 +3,8 @@ import { loadHubEnv } from "@/lib/telegram/bot-token";
 import { refineMatchScore, radarApiKey } from "./ai";
 import { isVideoVacancy, passesHardFilter } from "./filter";
 import { fetchEmployerVacancyCount, fetchHhVacancy, searchHh } from "./hh";
+import { searchRabota } from "./rabota";
+import { searchTrudvsem } from "./trudvsem";
 import { scoreMatch } from "./match";
 import { resolveRadarDelivery } from "./delivery";
 import { digestKeyboard, formatRadarDigest, formatRadarTelegram, radarKeyboard, type RadarAlert } from "./notify";
@@ -13,6 +15,126 @@ import { freshness, hhTimestamp, inQuietHours, startOfMskDay } from "./time";
 import { buildTrustChecks, trustScore } from "./trust";
 
 const AI_CAP_PER_CYCLE = 6;
+
+type RadarProfileRow = Awaited<ReturnType<typeof ensureRadarProfile>>;
+
+type SaveVacancyInput = {
+  source: string;
+  track: RadarTrack;
+  externalId: string;
+  title: string;
+  company: string | null;
+  companyUrl: string | null;
+  url: string;
+  salaryFrom: number | null;
+  salaryTo: number | null;
+  salaryCurrency: string | null;
+  salaryGross: boolean | null;
+  area: string | null;
+  remote: boolean;
+  employment: string | null;
+  description: string;
+  publishedAt: Date | null;
+  trusted: boolean | null;
+  employerVacancyCount: number | null;
+  responsesCount: number | null;
+};
+
+async function saveVacancy(profile: RadarProfileRow, input: SaveVacancyInput, ai: { left: number; key: string | null }): Promise<boolean> {
+  const decision = passesHardFilter(
+    {
+      title: input.title,
+      description: input.description,
+      salaryFrom: input.salaryFrom,
+      salaryTo: input.salaryTo,
+      salaryCurrency: input.salaryCurrency,
+      remote: input.remote,
+    },
+    profile,
+    input.track,
+  );
+  if (!decision.ok) return false;
+
+  const checks = buildTrustChecks({
+    company: input.company,
+    employerTrusted: input.trusted,
+    employerVacancyCount: input.employerVacancyCount,
+    publishedAt: input.publishedAt,
+    salaryFrom: input.salaryFrom,
+    salaryTo: input.salaryTo,
+    description: input.description,
+  });
+  const rules = scoreMatch({
+    title: input.title,
+    description: input.description,
+    remote: input.remote,
+    employment: input.employment,
+    salaryFrom: input.salaryFrom,
+    salaryTo: input.salaryTo,
+    salaryCurrency: input.salaryCurrency,
+    directions: [...profile.directions, ...trackTerms(input.track)],
+    skills: profile.skills,
+    salaryMin: profile.salaryMin,
+    roleBonus: input.track !== "cards",
+  });
+
+  let match = rules.score;
+  let why = rules.reasons.slice(0, 6).join(" + ");
+  if (ai.key && rules.score >= 70 && ai.left > 0) {
+    ai.left -= 1;
+    try {
+      const refined = await refineMatchScore({
+        apiKey: ai.key,
+        specialization: profile.specialization,
+        about: profile.about,
+        directions: profile.directions,
+        skills: profile.skills,
+        exclusions: profile.exclusions,
+        salaryMin: profile.salaryMin,
+        title: input.title,
+        company: input.company,
+        description: input.description,
+      });
+      if (refined) {
+        match = refined.score;
+        why = refined.why;
+      }
+    } catch (e) {
+      console.error("[hh-radar] ai", e instanceof Error ? e.message : e);
+    }
+  }
+
+  await db.jobVacancy.create({
+    data: {
+      source: input.source,
+      track: input.track,
+      externalId: input.externalId,
+      title: input.title.slice(0, 300),
+      company: input.company,
+      companyUrl: input.companyUrl,
+      url: input.url,
+      salaryFrom: input.salaryFrom,
+      salaryTo: input.salaryTo,
+      salaryCurrency: input.salaryCurrency,
+      salaryGross: input.salaryGross,
+      area: input.area,
+      remote: input.remote,
+      employment: input.employment,
+      description: input.description.slice(0, 12000),
+      publishedAt: input.publishedAt,
+      employerTrusted: input.trusted,
+      employerVacancyCount: input.employerVacancyCount,
+      responsesCount: input.responsesCount,
+      matchScore: match,
+      trustScore: trustScore(checks),
+      trustChecks: JSON.parse(JSON.stringify(checks)),
+      fitReasons: rules.reasons.slice(0, 8),
+      whyFit: why,
+      status: "new",
+    },
+  });
+  return true;
+}
 
 export type RadarCycleResult = {
   scanned: number;
@@ -51,13 +173,15 @@ export async function runRadarCycle(): Promise<RadarCycleResult> {
   let considered = 0;
   let error: string | undefined;
   const maxAgeMs = 30 * 24 * 60 * 60 * 1000;
-  let aiLeft = AI_CAP_PER_CYCLE;
-  const apiKey = radarApiKey();
+  const ai = { left: AI_CAP_PER_CYCLE, key: radarApiKey() };
+  let trudError: string | undefined;
+  let rabotaError: string | undefined;
 
   try {
     const since = hhTimestamp(new Date(Date.now() - 6 * 60 * 60 * 1000));
     const streams: { track: RadarTrack; queries: string[] }[] = [
       { track: "cards", queries: profile.searchQueries },
+      { track: "web", queries: profile.webQueries },
       { track: "tilda", queries: profile.tildaQueries },
       { track: "ai", queries: profile.aiQueries },
     ];
@@ -70,7 +194,7 @@ export async function runRadarCycle(): Promise<RadarCycleResult> {
         order_by: "publication_time",
         per_page: "15",
         date_from: since,
-        area: "113",
+        area: "113", // вся Россия, без города
         currency: "RUR",
         search_field: "name",
         search_period: "1",
@@ -135,79 +259,15 @@ export async function runRadarCycle(): Promise<RadarCycleResult> {
           console.error("[hh-radar] detail", hit.id, e instanceof Error ? e.message : e);
         }
 
-        const decision = passesHardFilter(
-          {
-            title: hit.title,
-            description,
-            salaryFrom: hit.salaryFrom,
-            salaryTo: hit.salaryTo,
-            salaryCurrency: hit.salaryCurrency,
-            remote,
-          },
-          profile,
-          stream.track,
-        );
-        if (!decision.ok) continue;
-
         let employerVacancyCount: number | null = null;
         if (hit.employerId) employerVacancyCount = await fetchEmployerVacancyCount(hit.employerId);
-
-        const publishedAt = hit.publishedAt ? new Date(hit.publishedAt) : null;
-        const checks = buildTrustChecks({
-          company: hit.company,
-          employerTrusted: trusted,
-          employerVacancyCount,
-          publishedAt,
-          salaryFrom: hit.salaryFrom,
-          salaryTo: hit.salaryTo,
-          description,
-        });
-        const rules = scoreMatch({
-          title: hit.title,
-          description,
-          remote,
-          employment,
-          salaryFrom: hit.salaryFrom,
-          salaryTo: hit.salaryTo,
-          salaryCurrency: hit.salaryCurrency,
-          directions: [...profile.directions, ...trackTerms(stream.track)],
-          skills: profile.skills,
-          salaryMin: profile.salaryMin,
-          roleBonus: stream.track !== "cards",
-        });
-
-        let match = rules.score;
-        let why = rules.reasons.slice(0, 6).join(" + ");
-        if (apiKey && rules.score >= 70 && aiLeft > 0) {
-          aiLeft -= 1;
-          try {
-            const refined = await refineMatchScore({
-              apiKey,
-              specialization: profile.specialization,
-              about: profile.about,
-              directions: profile.directions,
-              skills: profile.skills,
-              exclusions: profile.exclusions,
-              salaryMin: profile.salaryMin,
-              title: hit.title,
-              company: hit.company,
-              description,
-            });
-            if (refined) {
-              match = refined.score;
-              why = refined.why;
-            }
-          } catch (e) {
-            console.error("[hh-radar] ai", e instanceof Error ? e.message : e);
-          }
-        }
-
-        await db.jobVacancy.create({
-          data: {
+        const created = await saveVacancy(
+          profile,
+          {
             source: "hh",
             track: stream.track,
             externalId: hit.id,
-            title: hit.title.slice(0, 300),
+            title: hit.title,
             company: hit.company,
             companyUrl: hit.companyUrl,
             url: hit.url,
@@ -218,20 +278,15 @@ export async function runRadarCycle(): Promise<RadarCycleResult> {
             area: hit.area,
             remote,
             employment,
-            description: description.slice(0, 12000),
-            publishedAt,
-            employerTrusted: trusted,
+            description,
+            publishedAt: publishedAtHit,
+            trusted,
             employerVacancyCount,
             responsesCount: hit.responsesCount,
-            matchScore: match,
-            trustScore: trustScore(checks),
-            trustChecks: JSON.parse(JSON.stringify(checks)),
-            fitReasons: rules.reasons.slice(0, 8),
-            whyFit: why,
-            status: "new",
           },
-        });
-        saved += 1;
+          ai,
+        );
+        if (created) saved += 1;
       }
     }
     }
@@ -240,17 +295,154 @@ export async function runRadarCycle(): Promise<RadarCycleResult> {
     console.error("[hh-radar]", error);
   }
 
+  try {
+    const streams: { track: RadarTrack; queries: string[] }[] = [
+      { track: "cards", queries: profile.searchQueries },
+      { track: "web", queries: profile.webQueries },
+      { track: "tilda", queries: profile.tildaQueries },
+      { track: "ai", queries: profile.aiQueries },
+    ];
+    for (const stream of streams) {
+      for (const query of stream.queries) {
+        const text = query.trim();
+        if (!text) continue;
+        let hits;
+        try {
+          hits = await searchTrudvsem(text);
+        } catch (e) {
+          trudError = e instanceof Error ? e.message : String(e);
+          console.error("[hh-radar] trudvsem", text, trudError);
+          continue;
+        }
+        scanned += hits.length;
+        for (const hit of hits) {
+          if (profile.remoteOnly && !hit.remote) continue;
+          const exists = await db.jobVacancy.findUnique({
+            where: { source_externalId: { source: "trudvsem", externalId: hit.id } },
+            select: { id: true },
+          });
+          if (exists || !publishedToday(hit.publishedAt) || !fewResponses(null)) continue;
+          considered += 1;
+          try {
+            const created = await saveVacancy(
+            profile,
+            {
+              source: "trudvsem",
+              track: stream.track,
+              externalId: hit.id,
+              title: hit.title,
+              company: hit.company,
+              companyUrl: hit.companyUrl,
+              url: hit.url,
+              salaryFrom: hit.salaryFrom,
+              salaryTo: hit.salaryTo,
+              salaryCurrency: hit.salaryCurrency,
+              salaryGross: null,
+              area: hit.area,
+              remote: hit.remote,
+              employment: hit.employment,
+              description: hit.description || hit.title,
+              publishedAt: hit.publishedAt,
+              trusted: null,
+              employerVacancyCount: null,
+              responsesCount: null,
+            },
+            ai,
+          );
+            if (created) saved += 1;
+          } catch (e) {
+            console.error("[hh-radar] trudvsem save", hit.id, e instanceof Error ? e.message : e);
+          }
+        }
+      }
+    }
+  } catch (e) {
+    trudError = e instanceof Error ? e.message : String(e);
+    console.error("[hh-radar] trudvsem", trudError);
+  }
+
+  try {
+    const streams: { track: RadarTrack; queries: string[] }[] = [
+      { track: "cards", queries: profile.searchQueries },
+      { track: "web", queries: profile.webQueries },
+      { track: "tilda", queries: profile.tildaQueries },
+      { track: "ai", queries: profile.aiQueries },
+    ];
+    let stopRabota = false;
+    for (const stream of streams) {
+      if (stopRabota) break;
+      for (const query of stream.queries) {
+        const text = query.trim();
+        if (!text) continue;
+        let hits;
+        try {
+          hits = await searchRabota(text, profile.remoteOnly);
+        } catch (e) {
+          rabotaError = e instanceof Error ? e.message : String(e);
+          console.error("[hh-radar] rabota", text, rabotaError);
+          if (rabotaError.includes("нет токена")) stopRabota = true;
+          if (stopRabota) break;
+          continue;
+        }
+        scanned += hits.length;
+        for (const hit of hits) {
+          if (profile.remoteOnly && !hit.remote) continue;
+          const exists = await db.jobVacancy.findUnique({
+            where: { source_externalId: { source: "rabota", externalId: hit.id } },
+            select: { id: true },
+          });
+          if (exists || !publishedToday(hit.publishedAt) || !fewResponses(null)) continue;
+          considered += 1;
+          try {
+            const created = await saveVacancy(
+              profile,
+              {
+                source: "rabota",
+                track: stream.track,
+                externalId: hit.id,
+                title: hit.title,
+                company: hit.company,
+                companyUrl: hit.companyUrl,
+                url: hit.url,
+                salaryFrom: hit.salaryFrom,
+                salaryTo: hit.salaryTo,
+                salaryCurrency: hit.salaryCurrency,
+                salaryGross: null,
+                area: hit.area,
+                remote: hit.remote,
+                employment: hit.employment,
+                description: hit.description || hit.title,
+                publishedAt: hit.publishedAt,
+                trusted: null,
+                employerVacancyCount: null,
+                responsesCount: null,
+              },
+              ai,
+            );
+            if (created) saved += 1;
+          } catch (e) {
+            console.error("[hh-radar] rabota save", hit.id, e instanceof Error ? e.message : e);
+          }
+        }
+      }
+    }
+  } catch (e) {
+    rabotaError = e instanceof Error ? e.message : String(e);
+    console.error("[hh-radar] rabota", rabotaError);
+  }
+
   const digested = await sendMorningDigest(profile);
   const notified = error ? digested : digested + (await notifyPending(profile));
   await db.jobRadarProfile.update({
     where: { id: profile.id },
     data: {
       lastCheckAt: new Date(),
-      lastError: error ?? null,
+      lastError: [error, trudError, rabotaError].filter(Boolean).join("; ") || null,
       lastNewCount: saved,
     },
   });
-  return { scanned, fresh: considered, saved, notified, error };
+  const reported = [error, trudError, rabotaError].filter(Boolean).join("; ") || undefined;
+  return { scanned, fresh: considered, saved, notified, error: reported };
 }
 
 async function sendMorningDigest(profile: Awaited<ReturnType<typeof ensureRadarProfile>>): Promise<number> {
@@ -262,7 +454,6 @@ async function sendMorningDigest(profile: Awaited<ReturnType<typeof ensureRadarP
     where: {
       status: { in: ["new", "opened"] },
       notifiedAt: null,
-      source: "hh",
       firstSeenAt: { gte: since },
     },
     orderBy: [{ matchScore: "desc" }, { firstSeenAt: "desc" }],
@@ -298,7 +489,7 @@ async function notifyPending(profile: Awaited<ReturnType<typeof ensureRadarProfi
   const sentToday = sentRows.reduce((sum, row) => sum + row._count, 0);
   const room = Math.max(0, profile.dailyAlertCap - sentToday);
   if (!room) return 0;
-  const already: Record<RadarTrack, number> = { cards: 0, tilda: 0, ai: 0 };
+  const already: Record<RadarTrack, number> = { cards: 0, tilda: 0, ai: 0, web: 0 };
   for (const row of sentRows) already[asTrack(row.track)] += row._count;
 
   const delivery = await resolveRadarDelivery(profile.telegramChatId);
@@ -309,7 +500,6 @@ async function notifyPending(profile: Awaited<ReturnType<typeof ensureRadarProfi
     where: {
       status: "new",
       notifiedAt: null,
-      source: "hh",
     },
     orderBy: [{ publishedAt: "desc" }, { firstSeenAt: "desc" }],
     take: 80,
@@ -358,6 +548,7 @@ function toAlert(row: {
   fitReasons: string[];
   responsesCount: number | null;
   track: string;
+  source: string;
 }): RadarAlert {
   return {
     id: row.id,
@@ -377,6 +568,7 @@ function toAlert(row: {
     fitReasons: row.fitReasons,
     responsesCount: row.responsesCount,
     track: asTrack(row.track),
+    source: row.source,
   };
 }
 

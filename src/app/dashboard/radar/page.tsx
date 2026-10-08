@@ -5,7 +5,8 @@ import { hideVacancy, markApplied, restoreVacancy } from "@/lib/radar/actions";
 import { formatSalary } from "@/lib/radar/money";
 import { ensureRadarProfile } from "@/lib/radar/profile";
 import { hideReasonLabel, responsesLabel } from "@/lib/radar/responses";
-import { asTrack, TRACK_LABEL, type RadarTrack } from "@/lib/radar/tracks";
+import { asTrack, isRadarTrack, RADAR_TRACKS, TRACK_LABEL, type RadarTrack } from "@/lib/radar/tracks";
+import { sourceLabel } from "@/lib/radar/sources";
 import { freshness } from "@/lib/radar/time";
 
 export default async function RadarFeedPage({
@@ -16,8 +17,7 @@ export default async function RadarFeedPage({
   const { view, track: trackParam } = await searchParams;
   const hidden = view === "hidden";
   const applied = view === "applied";
-  const track: RadarTrack | null =
-    trackParam === "cards" || trackParam === "tilda" || trackParam === "ai" ? trackParam : null;
+  const track: RadarTrack | null = isRadarTrack(trackParam) ? trackParam : null;
   const profile = await ensureRadarProfile();
   const rows = await db.jobVacancy.findMany({
     where: {
@@ -46,7 +46,7 @@ export default async function RadarFeedPage({
         <Link href={feedHref(viewQuery, null)} style={tabStyle(track == null)}>
           Все потоки
         </Link>
-        {(["cards", "tilda", "ai"] as const).map((id) => (
+        {RADAR_TRACKS.map((id) => (
           <Link key={id} href={feedHref(viewQuery, id)} style={tabStyle(track === id)}>
             {TRACK_LABEL[id]}
           </Link>
@@ -61,7 +61,7 @@ export default async function RadarFeedPage({
           {!hidden && !applied && (
             <p style={{ margin: "8px 0 0", color: "var(--ink-muted)", fontSize: "var(--text-sm)" }}>
               {profile.enabled
-                ? `В ленте только сегодняшние удалённые вакансии с числом откликов до 3. Зарплата на отбор не влияет. ${profile.lastCheckAt ? `Последний обход ничего подходящего не сохранил.` : "Первый обход можно запустить в настройках."}`
+                ? "В ленте только сегодняшние удалённые вакансии по всей России. На HH ещё и не больше 3 откликов. У «Работы в России» и Работа.ру числа откликов нет. Зарплата на отбор не влияет."
                 : "Сбор выключен. Включите его в настройках."}
             </p>
           )}
@@ -95,6 +95,8 @@ export default async function RadarFeedPage({
                   </span>
                 </div>
                 <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--ink-body)" }}>
+                  {sourceLabel(row.source)}
+                  {" · "}
                   {row.company || "Компания не указана"}
                   {row.remote ? " · удалённо" : ""}
                   {row.employment ? ` · ${row.employment}` : ""}

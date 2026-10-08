@@ -1,6 +1,7 @@
 import { formatSalary } from "./money";
 import { responsesLabel } from "./responses";
 import { TRACK_LABEL, type RadarTrack } from "./tracks";
+import { sourceLabel } from "./sources";
 import { freshness } from "./time";
 
 export type RadarAlert = {
@@ -21,6 +22,7 @@ export type RadarAlert = {
   fitReasons: string[];
   responsesCount?: number | null;
   track?: RadarTrack;
+  source?: string;
 };
 
 function escapeHtml(text: string): string {
@@ -31,7 +33,7 @@ export function formatRadarTelegram(alert: RadarAlert, now = new Date()): string
   const fresh = freshness(alert.publishedAt, alert.firstSeenAt, now);
   const head = fresh.hot ? "🔥 НОВАЯ ВАКАНСИЯ" : "Вакансия";
   const lines = [
-    TRACK_LABEL[alert.track || "cards"],
+    `${sourceLabel(alert.source)} · ${TRACK_LABEL[alert.track || "cards"]}`,
     head,
     "",
     `<b>${escapeHtml(alert.title)}</b>`,
@@ -92,7 +94,7 @@ export function formatRadarDigest(alerts: RadarAlert[], now = new Date()): strin
   alerts.forEach((alert, index) => {
     const fresh = freshness(alert.publishedAt, alert.firstSeenAt, now);
     const replies = responsesLabel(alert.responsesCount);
-    const track = TRACK_LABEL[alert.track || "cards"];
+    const track = `${sourceLabel(alert.source)} · ${TRACK_LABEL[alert.track || "cards"]}`;
     lines.push(`<b>${index + 1}. ${escapeHtml(track)} · ${escapeHtml(alert.title)}</b>`);
     lines.push(escapeHtml(alert.company || "Компания не указана"));
     lines.push(`💰 ${escapeHtml(formatSalary(alert.salaryFrom, alert.salaryTo, alert.salaryCurrency, alert.salaryGross))}`);

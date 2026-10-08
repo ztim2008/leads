@@ -1,17 +1,17 @@
 import { db } from "@/lib/db";
-import { DEFAULT_AI_QUERIES, DEFAULT_TILDA_QUERIES } from "./tracks";
+import { DEFAULT_AI_QUERIES, DEFAULT_TILDA_QUERIES, DEFAULT_WEB_QUERIES } from "./tracks";
 
 export const RADAR_PROFILE_ID = "default";
 
 export const DEFAULT_RADAR_PROFILE = {
   enabled: true,
-  specialization: "Дизайнер карточек для маркетплейсов",
+  specialization: "Дизайнер маркетплейсов, веб и AI",
   about:
-    "7 лет делаю карточки и инфографику для Wildberries, Ozon, Lamoda, Яндекс Маркета и Яндекс Кита. Figma и Photoshop. Нейросети для изображений, видео и аватаров: Midjourney, Runway, Kling. Визуальный маркетинг в e-commerce и основы A/B-тестов. 60–70 карточек в неделю за счёт шаблонов, библиотек и автоматизации. Точная цветопередача и характеристики товара. Ищу долгосрочную удалённую работу.",
-  directions: ["Wildberries", "Ozon", "Lamoda", "Яндекс Маркет", "Яндекс Кит", "Инфографика", "Карточки товаров"],
-  skills: ["Figma", "Photoshop", "Midjourney", "Runway", "Kling", "генерация изображений", "AI-видео", "AI-аватары"],
-  formats: ["удалёнка", "долгосрочная работа"],
-  exclusions: ["программирование", "frontend", "офис", "продажи"],
+    "7 лет делаю карточки и инфографику для Wildberries, Ozon, Avito, Lamoda, Яндекс Маркета и Яндекс Кита. Figma, Photoshop, CorelDRAW, Illustrator. Нейросети для изображений: Midjourney, Runway, Kling. Делаю и веду сайты, лендинги и веб-приложения, настраиваю рекламу и продвижение, разрабатываю AI-агентов и автоматизацию. Ищу долгосрочную удалённую работу по всей России. Портфолио: https://konversus.ru/portfolio/timeline",
+  directions: ["Wildberries", "Ozon", "Avito", "Lamoda", "Яндекс Маркет", "Яндекс Кит", "Инфографика", "Карточки товаров"],
+  skills: ["Figma", "Photoshop", "CorelDRAW", "Illustrator", "Midjourney", "Runway", "Kling", "генерация изображений"],
+  formats: ["удалёнка", "по всей России", "долгосрочная работа"],
+  exclusions: ["офис", "продажи"],
   searchQueries: [
     "дизайнер карточек",
     "инфографика",
@@ -22,6 +22,7 @@ export const DEFAULT_RADAR_PROFILE = {
   ],
   tildaQueries: DEFAULT_TILDA_QUERIES,
   aiQueries: DEFAULT_AI_QUERIES,
+  webQueries: DEFAULT_WEB_QUERIES,
   salaryMin: 50000,
   requireSalary: false,
   remoteOnly: true,

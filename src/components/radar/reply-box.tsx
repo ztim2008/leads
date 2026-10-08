@@ -29,7 +29,7 @@ export default function ReplyBox({ id, initial }: { id: string; initial: string 
     <section style={{ display: "grid", gap: 10 }}>
       <h2 style={{ fontSize: "var(--text-lg)", margin: 0 }}>Отклик</h2>
       <p style={{ margin: 0, fontSize: "var(--text-sm)", color: "var(--ink-muted)" }}>
-        Письмо остаётся у вас. На HH его нужно вставить и отправить самому.
+        Письмо остаётся у вас. На сайт вакансии его нужно вставить и отправить самому.
       </p>
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
         <button type="button" onClick={() => void prepare()} disabled={loading} style={buttonStyle}>

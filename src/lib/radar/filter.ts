@@ -79,6 +79,29 @@ export function isVideoVacancy(title: string): boolean {
   return /видео|video|монтаж|рилс|reels|shorts|тикток|tiktok/.test(norm(title));
 }
 
+/** Сайты, поддержка, сисадмин и ИИ-технологии. Не 1С, Java, видео и продажи. */
+export function webTitleOk(title: string): boolean {
+  const text = norm(title);
+  if (isVideoVacancy(title)) return false;
+  if (/1[сc]\b|java(?!script)|android|ios\b|data scientist|тестировщик|аналитик данных|гейм-дизайнер|game designer/.test(text)) return false;
+  if (/менеджер по продаж|контент-менеджер|\bsmm\b|по продаж/.test(text)) return false;
+  if (/офис-менеджер|администратор магазин|администратор салон|секретарь/.test(text)) return false;
+  if (/менеджер/.test(text) && !/сайт|веб|web|проект/.test(text)) return false;
+  if (/сисадмин|системн[а-я]* администратор|system administrator/.test(text)) return true;
+  if (/\bdevops\b|dev-ops|\bsre\b/.test(text)) return true;
+  if (/веб-?мастер|webmaster/.test(text)) return true;
+  if (/создание сайтов|разработка сайтов|поддержка сайтов|ведение сайтов|продвижение сайтов|поддержка сайта|администратор сайта|администратор сайтов/.test(text)) {
+    return true;
+  }
+  if (/техническ[а-я]* поддержк/.test(text) && /сайт|сервер|веб|хостинг|инфраструктур/.test(text)) return true;
+  const role = /разработчик|developer|дизайнер|программист|инженер|engineer|верстальщик|специалист|архитектор|технолог/.test(text);
+  const web = /веб|web|сайт|лендинг|frontend|front-end|фронтенд|fullstack|full-stack|react\b|next\.?js|хостинг/.test(text);
+  const aiTech = /искусственн[а-я]*\s+интеллект|\bllm\b|machine learning|(^|[^a-zа-я])(ai|ии)([^a-zа-я]|$)|нейросет/.test(text);
+  if (aiTech && /продаж|обучен|курс|школ|adult|порн|гейм/.test(text)) return false;
+  if (aiTech && (role || /технолог|автоматизац|агент|внедрен/.test(text))) return true;
+  return web && role;
+}
+
 export function aiTitleOk(title: string): boolean {
   const text = norm(title);
   if (isVideoVacancy(title)) return false;
@@ -127,6 +150,10 @@ export function passesHardFilter(
   if (track === "ai") {
     if (!aiTitleOk(vacancy.title)) return { ok: false, reason: "в заголовке другая роль" };
     return { ok: true, hits: ["AI"] };
+  }
+  if (track === "web") {
+    if (!webTitleOk(vacancy.title)) return { ok: false, reason: "в заголовке другая роль" };
+    return { ok: true, hits: ["Веб"] };
   }
 
   const roleTerms = [

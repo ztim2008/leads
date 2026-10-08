@@ -2,12 +2,15 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { parseSearchHits } from "./hh";
 import { parseRadarTap } from "./actions-parse";
-import { aiTitleOk, isVideoVacancy, passesHardFilter, tildaTitleOk } from "./filter";
+import { aiTitleOk, isVideoVacancy, passesHardFilter, tildaTitleOk, webTitleOk } from "./filter";
 import { canPushVacancy, fewResponses, responsesLabel, shouldSendDigest, worthInstantPush } from "./responses";
 import { allocatePushSlots } from "./tracks";
 import { scoreMatch } from "./match";
 import { salaryBelowFloor } from "./money";
 import { freshness, inQuietHours } from "./time";
+import { rabotaSignature } from "./rabota-oauth";
+import { parseRabotaVacancies, rabotaPublishedAt } from "./rabota";
+import { parseTrudvsemVacancies, textSaysRemote, trudPublishedAt } from "./trudvsem";
 import { buildTrustChecks, trustScore } from "./trust";
 
 const profile = {
@@ -99,6 +102,26 @@ describe("job radar filter", () => {
     assert.equal(
       passesHardFilter({ ...vacancy, title: "AI-дизайнер обложек", salaryFrom: 20000, salaryTo: 25000 }, profile, "ai").ok,
       true,
+    );
+    assert.equal(webTitleOk("Веб-разработчик"), true);
+    assert.equal(webTitleOk("AI Engineer"), true);
+    assert.equal(webTitleOk("Java-разработчик"), false);
+    assert.equal(webTitleOk("Разработчик 1С"), false);
+    assert.equal(webTitleOk("Системный администратор"), true);
+    assert.equal(webTitleOk("Поддержка сайтов"), true);
+    assert.equal(webTitleOk("Создание сайтов"), true);
+    assert.equal(webTitleOk("DevOps инженер"), true);
+    assert.equal(webTitleOk("Специалист по нейросетям"), true);
+    assert.equal(webTitleOk("Инженер по искусственному интеллекту"), true);
+    assert.equal(webTitleOk("Менеджер по продажам нейросетей"), false);
+    assert.equal(webTitleOk("Администратор магазина"), false);
+    assert.equal(
+      passesHardFilter({ ...vacancy, title: "Веб-разработчик сайтов", remote: true }, profile, "web").ok,
+      true,
+    );
+    assert.equal(
+      passesHardFilter({ ...vacancy, title: "Веб-разработчик сайтов", remote: false }, profile, "web").ok,
+      false,
     );
   });
 });
@@ -234,17 +257,17 @@ describe("job radar replies and digest", () => {
   });
 
   it("слоты потоков: квота, потом остаток другому", () => {
-    const item = (track: "cards" | "tilda" | "ai", n: number) => ({ track, n });
+    const item = (track: "cards" | "tilda" | "ai" | "web", n: number) => ({ track, n });
     const pending = [
       ...Array.from({ length: 10 }, (_, i) => item("cards", i)),
       ...Array.from({ length: 2 }, (_, i) => item("tilda", i)),
       item("ai", 0),
     ];
-    const picked = allocatePushSlots(pending, 15, { cards: 0, tilda: 0, ai: 0 });
+    const picked = allocatePushSlots(pending, 15, { cards: 0, tilda: 0, ai: 0, web: 0 });
     assert.equal(picked.filter((row) => row.track === "cards").length, 10);
     assert.equal(picked.filter((row) => row.track === "tilda").length, 2);
     assert.equal(picked.filter((row) => row.track === "ai").length, 1);
-    const rest = allocatePushSlots(pending, 7, { cards: 8, tilda: 0, ai: 0 });
+    const rest = allocatePushSlots(pending, 7, { cards: 8, tilda: 0, ai: 0, web: 0 });
     assert.equal(rest.filter((row) => row.track === "cards").length, 4);
     assert.equal(rest.filter((row) => row.track === "tilda").length, 2);
     assert.equal(rest.filter((row) => row.track === "ai").length, 1);
@@ -278,5 +301,127 @@ describe("job radar time", () => {
     assert.equal(hot.hot, true);
     const republish = freshness(new Date("2026-09-01T18:50:00Z"), new Date("2026-10-05T18:52:00Z"), now);
     assert.equal(republish.hot, false);
+  });
+});
+
+describe("rabota oauth", () => {
+  it("подпись совпадает с примером из документации", () => {
+    const sign = rabotaSignature(
+      {
+        app_id: "3803",
+        time: "1551787641",
+        code: "3MS3zSsNkyBG1gDlLiApdE7KAOQnG1b0",
+      },
+      "74JbXYMUR306MHTz0VnCiU5prNv3lO7f",
+    );
+    assert.equal(sign, "8d240c87e944740862b3ebd261ceb6db555268f59b421ffdee012f7737bc2855");
+  });
+});
+
+describe("trudvsem", () => {
+  const now = new Date("2026-10-08T09:00:00+03:00");
+
+  it("удалёнка по тексту, не промплощадка и не отказ", () => {
+    assert.equal(textSaysRemote("Удалённая работа, дизайнер карточек"), true);
+    assert.equal(textSaysRemote("формат: дистанционно"), true);
+    assert.equal(textSaysRemote("можно удаленно или в офисе"), true);
+    assert.equal(textSaysRemote("Не удаленная работа, офис в Кирове"), false);
+    assert.equal(textSaysRemote("Участок сварочно-монтажных работ удаленной промплощадки"), false);
+    assert.equal(textSaysRemote("занятый на удалении золы"), false);
+  });
+
+  it("в ленту только создание сегодня, не правка старой", () => {
+    assert.ok(trudPublishedAt("2026-10-08", now));
+    assert.equal(trudPublishedAt("2026-04-27", now), null);
+    const hits = parseTrudvsemVacancies(
+      {
+        results: {
+          vacancies: [
+            {
+              vacancy: {
+                id: "abc",
+                "job-name": "Веб-разработчик (удаленно)",
+                "creation-date": "2026-10-08",
+                vac_url: "https://trudvsem.ru/vacancy/card/1/abc",
+                salary_min: 80000,
+                salary_max: 0,
+                schedule: "Полный рабочий день",
+                duty: "Сайты и лендинги. Удаленная работа.",
+                company: { companycode: "1", name: "ООО Ромашка" },
+                region: { name: "Москва" },
+              },
+            },
+            {
+              vacancy: {
+                id: "old",
+                "job-name": "Дизайнер",
+                "creation-date": "2026-04-27",
+                date_modify: "2026-10-08T11:00:00+0300",
+                duty: "удаленно",
+                company: { companycode: "2", name: "Старая" },
+              },
+            },
+          ],
+        },
+      },
+      now,
+    );
+    assert.equal(hits.length, 1);
+    assert.equal(hits[0].id, "1/abc");
+    assert.equal(hits[0].remote, true);
+    assert.equal(hits[0].salaryFrom, 80000);
+    assert.equal(hits[0].salaryTo, null);
+    assert.equal(hits[0].area, "Москва");
+  });
+});
+
+describe("rabota", () => {
+  const now = new Date("2026-10-08T12:00:00+03:00");
+
+  it("в ленту только сегодняшняя удалёнка, не правка старой и не офис", () => {
+    assert.ok(rabotaPublishedAt("2026-10-08T10:22:37+03:00", now));
+    assert.equal(rabotaPublishedAt("2026-10-07T18:00:00+03:00", now), null);
+    const hits = parseRabotaVacancies(
+      {
+        response: {
+          vacancies: [
+            {
+              id: 54432848,
+              title: "Веб-разработчик",
+              publish_start_at: "2026-10-08T10:22:37+03:00",
+              modified_date: "2026-10-08T11:00:00+0300",
+              description: "<p>Сайты и лендинги.</p>",
+              operating_schedule: { id: 6, name: "удаленная работа" },
+              salary: { from: 80000, to: 120000, currency: "руб./мес." },
+              company: { name: "ООО Ромашка", slug: "romashka" },
+              places: [{ name: "г Казань", region: { name: "Казань" } }],
+            },
+            {
+              id: 1,
+              title: "Старая, но обновлённая",
+              publish_start_at: "2026-09-01T10:00:00+03:00",
+              modified_date: "2026-10-08T11:00:00+0300",
+              operating_schedule: { id: 6, name: "удаленная работа" },
+            },
+            {
+              id: 2,
+              title: "Офис сегодня",
+              publish_start_at: "2026-10-08T09:00:00+03:00",
+              operating_schedule: { id: 1, name: "полный рабочий день" },
+              places: [{ region: { name: "Москва" } }],
+            },
+          ],
+        },
+      },
+      now,
+    );
+    assert.equal(hits.length, 2);
+    assert.equal(hits[0].id, "54432848");
+    assert.equal(hits[0].remote, true);
+    assert.equal(hits[0].salaryFrom, 80000);
+    assert.equal(hits[0].salaryCurrency, "RUR");
+    assert.equal(hits[0].area, "Казань");
+    assert.equal(hits[0].url, "https://www.rabota.ru/vacancy/54432848/");
+    assert.equal(hits[1].remote, false);
   });
 });

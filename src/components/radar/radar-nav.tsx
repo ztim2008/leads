@@ -18,7 +18,7 @@ export default function RadarNav() {
         Job Radar
       </h1>
       <p style={{ fontSize: "var(--text-sm)", color: "var(--ink-muted)", marginBottom: 16 }}>
-        Вакансии HH для вас. Партнёры этот раздел не видят.
+        Вакансии HH, «Работа в России» и Работа.ру. Партнёры этот раздел не видят.
       </p>
       <nav
         style={{

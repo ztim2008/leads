@@ -388,6 +388,7 @@ model JobRadarProfile {
   searchQueries  String[]  @default([]) @map("search_queries")
   tildaQueries   String[]  @default([]) @map("tilda_queries")
   aiQueries      String[]  @default([]) @map("ai_queries")
+  webQueries     String[]  @default([]) @map("web_queries")
   salaryMin      Int       @default(50000) @map("salary_min")
   requireSalary  Boolean   @default(false) @map("require_salary")
   remoteOnly     Boolean   @default(true) @map("remote_only")
