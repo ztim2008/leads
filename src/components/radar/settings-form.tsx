@@ -95,7 +95,7 @@ export default function SettingsForm({
         <Check label="Пуши в Telegram" checked={form.alertsEnabled} onChange={(v) => patch("alertsEnabled", v)} />
         <Check label="Только удалёнка" checked={form.remoteOnly} onChange={(v) => patch("remoteOnly", v)} />
         <p style={{ margin: 0, fontSize: "var(--text-xs)", color: "var(--ink-muted)" }}>
-          Удалёнка по всей России: город не выбирается. В ленту попадает только сегодня. На HH ещё и не больше 3 откликов, у «Работы в России» и Работа.ру числа откликов нет. Зарплата на карточке есть и отбор не режет. Вчерашнее удаляется само.
+          Удалёнка по всей России: город не выбирается. В ленту попадает только сегодня. На HH ещё и не больше 3 откликов, у «Работы в России» и Работа.ру числа откликов нет. Зарплата на карточке есть и отбор не режет. Вчерашнее удаляется само. В 08:00 — проверка источников и сколько собрано. В тихие часы карточки в Telegram удаляются и приходит вечерний итог.
         </p>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
           <Num label="Пушей в день" value={form.dailyAlertCap} onChange={(v) => patch("dailyAlertCap", v)} />

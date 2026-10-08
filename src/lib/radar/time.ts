@@ -22,6 +22,18 @@ export function startOfMskDay(date = new Date()): Date {
   return new Date(`${mskClock(date).ymd}T00:00:00+03:00`);
 }
 
+/** Последний момент quietStart, который уже наступил. В 15:00 при старте 23:00 это вчерашние 23:00. */
+export function mostRecentQuietStart(now: Date, quietStart = "23:00"): Date {
+  const clock = mskClock(now);
+  const match = /^(\d{1,2}):(\d{2})$/.exec(quietStart.trim());
+  const hour = match ? Number(match[1]) : 23;
+  const minute = match ? Number(match[2]) : 0;
+  const stamp = `${clock.ymd}T${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:00+03:00`;
+  const todayStart = new Date(stamp);
+  if (now.getTime() >= todayStart.getTime()) return todayStart;
+  return new Date(todayStart.getTime() - 24 * 60 * 60 * 1000);
+}
+
 function clockMinutes(hhmm: string): number | null {
   const m = /^(\d{1,2}):(\d{2})$/.exec(hhmm.trim());
   if (!m) return null;

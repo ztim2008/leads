@@ -1007,13 +1007,15 @@ Partner buys VPS, downloads zip, fills config.json (Profi login/password + Teleg
 - Работа.ру подключена официальным API, не скрейпом. OAuth приложения 952, профиль 32972752. Токен в `.rabota-token.json` (не в git), секрет только в `.env`. Обновление токена за 6 часов до конца.
 - Удалёнка на Работа.ру — график «удаленная работа». В ленту берётся `publish_start_at` за сегодня. Числа откликов нет. Отдельной «всей России» в API нет: поиск по Москве, Петербургу и Краснодарскому краю (городские ленты плюс общий набор удалённых).
 - Первый проход после выкладки: `scanned=186 fresh=20 saved=0 notified=0`, без ошибки Работа.ру. Сегодняшних по ролям не было.
-- Тесты радара 20/20.
+- Утро 08:00–09:00: проверка HH, «Работы в России» и Работа.ру, в Telegram сколько собрано с полуночи и кто из источников отвечает.
+- Вечер с 23:00: карточки вакансий и утренний разбор удаляются из Telegram, следом итог за день. Сам итог в чате остаётся. Номера старых карточек не сохранялись — сотрутся только новые пуши.
+- Тесты радара 22/22.
 
 ### Файлы
 - `DEVLOG.md`, `docs/JOB_RADAR.md`, `docs/PLAN_2026-08-10.md`
 - `.gitignore` — `.rabota-token.json`
-- `prisma/schema.prisma`, миграции `20261008130000_radar_trudvsem_web`, `20261008140000_radar_sites_sysadmin_ai`
-- `src/lib/radar/trudvsem.ts`, `sources.ts`, `rabota.ts`, `rabota-oauth.ts`, `cycle.ts`, `filter.ts`, `tracks.ts`, `notify.ts`, `profile.ts`, `radar.test.ts`
+- `prisma/schema.prisma`, миграции `20261008130000_radar_trudvsem_web`, `20261008140000_radar_sites_sysadmin_ai`, `20261008160000_radar_day_report`
+- `src/lib/radar/trudvsem.ts`, `sources.ts`, `rabota.ts`, `rabota-oauth.ts`, `day-report.ts`, `cycle.ts`, `filter.ts`, `tracks.ts`, `notify.ts`, `profile.ts`, `responses.ts`, `time.ts`, `hh.ts`, `radar.test.ts`
 - `src/app/api/radar/rabota/callback/route.ts`
 - `src/app/dashboard/radar/**`, `src/components/radar/**`
 
@@ -1025,7 +1027,9 @@ Partner buys VPS, downloads zip, fills config.json (Profi login/password + Teleg
 - Секрет приложения и токен Работа.ру в git не попадали
 
 ### Осталось
-- Дождаться сегодняшней удалённой вакансии по роли и проверить карточку «Работа.ру» в Telegram
+- Сегодня в 23:00 первый вечерний итог. Карточки, уже лежащие в чате, не удалятся
+- Завтра в 08:00 проверить утренний отчёт по трём источникам
+- Дождаться свежей вакансии по роли и проверить карточку «Работа.ру» в Telegram
 - Секрет приложения светился в чате — при желании перевыпустить в кабинете Работа.ру и записать новый только в `.env`
 - Jabka не подключать без команды
 - Пилот `93.188.186.13` не рестартить

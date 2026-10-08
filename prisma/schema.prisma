@@ -402,8 +402,11 @@ model JobRadarProfile {
   lastCheckAt    DateTime? @map("last_check_at")
   lastError      String?   @map("last_error")
   lastNewCount   Int       @default(0) @map("last_new_count")
-  lastDigestAt   DateTime? @map("last_digest_at")
-  updatedAt      DateTime  @updatedAt @map("updated_at")
+  lastDigestAt      DateTime? @map("last_digest_at")
+  lastMorningReportAt DateTime? @map("last_morning_report_at")
+  lastEveningReportAt DateTime? @map("last_evening_report_at")
+  digestMessageId   Int?      @map("digest_message_id")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
 
   @@map("job_radar_profile")
 }
@@ -441,6 +444,7 @@ model JobVacancy {
   /// role | pay | seen
   hideReason           String?   @map("hide_reason")
   notifiedAt           DateTime? @map("notified_at")
+  telegramMessageId    Int?      @map("telegram_message_id")
   replyDraft           String?   @map("reply_draft") @db.Text
   createdAt            DateTime  @default(now()) @map("created_at")
   updatedAt            DateTime  @updatedAt @map("updated_at")

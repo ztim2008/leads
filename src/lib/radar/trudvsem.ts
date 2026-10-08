@@ -113,6 +113,17 @@ export function parseTrudvsemVacancies(payload: unknown, now = new Date()): Trud
   return hits;
 }
 
+/** Один короткий запрос: утром проверяем, что открытый API жив. */
+export async function pingTrudvsem(): Promise<void> {
+  const response = await fetch(`${API}?text=дизайнер&limit=1`, {
+    headers: { Accept: "application/json", "User-Agent": "KonversusJobRadar/1.0" },
+    signal: AbortSignal.timeout(20000),
+  });
+  if (!response.ok) throw new Error(`Работа России ${response.status}`);
+  const payload = (await response.json()) as { results?: { vacancies?: unknown[] } };
+  if (!Array.isArray(payload.results?.vacancies)) throw new Error("Работа России: пустой ответ");
+}
+
 export async function searchTrudvsem(query: string, now = new Date()): Promise<TrudHit[]> {
   const modifiedFrom = startOfMskDay(now).toISOString().replace(/\.\d{3}Z$/, "Z");
   const hits: TrudHit[] = [];

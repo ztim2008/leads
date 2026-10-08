@@ -143,6 +143,12 @@ async function hhPage(url: string): Promise<string> {
   return html;
 }
 
+/** Короткий запрос страницы поиска: утром проверяем, что HH отдаёт выдачу. */
+export async function pingHh(): Promise<void> {
+  const html = await hhPage("https://hh.ru/search/vacancy?text=дизайнер&area=113&items_on_page=1");
+  if (!parseLuxState(html)) throw new Error("HH отдал страницу без выдачи");
+}
+
 export async function searchHh(params: URLSearchParams): Promise<HhSearchHit[]> {
   const query = new URLSearchParams({
     text: params.get("text") || "",

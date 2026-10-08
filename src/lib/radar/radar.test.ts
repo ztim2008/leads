@@ -3,7 +3,16 @@ import { describe, it } from "node:test";
 import { parseSearchHits } from "./hh";
 import { parseRadarTap } from "./actions-parse";
 import { aiTitleOk, isVideoVacancy, passesHardFilter, tildaTitleOk, webTitleOk } from "./filter";
-import { canPushVacancy, fewResponses, responsesLabel, shouldSendDigest, worthInstantPush } from "./responses";
+import { formatEveningReport, formatMorningReport, sourceCounts } from "./day-report";
+import {
+  canPushVacancy,
+  fewResponses,
+  responsesLabel,
+  shouldSendDigest,
+  shouldSendEveningReport,
+  shouldSendMorningReport,
+  worthInstantPush,
+} from "./responses";
 import { allocatePushSlots } from "./tracks";
 import { scoreMatch } from "./match";
 import { salaryBelowFloor } from "./money";
@@ -279,6 +288,44 @@ describe("job radar replies and digest", () => {
     assert.equal(shouldSendDigest(morning, null), true);
     assert.equal(shouldSendDigest(later, null), false);
     assert.equal(shouldSendDigest(morning, new Date("2026-10-06T05:01:00Z")), false);
+  });
+
+  it("вечерний отчёт в тихие часы и не среди дня, утро — с 8 до 9", () => {
+    const afternoon = new Date("2026-10-08T12:00:00+03:00");
+    const evening = new Date("2026-10-08T23:10:00+03:00");
+    const afterEvening = new Date("2026-10-08T23:20:00+03:00");
+    const nextMorning = new Date("2026-10-09T08:20:00+03:00");
+    assert.equal(shouldSendEveningReport(afternoon, null), false);
+    assert.equal(shouldSendEveningReport(evening, null), true);
+    assert.equal(shouldSendEveningReport(afterEvening, evening), false);
+    assert.equal(shouldSendEveningReport(nextMorning, new Date("2026-10-07T23:10:00+03:00")), true);
+    assert.equal(shouldSendMorningReport(new Date("2026-10-09T08:10:00+03:00"), null), true);
+    assert.equal(shouldSendMorningReport(new Date("2026-10-09T09:10:00+03:00"), null), false);
+    assert.equal(shouldSendMorningReport(new Date("2026-10-09T08:15:00+03:00"), new Date("2026-10-09T08:05:00+03:00")), false);
+  });
+
+  it("утренний и вечерний текст называют источники и числа", () => {
+    const counts = sourceCounts(
+      [
+        { source: "hh", count: 2 },
+        { source: "rabota", count: 1 },
+      ],
+      [{ source: "hh", count: 1 }],
+    );
+    const morning = formatMorningReport(
+      [
+        { source: "hh", label: "HH", ok: true, detail: "отвечает" },
+        { source: "trudvsem", label: "Работа России", ok: false, detail: "Работа России 503" },
+        { source: "rabota", label: "Работа.ру", ok: true, detail: "отвечает" },
+      ],
+      counts,
+    );
+    assert.match(morning, /С полуночи в ленте: 3/);
+    assert.match(morning, /В Telegram ушло: 1/);
+    assert.match(morning, /Есть проблема с источником/);
+    const evening = formatEveningReport(counts, 4, []);
+    assert.match(evening, /За день в ленте: 3/);
+    assert.match(evening, /Карточки в чате удалены: 4/);
   });
 
   it("кнопки телеграма разбираются", () => {

@@ -1,4 +1,4 @@
-import { mskClock, startOfMskDay } from "./time";
+import { inQuietHours, mostRecentQuietStart, mskClock, startOfMskDay } from "./time";
 
 /** В ленту и в Telegram только если откликов не больше этого. Нет числа — не режем. */
 export const FEW_RESPONSES = 3;
@@ -58,6 +58,40 @@ export type HideReason = keyof typeof HIDE_REASONS;
 export function hideReasonLabel(reason: string | null | undefined): string | null {
   if (!reason) return null;
   return reason in HIDE_REASONS ? HIDE_REASONS[reason as HideReason] : null;
+}
+
+/**
+ * Вечерний отчёт и удаление карточек из Telegram.
+ * Пока отчёта не было ни разу — только в тихие часы, чтобы дневной деплой не стёр чат.
+ * Если вечер уже пропущен — в ближайшем обходе, до удаления строк из базы.
+ */
+export function shouldSendEveningReport(
+  now: Date,
+  lastAt: Date | null,
+  quietStart = "23:00",
+  quietEnd = "08:00",
+): boolean {
+  const due = mostRecentQuietStart(now, quietStart);
+  const behind = !lastAt || lastAt.getTime() < due.getTime();
+  if (!behind) return false;
+  if (!lastAt) return inQuietHours(quietStart, quietEnd, now);
+  return true;
+}
+
+/** Сутки, которые закрывает вечерний отчёт: от полуночи до следующей полуночи по Москве. */
+export function closedDayRange(now: Date, quietStart = "23:00"): { from: Date; to: Date } {
+  const from = startOfMskDay(mostRecentQuietStart(now, quietStart));
+  return { from, to: new Date(from.getTime() + 24 * 60 * 60 * 1000) };
+}
+
+/** Утренний отчёт 08:00–09:00 МСК, один раз. Окно шире разбора: сбор источников долгий. */
+export function shouldSendMorningReport(now: Date, lastAt: Date | null): boolean {
+  const clock = mskClock(now);
+  const mins = clock.hour * 60 + clock.minute;
+  if (mins < 8 * 60 || mins >= 9 * 60) return false;
+  if (!lastAt) return true;
+  const morning = new Date(`${clock.ymd}T08:00:00+03:00`);
+  return lastAt.getTime() < morning.getTime();
 }
 
 /** Окно 08:00–08:20 МСК, один раз за утро. */

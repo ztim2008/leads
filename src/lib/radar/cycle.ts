@@ -8,7 +8,17 @@ import { searchTrudvsem } from "./trudvsem";
 import { scoreMatch } from "./match";
 import { resolveRadarDelivery } from "./delivery";
 import { digestKeyboard, formatRadarDigest, formatRadarTelegram, radarKeyboard, type RadarAlert } from "./notify";
-import { canPushVacancy, digestSince, fewResponses, publishedToday, shouldSendDigest } from "./responses";
+import { formatEveningReport, formatMorningReport, probeRadarSources, sourceCounts } from "./day-report";
+import {
+  canPushVacancy,
+  closedDayRange,
+  digestSince,
+  fewResponses,
+  publishedToday,
+  shouldSendDigest,
+  shouldSendEveningReport,
+  shouldSendMorningReport,
+} from "./responses";
 import { ensureRadarProfile } from "./profile";
 import { allocatePushSlots, asTrack, DEFAULT_AI_QUERIES, trackTerms, type RadarTrack } from "./tracks";
 import { freshness, hhTimestamp, inQuietHours, startOfMskDay } from "./time";
@@ -162,6 +172,8 @@ export async function runRadarCycle(): Promise<RadarCycleResult> {
   loadHubEnv();
   const profile = await ensureRadarProfile();
   if (!profile.enabled) return { scanned: 0, fresh: 0, saved: 0, notified: 0 };
+  await closeRadarDay(profile);
+  await sendMorningStatus(profile);
   await dropStaleAndVideo();
   if (profile.aiQueries.some((query) => /видео|монтаж|video/i.test(query))) {
     await db.jobRadarProfile.update({ where: { id: profile.id }, data: { aiQueries: DEFAULT_AI_QUERIES } });
@@ -467,13 +479,16 @@ async function sendMorningDigest(profile: Awaited<ReturnType<typeof ensureRadarP
     .slice(0, 3);
   if (!picked.length) return 0;
   const alerts = picked.map(toAlert);
-  const ok = await sendText(delivery.token, delivery.chat, formatRadarDigest(alerts), digestKeyboard(alerts));
-  if (!ok) return 0;
+  const messageId = await sendText(delivery.token, delivery.chat, formatRadarDigest(alerts), digestKeyboard(alerts));
+  if (!messageId) return 0;
   await db.jobVacancy.updateMany({
     where: { id: { in: picked.map((row) => row.id) } },
     data: { notifiedAt: new Date() },
   });
-  await db.jobRadarProfile.update({ where: { id: profile.id }, data: { lastDigestAt: new Date() } });
+  await db.jobRadarProfile.update({
+    where: { id: profile.id },
+    data: { lastDigestAt: new Date(), digestMessageId: messageId },
+  });
   return picked.length;
 }
 
@@ -522,9 +537,12 @@ async function notifyPending(profile: Awaited<ReturnType<typeof ensureRadarProfi
   let sent = 0;
   for (const row of picked) {
     const alert = toAlert(row);
-    const ok = await sendRadarAlert(token, chat, alert);
-    if (!ok) continue;
-    await db.jobVacancy.update({ where: { id: row.id }, data: { notifiedAt: new Date() } });
+    const messageId = await sendRadarAlert(token, chat, alert);
+    if (!messageId) continue;
+    await db.jobVacancy.update({
+      where: { id: row.id },
+      data: { notifiedAt: new Date(), telegramMessageId: messageId },
+    });
     sent += 1;
   }
   return sent;
@@ -576,8 +594,8 @@ async function sendText(
   token: string,
   chatId: string,
   text: string,
-  replyMarkup: { inline_keyboard: unknown[][] },
-): Promise<boolean> {
+  replyMarkup?: { inline_keyboard: unknown[][] },
+): Promise<number | null> {
   try {
     const response = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: "POST",
@@ -587,18 +605,96 @@ async function sendText(
         text,
         parse_mode: "HTML",
         disable_web_page_preview: true,
-        reply_markup: replyMarkup,
+        ...(replyMarkup ? { reply_markup: replyMarkup } : {}),
       }),
+      signal: AbortSignal.timeout(8000),
+    });
+    const data = (await response.json()) as { ok?: boolean; result?: { message_id?: number } };
+    return data.ok && data.result?.message_id ? data.result.message_id : null;
+  } catch (e) {
+    console.error("[hh-radar] telegram", e instanceof Error ? e.message : e);
+    return null;
+  }
+}
+
+async function sendRadarAlert(token: string, chatId: string, alert: RadarAlert): Promise<number | null> {
+  return sendText(token, chatId, formatRadarTelegram(alert), radarKeyboard(alert));
+}
+
+async function deleteTelegramMessage(token: string, chatId: string, messageId: number): Promise<boolean> {
+  try {
+    const response = await fetch(`https://api.telegram.org/bot${token}/deleteMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId, message_id: messageId }),
       signal: AbortSignal.timeout(8000),
     });
     const data = (await response.json()) as { ok?: boolean };
     return data.ok === true;
   } catch (e) {
-    console.error("[hh-radar] telegram", e instanceof Error ? e.message : e);
+    console.error("[hh-radar] delete", e instanceof Error ? e.message : e);
     return false;
   }
 }
 
-async function sendRadarAlert(token: string, chatId: string, alert: RadarAlert): Promise<boolean> {
-  return sendText(token, chatId, formatRadarTelegram(alert), radarKeyboard(alert));
+async function loadSourceCounts(from: Date, to?: Date) {
+  const seen = to ? { gte: from, lt: to } : { gte: from };
+  const savedRows = await db.jobVacancy.groupBy({
+    by: ["source"],
+    where: { firstSeenAt: seen },
+    _count: true,
+  });
+  const pushedRows = await db.jobVacancy.groupBy({
+    by: ["source"],
+    where: { notifiedAt: seen },
+    _count: true,
+  });
+  const countOf = (rows: { source: string; _count: number }[]) => rows.map((row) => ({ source: row.source, count: row._count }));
+  return sourceCounts(countOf(savedRows), countOf(pushedRows));
+}
+
+/** В конце дня убирает карточки из чата и присылает, сколько собрано. */
+async function closeRadarDay(profile: Awaited<ReturnType<typeof ensureRadarProfile>>): Promise<void> {
+  if (!profile.alertsEnabled) return;
+  if (!shouldSendEveningReport(new Date(), profile.lastEveningReportAt, profile.quietStart, profile.quietEnd)) return;
+  const delivery = await resolveRadarDelivery(profile.telegramChatId);
+  if (!delivery) return;
+  const range = closedDayRange(new Date(), profile.quietStart);
+  const counts = await loadSourceCounts(range.from, range.to);
+  const cards = await db.jobVacancy.findMany({
+    where: { telegramMessageId: { not: null } },
+    select: { id: true, telegramMessageId: true },
+  });
+  let deleted = 0;
+  for (const card of cards) {
+    if (card.telegramMessageId == null) continue;
+    const ok = await deleteTelegramMessage(delivery.token, delivery.chat, card.telegramMessageId);
+    if (ok) deleted += 1;
+    await db.jobVacancy.update({ where: { id: card.id }, data: { telegramMessageId: null } });
+  }
+  if (profile.digestMessageId != null) {
+    const ok = await deleteTelegramMessage(delivery.token, delivery.chat, profile.digestMessageId);
+    if (ok) deleted += 1;
+    await db.jobRadarProfile.update({ where: { id: profile.id }, data: { digestMessageId: null } });
+  }
+  const messageId = await sendText(
+    delivery.token,
+    delivery.chat,
+    formatEveningReport(counts, deleted, profile.lastError ? [profile.lastError] : []),
+  );
+  if (!messageId) return;
+  await db.jobRadarProfile.update({ where: { id: profile.id }, data: { lastEveningReportAt: new Date() } });
+}
+
+/** Утром проверяет источники и пишет, сколько уже в ленте. */
+async function sendMorningStatus(profile: Awaited<ReturnType<typeof ensureRadarProfile>>): Promise<void> {
+  if (!profile.alertsEnabled) return;
+  if (!shouldSendMorningReport(new Date(), profile.lastMorningReportAt)) return;
+  const delivery = await resolveRadarDelivery(profile.telegramChatId);
+  if (!delivery) return;
+  const probes = await probeRadarSources();
+  const counts = await loadSourceCounts(startOfMskDay());
+  const messageId = await sendText(delivery.token, delivery.chat, formatMorningReport(probes, counts));
+  if (!messageId) return;
+  await db.jobRadarProfile.update({ where: { id: profile.id }, data: { lastMorningReportAt: new Date() } });
 }

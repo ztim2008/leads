@@ -135,6 +135,33 @@ async function searchRegion(
   return parseRabotaVacancies(payload, now);
 }
 
+/** Один регион и одна карточка: утром проверяем токен и поиск. */
+export async function pingRabota(): Promise<void> {
+  const auth = await ensureRabotaAccess();
+  if (!auth) throw new Error("Работа.ру: нет токена");
+  const response = await fetch(API, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "X-Token": auth.accessToken,
+      "Application-Id": auth.appId,
+    },
+    body: JSON.stringify({
+      request: {
+        query: "дизайнер",
+        limit: 1,
+        offset: 0,
+        location: { type: "region", region_id: SEARCH_REGIONS[0] },
+        filters: { schedule_ids: [REMOTE_SCHEDULE_ID] },
+      },
+    }),
+    signal: AbortSignal.timeout(20000),
+  });
+  if (!response.ok) throw new Error(`Работа.ру ${response.status}`);
+  const payload = (await response.json()) as { response?: { vacancies?: unknown[] } };
+  if (!Array.isArray(payload.response?.vacancies)) throw new Error("Работа.ру: пустой ответ");
+}
+
 export async function searchRabota(query: string, remoteOnly: boolean, now = new Date()): Promise<RabotaHit[]> {
   const auth = await ensureRabotaAccess();
   if (!auth) throw new Error("Rabota.ru: нет токена");
