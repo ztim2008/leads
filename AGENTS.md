@@ -143,6 +143,7 @@ pm2 save
 | [docs/CLIENT_PROJECT_LAUNCH.md](docs/CLIENT_PROJECT_LAUNCH.md) | Поэтапный запуск: Beget → домен → среда → Cursor-агент |
 | [docs/JOB_RADAR.md](docs/JOB_RADAR.md) | Вакансии HH для админа. Отдельно от заявок партнёров |
 | [docs/STRATEG.md](docs/STRATEG.md) | Стратег: аудит сайта и черновик Директа. Не Job Radar и не заявки |
+| [docs/STRATEG_ROADMAP.md](docs/STRATEG_ROADMAP.md) | Стратег: план развития R.1–R.6. Читать по запросу «развить Стратег» |
 | [docs/devlog.md](docs/devlog.md) | Архив (июнь–июль 2026), только чтение |
 
 <!-- BEGIN:nextjs-agent-rules -->
