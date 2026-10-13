@@ -454,7 +454,10 @@ async function fetchResource(
   throw new Error("Слишком много перенаправлений");
 }
 
-export async function readSite(rawUrl: string): Promise<PageSnapshot[]> {
+export async function readSite(
+  rawUrl: string,
+  onPage?: (done: number, total: number, url: string) => Promise<void>,
+): Promise<PageSnapshot[]> {
   const home = await fetchHtml(rawUrl);
   const homeParsed = parsePage(home.html, home.url);
   const pages: PageSnapshot[] = [
@@ -464,6 +467,7 @@ export async function readSite(rawUrl: string): Promise<PageSnapshot[]> {
   const links = pickInternalLinks(home.html, home.url);
   for (const link of links) {
     if (pages.length >= MAX_PAGES) break;
+    await onPage?.(pages.length, links.length + 1, link);
     try {
       const page = await fetchHtml(link);
       const { links: _links, ...parsed } = parsePage(page.html, page.url);

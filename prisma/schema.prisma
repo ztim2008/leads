@@ -490,6 +490,9 @@ model BriefRun {
   projectId  String    @map("project_id")
   /// queued | running | done | failed
   status     String    @default("queued")
+  /// home | pages | files | model | save — шаг для полосы прогресса
+  stage       String?
+  stageDetail String?   @map("stage_detail")
   error      String?   @db.Text
   pages      Json?
   startedAt  DateTime? @map("started_at")

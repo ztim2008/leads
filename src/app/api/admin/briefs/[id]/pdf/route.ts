@@ -3,14 +3,15 @@ import { requireBriefsUser } from "@/lib/briefs/access";
 import { db } from "@/lib/db";
 import { companyName, type PresentFinding } from "@/lib/briefs/present";
 import { renderBriefPdf } from "@/lib/briefs/pdf";
-import { briefPdfDocument } from "@/lib/briefs/reading";
+import { briefPdfDocument, type PdfAudience } from "@/lib/briefs/reading";
 
 type Ctx = { params: Promise<{ id: string }> };
 
-export async function GET(_req: Request, ctx: Ctx) {
+export async function GET(req: Request, ctx: Ctx) {
   const gate = await requireBriefsUser();
   if (gate.error) return gate.error;
   const { id } = await ctx.params;
+  const audience: PdfAudience = new URL(req.url).searchParams.get("for") === "client" ? "client" : "team";
   const project = await db.briefProject.findUnique({
     where: { id },
     include: { findings: { orderBy: { sort: "asc" } }, document: true },
@@ -30,9 +31,10 @@ export async function GET(_req: Request, ctx: Ctx) {
       findings: site,
       semantics,
       notes: project.document?.body || "",
+      audience,
     }),
   );
-  const filename = `strateg-${host.replace(/[^a-z0-9.-]+/gi, "-")}.pdf`;
+  const filename = `strateg-${host.replace(/[^a-z0-9.-]+/gi, "-")}${audience === "client" ? "-client" : ""}.pdf`;
   return new NextResponse(new Uint8Array(pdf), {
     headers: {
       "Content-Type": "application/pdf",

@@ -224,6 +224,146 @@ a:hover { color: var(--accent-hover); }
   font-size: var(--text-xs);
 }
 
+.brief-progress {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-surface);
+  padding: 16px;
+}
+
+.brief-progress-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--ink-heading);
+  font-size: var(--text-sm);
+}
+
+.brief-progress-head span {
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.brief-progress-track {
+  height: 8px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-layer);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.brief-progress-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 400ms ease;
+}
+
+.brief-steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 6px;
+  font-size: var(--text-sm);
+}
+
+.brief-steps li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 20px;
+  color: var(--ink-muted);
+}
+
+.brief-steps li[data-state="now"] {
+  color: var(--ink-heading);
+  font-weight: 650;
+}
+
+.brief-steps li span:last-child {
+  font-weight: 400;
+  color: var(--ink-muted);
+  text-align: right;
+}
+
+.brief-progress-note {
+  margin: 0;
+  color: var(--ink-muted);
+  font-size: var(--text-xs);
+}
+
+.brief-dialog {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
+  color: var(--ink-body);
+  padding: 24px;
+  width: min(420px, calc(100vw - 32px));
+  box-shadow: var(--shadow-lg);
+}
+
+.brief-dialog::backdrop {
+  background: rgba(15, 23, 42, 0.35);
+}
+
+.brief-dialog h2 {
+  margin: 0;
+  font-size: var(--text-lg);
+  color: var(--ink-heading);
+}
+
+.brief-dialog p {
+  margin: 4px 0 16px;
+  color: var(--ink-muted);
+  font-size: var(--text-sm);
+}
+
+.brief-dialog dl {
+  margin: 0 0 20px;
+  display: grid;
+  gap: 8px;
+}
+
+.brief-dialog dl div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: var(--text-sm);
+  border-bottom: 1px solid var(--border-light);
+  padding-bottom: 8px;
+}
+
+.brief-dialog dd {
+  margin: 0;
+  font-weight: 650;
+  color: var(--ink-heading);
+  font-variant-numeric: tabular-nums;
+}
+
+.brief-dialog-actions {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.brief-dialog-actions button {
+  background: var(--accent);
+  color: #fff;
+  border: 0;
+  border-radius: var(--radius-sm);
+  padding: 10px 16px;
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.brief-dialog-actions button:hover {
+  background: var(--accent-hover);
+}
+
 @media (max-width: 800px) {
   .brief-slots { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }

@@ -14,7 +14,7 @@ import { wordstatEnabled } from "@/lib/briefs/wordstat";
 import FindingEditor from "@/components/briefs/finding-editor";
 import BriefNotes from "@/components/briefs/notes-form";
 import BriefRerun from "@/components/briefs/rerun-button";
-import BriefStatusPoller from "@/components/briefs/status-poller";
+import BriefProgress from "@/components/briefs/brief-progress";
 import BriefSlots from "@/components/briefs/brief-slots";
 import CopyBrief from "@/components/briefs/copy-brief";
 import SemanticsBlock from "@/components/briefs/semantics-block";
@@ -100,7 +100,6 @@ export default async function BriefProjectPage({ params }: Ctx) {
 
   return (
     <div style={{ display: "grid", gap: 28, maxWidth: 960 }}>
-      <BriefStatusPoller active={active} />
       <header style={{ display: "grid", gap: 8 }}>
         <Link href="/dashboard/admin/briefs" style={{ fontSize: "var(--text-sm)", color: "var(--ink-muted)" }}>
           К списку
@@ -125,10 +124,12 @@ export default async function BriefProjectPage({ params }: Ctx) {
           <CopyBrief text={text} />
           {!active && <BriefRerun projectId={project.id} />}
           <Link href={`/dashboard/admin/briefs/${project.id}/print`}>Версия для печати</Link>
-          {!active && <a href={`/api/admin/briefs/${project.id}/pdf`}>PDF для мессенджера</a>}
+          {!active && <a href={`/api/admin/briefs/${project.id}/pdf?for=client`}>PDF клиенту</a>}
+          {!active && <a href={`/api/admin/briefs/${project.id}/pdf`}>PDF команде</a>}
         </div>
       </header>
 
+      <BriefProgress projectId={project.id} active={active} host={host} />
       <BriefSlots findings={siteFindings} />
       <CompareBlock title="Директологу" lead={DIRECTOLOGIST_LEAD} rows={direct} />
       <LandingBlock rows={landingMap({ niche: project.niche, regionName: project.regionName, findings: siteFindings })} />

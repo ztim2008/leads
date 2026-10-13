@@ -16,6 +16,19 @@ import { LANDING_HEADERS, landingMap } from "@/lib/briefs/landing";
 import { ACTION_HEADER, CHECK_HEADER, FACT_HEADER, checkVerdict, seoOutline, type CheckRow } from "@/lib/briefs/seo";
 
 const CONTENT_W = twoCol().reduce((sum, width) => sum + width, 0);
+const LABEL_W = twoCol()[0];
+
+/**
+ * client — владельцу сайта: что хорошо и плохо, карта посадочных, КП. Без сырых фактов,
+ * гипотез, черновиков объявлений и внутренних заметок.
+ * team — директологу и разработчику: всё, что нашёл разбор.
+ */
+export type PdfAudience = "client" | "team";
+
+export const PDF_EDITIONS: Record<PdfAudience, string> = {
+  client: "Для клиента",
+  team: "Для команды",
+};
 
 export function briefPdfDocument(input: {
   company: string;
@@ -26,12 +39,47 @@ export function briefPdfDocument(input: {
   findings: PresentFinding[];
   semantics: PresentFinding[];
   notes: string;
+  audience?: PdfAudience;
 }): BriefPdf {
+  const audience = input.audience ?? "team";
   const hasSemantics = input.semantics.some((finding) => /^\d+$/.test(finding.evidenceQuote || ""));
   const outline = strategyOutline({ ...input, hasSemantics });
-  const ads = adsFromFindings(input);
   const seo = seoOutline(input);
   const direct = directologistChecks(input);
+  const site = siteTable(input.findings);
+  const landing: PdfTable = {
+    title: "Карта посадочных",
+    headers: LANDING_HEADERS,
+    widths: [LABEL_W, Math.round((CONTENT_W - LABEL_W) / 2), CONTENT_W - LABEL_W - Math.round((CONTENT_W - LABEL_W) / 2)],
+    rows: landingMap(input).map((row) => [row.group, `${row.fact}\n${row.url}`, row.action]),
+  };
+
+  if (audience === "client") {
+    return {
+      company: input.company,
+      siteUrl: input.siteUrl,
+      edition: PDF_EDITIONS.client,
+      intro:
+        "Что на сайте уже хорошо, что поправить до запуска и на какие страницы вести рекламу. Всё взято со страниц сайта. Позиции и трафик не измерялись.",
+      tables: [
+        site,
+        checksTable("Перед запуском рекламы", direct),
+        landing,
+        checksTable("SEO и техника сайта", seo),
+        {
+          title: "Коммерческое предложение",
+          headers: ["Поле", "Значение"],
+          widths: twoCol(),
+          rows: outline.proposal
+            .filter((row) => row.value && !/^Заполняет человек/.test(row.value))
+            .map((row) => [row.label, row.label === "Что делаем" ? "Кампания в Яндекс Директе по фактам сайта." : row.value]),
+        },
+      ],
+      notes: "",
+    };
+  }
+
+  const ads = adsFromFindings(input);
   const tables: PdfTable[] = [
     {
       title: "Карточка",
@@ -43,24 +91,9 @@ export function briefPdfDocument(input: {
         ["Задача", input.goal || "Нет данных"],
       ],
     },
-    {
-      title: "Сайт",
-      headers: ["Слот", "На странице"],
-      widths: twoCol(),
-      rows: SLOT_ORDER.map((slot) => {
-        const finding = slotFinding(input.findings, slot);
-        const value = finding ? slotSummary(finding, slot) : "Нет данных";
-        const url = finding?.evidenceUrl || "";
-        return [SLOT_LABELS[slot], url ? `${value}\n${url}` : value];
-      }),
-    },
+    site,
     checksTable("Директологу", direct),
-    {
-      title: "Карта посадочных",
-      headers: LANDING_HEADERS,
-      widths: [112, Math.round((CONTENT_W - 112) / 2), CONTENT_W - 112 - Math.round((CONTENT_W - 112) / 2)],
-      rows: landingMap(input).map((row) => [row.group, `${row.fact}\n${row.url}`, row.action]),
-    },
+    landing,
     checksTable("Разработчику", seo),
   ];
 
@@ -69,7 +102,7 @@ export function briefPdfDocument(input: {
     tables.push({
       title: GROUP_LABELS[kind],
       headers: ["Пункт", "Текст"],
-      widths: twoCol(132),
+      widths: twoCol(200),
       rows: rows.map((finding) => [
         finding.title,
         finding.evidenceUrl ? `${finding.body}\n${finding.evidenceUrl}` : finding.body,
@@ -100,19 +133,33 @@ export function briefPdfDocument(input: {
   return {
     company: input.company,
     siteUrl: input.siteUrl,
+    edition: PDF_EDITIONS.team,
     intro: "Для чтения в мессенджере. Позиции и трафик не измерялись. Черновики объявлений в кабинет Директа не отправлены. Цену и срок ставит человек.",
     tables,
     notes: input.notes,
   };
 }
 
+function siteTable(findings: PresentFinding[]): PdfTable {
+  return {
+    title: "Сайт",
+    headers: ["Слот", "На странице"],
+    widths: twoCol(),
+    rows: SLOT_ORDER.map((slot) => {
+      const finding = slotFinding(findings, slot);
+      const value = finding ? slotSummary(finding, slot) : "Нет данных";
+      const url = finding?.evidenceUrl || "";
+      return [SLOT_LABELS[slot], url ? `${value}\n${url}` : value];
+    }),
+  };
+}
+
 function checksTable(title: string, rows: CheckRow[]): PdfTable {
-  const check = 112;
-  const fact = Math.round((CONTENT_W - check) / 2);
+  const fact = Math.round((CONTENT_W - LABEL_W) / 2);
   return {
     title,
     headers: [CHECK_HEADER, FACT_HEADER, ACTION_HEADER],
-    widths: [check, fact, CONTENT_W - check - fact],
+    widths: [LABEL_W, fact, CONTENT_W - LABEL_W - fact],
     rows: rows.map((row) => [
       `${checkVerdict(row)}\n${row.check}`,
       row.url ? `${row.fact}\n${row.url}` : row.fact,
@@ -133,9 +180,9 @@ function semanticsTable(findings: PresentFinding[], hasSemantics: boolean): PdfT
   return {
     title: "Семантика",
     headers: ["Запрос", "Показы за 30 дней"],
-    widths: twoCol(CONTENT_W - 110),
+    widths: twoCol(CONTENT_W - 140),
     rows: findings
       .filter((finding) => /^\d+$/.test(finding.evidenceQuote || ""))
-      .map((finding) => [finding.title, new Intl.NumberFormat("ru-RU").format(Number(finding.evidenceQuote))    ]),
+      .map((finding) => [finding.title, new Intl.NumberFormat("ru-RU").format(Number(finding.evidenceQuote))]),
   };
 }

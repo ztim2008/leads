@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { factsFromPages, factsFromSiteFiles, readSite, readSiteFiles, type SiteFiles } from "@/lib/briefs/fetch-site";
 import { interpretSite } from "@/lib/briefs/interpret";
+import type { BriefStage } from "@/lib/briefs/progress";
 import { collectWordstat, publicWordstatError, type WordstatPhrase, type WordstatRegion } from "@/lib/briefs/wordstat";
 
 const MODEL = process.env.BRIEFS_MODEL || "deepseek/deepseek-chat";
@@ -23,10 +24,20 @@ export async function processBriefRun(runId: string): Promise<void> {
   });
   if (!run || run.status !== "running") return;
 
+  const step = (stage: BriefStage, stageDetail: string | null = null) =>
+    db.briefRun
+      .update({ where: { id: run.id }, data: { stage, stageDetail } })
+      .then(() => undefined)
+      .catch(() => undefined);
+
   try {
-    const pages = await readSite(run.project.siteUrl);
+    await step("home", run.project.siteUrl);
+    const pages = await readSite(run.project.siteUrl, (done, total, url) =>
+      step("pages", `${done + 1} из ${total} · ${pathOf(url)}`),
+    );
     let files: SiteFiles | null = null;
     if (pages[0] && pages[0].status > 0 && pages[0].status < 400) {
+      await step("files");
       try {
         files = await readSiteFiles(pages[0].url);
       } catch (error) {
@@ -38,6 +49,7 @@ export async function processBriefRun(runId: string): Promise<void> {
     let interpreted: Awaited<ReturnType<typeof interpretSite>> = [];
     const apiKey = await resolveOpenRouterKey();
     if (apiKey && pages[0] && pages[0].status > 0 && pages[0].status < 400) {
+      await step("model", MODEL);
       try {
         interpreted = await interpretSite({
           apiKey,
@@ -55,6 +67,7 @@ export async function processBriefRun(runId: string): Promise<void> {
       }
     }
 
+    await step("save");
     const semantics = await semanticsRows(run.project.niche, run.project.regionName);
 
     const rows = [
@@ -143,6 +156,14 @@ export async function claimNextBriefRun(): Promise<string | null> {
     data: { status: "running" },
   });
   return next.id;
+}
+
+function pathOf(url: string): string {
+  try {
+    return new URL(url).pathname || "/";
+  } catch {
+    return url;
+  }
 }
 
 function formatCount(count: number): string {

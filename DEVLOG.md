@@ -1074,3 +1074,28 @@ Partner buys VPS, downloads zip, fills config.json (Profi login/password + Teleg
 - Jabka не подключать без команды
 - Пилот `93.188.186.13` не рестартить
 - **Не** этап 6 AI, полный 4.9, deep scan без команды
+
+---
+
+## Стратег: прогресс разбора и PDF клиенту · 13 октября 2026 (вечер)
+
+### Сделано
+- Прогресс разбора: воркер пишет этап в `brief_runs.stage` / `stage_detail` (главная → страницы «3 из 5 · /путь» → robots и sitemap → модель → сборка). `GET /api/admin/briefs/[id]/status` отдаёт этап, процент и сводку. `BriefProgress` показывает полосу, шаги и время, на этапе модели полоса плавно идёт до 90%. По готовности окно «Отчёт готов»: до запуска / позже / хорошо / групп + ссылки на PDF.
+- PDF: A4 альбом 842 × 595, левая колонка таблиц 170. Ссылки цветом `--accent`, подчёркнуты, кликабельны, показываются без протокола.
+- Две версии PDF: `?for=client` (Сайт, Перед запуском рекламы, Карта посадочных, SEO и техника сайта, КП без «Заполняет человек»; 6 страниц на k-spec) и команде (полный, 11 страниц).
+- Шапка: Konversus · «Реклама в Яндекс Директе, которая приводит заявки» · konversus.ru, подзаголовок с версией и датой. В конце блок «Обсудить запуск рекламы» с Telegram, почтой, телефоном и сайтом (все ссылки кликабельны). В подвале konversus.ru и номер страницы.
+
+### Файлы
+- `prisma/schema.prisma`, миграция `20261013170000_brief_run_stage`
+- `src/lib/briefs/progress.ts`, `run.ts`, `fetch-site.ts`, `pdf.ts`, `reading.ts`, `pdf.test.ts`
+- `src/app/api/admin/briefs/[id]/status/route.ts`, `src/app/api/admin/briefs/[id]/pdf/route.ts`
+- `src/components/briefs/brief-progress.tsx` (новый), `status-poller.tsx` (удалён)
+- `src/app/dashboard/admin/briefs/[id]/page.tsx`, `src/app/globals.css`
+
+### Production
+- Тесты 31/31 · `npm run build` ✅ · `localhost:3005` → **200**
+- PM2: `leads-konversus` и `leads-briefs` перезапущены · Profi на хабе **off** · Job Radar не трогали
+
+### Осталось
+- Перенос таблиц PDF по строкам, чтобы не было пустот внизу листа
+- Конкуренты по адресам, которые вводит человек
