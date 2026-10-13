@@ -11,8 +11,9 @@ import {
 } from "@/lib/briefs/present";
 import { FINDING_KINDS, GROUP_LABELS } from "@/lib/briefs/sections";
 import { strategyOutline } from "@/lib/briefs/strategy";
-import { developerCompare, directologistCompare } from "@/lib/briefs/compare";
-import { seoOutline } from "@/lib/briefs/seo";
+import { directologistChecks } from "@/lib/briefs/compare";
+import { LANDING_HEADERS, landingMap } from "@/lib/briefs/landing";
+import { ACTION_HEADER, CHECK_HEADER, FACT_HEADER, checkVerdict, seoOutline, type CheckRow } from "@/lib/briefs/seo";
 
 const CONTENT_W = twoCol().reduce((sum, width) => sum + width, 0);
 
@@ -30,8 +31,7 @@ export function briefPdfDocument(input: {
   const outline = strategyOutline({ ...input, hasSemantics });
   const ads = adsFromFindings(input);
   const seo = seoOutline(input);
-  const direct = directologistCompare(input);
-  const developer = developerCompare(seo);
+  const direct = directologistChecks(input);
   const tables: PdfTable[] = [
     {
       title: "Карточка",
@@ -54,6 +54,14 @@ export function briefPdfDocument(input: {
         return [SLOT_LABELS[slot], url ? `${value}\n${url}` : value];
       }),
     },
+    checksTable("Директологу", direct),
+    {
+      title: "Карта посадочных",
+      headers: LANDING_HEADERS,
+      widths: [112, Math.round((CONTENT_W - 112) / 2), CONTENT_W - 112 - Math.round((CONTENT_W - 112) / 2)],
+      rows: landingMap(input).map((row) => [row.group, `${row.fact}\n${row.url}`, row.action]),
+    },
+    checksTable("Разработчику", seo),
   ];
 
   for (const kind of FINDING_KINDS) {
@@ -83,18 +91,6 @@ export function briefPdfDocument(input: {
     rows: outline.proposal.map((row) => [row.label, row.value]),
   });
   tables.push({
-    title: "Директологу",
-    headers: ["Хорошо", "Плохо"],
-    widths: [Math.round(CONTENT_W / 2), CONTENT_W - Math.round(CONTENT_W / 2)],
-    rows: zipSides(direct.good, direct.bad),
-  });
-  tables.push({
-    title: "Разработчику",
-    headers: ["Хорошо", "Плохо"],
-    widths: [Math.round(CONTENT_W / 2), CONTENT_W - Math.round(CONTENT_W / 2)],
-    rows: zipSides(developer.good, developer.bad),
-  });
-  tables.push({
     title: "Объявления",
     headers: ["№", "Черновик"],
     widths: [36, CONTENT_W - 36],
@@ -110,9 +106,19 @@ export function briefPdfDocument(input: {
   };
 }
 
-function zipSides(good: string[], bad: string[]): string[][] {
-  const count = Math.max(good.length, bad.length, 1);
-  return Array.from({ length: count }, (_, index) => [good[index] || "", bad[index] || ""]);
+function checksTable(title: string, rows: CheckRow[]): PdfTable {
+  const check = 112;
+  const fact = Math.round((CONTENT_W - check) / 2);
+  return {
+    title,
+    headers: [CHECK_HEADER, FACT_HEADER, ACTION_HEADER],
+    widths: [check, fact, CONTENT_W - check - fact],
+    rows: rows.map((row) => [
+      `${checkVerdict(row)}\n${row.check}`,
+      row.url ? `${row.fact}\n${row.url}` : row.fact,
+      row.action,
+    ]),
+  };
 }
 
 function semanticsTable(findings: PresentFinding[], hasSemantics: boolean): PdfTable {

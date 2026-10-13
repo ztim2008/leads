@@ -105,7 +105,7 @@ export function telegramBrief(input: {
     lines.push("");
   }
   if (input.seo?.length) {
-    lines.push("SEO");
+    lines.push("Что исправить");
     for (const line of input.seo) lines.push(`• ${clipText(line, 160)}`);
     lines.push("");
   }

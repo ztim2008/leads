@@ -6,8 +6,8 @@ import { homePathForRole } from "@/lib/auth/roles";
 import { GROUP_LABELS, type FindingKind } from "@/lib/briefs/sections";
 import { adsFromFindings } from "@/lib/briefs/ads";
 import { companyName, findingsByKind, type PresentFinding } from "@/lib/briefs/present";
-import { developerCompare, directologistCompare } from "@/lib/briefs/compare";
-import { seoOutline } from "@/lib/briefs/seo";
+import { directologistChecks } from "@/lib/briefs/compare";
+import { DEVELOPER_LEAD, DIRECTOLOGIST_LEAD, seoOutline } from "@/lib/briefs/seo";
 import { strategyOutline } from "@/lib/briefs/strategy";
 import { wordstatEnabled } from "@/lib/briefs/wordstat";
 import BriefSlots from "@/components/briefs/brief-slots";
@@ -15,6 +15,8 @@ import SemanticsBlock from "@/components/briefs/semantics-block";
 import StrategyBlock from "@/components/briefs/strategy-block";
 import AdsBlock from "@/components/briefs/ads-block";
 import CompareBlock from "@/components/briefs/compare-block";
+import LandingBlock from "@/components/briefs/landing-block";
+import { landingMap } from "@/lib/briefs/landing";
 
 const GROUP_ORDER: FindingKind[] = ["fact", "hypothesis", "recommendation"];
 
@@ -79,8 +81,7 @@ export default async function BriefPrintPage({ params }: Ctx) {
     regionName: project.regionName,
     findings,
   });
-  const direct = directologistCompare({ niche: project.niche, regionName: project.regionName, findings });
-  const developer = developerCompare(seoRows);
+  const direct = directologistChecks({ niche: project.niche, regionName: project.regionName, findings });
 
   return (
     <article className="brief-print" style={{ display: "grid", gap: 24, maxWidth: 760 }}>
@@ -94,18 +95,9 @@ export default async function BriefPrintPage({ params }: Ctx) {
         <p style={{ margin: "8px 0 0" }}>{project.goal}</p>
       </header>
       <BriefSlots findings={findings} />
-      <CompareBlock
-        title="Директологу"
-        lead="Что можно брать в Директ и чего в текст объявления ставить нельзя, пока этого нет на сайте."
-        good={direct.good}
-        bad={direct.bad}
-      />
-      <CompareBlock
-        title="Разработчику"
-        lead="Что в HTML изученных страниц уже в порядке и что исправить. Позиции и трафик не измерялись."
-        good={developer.good}
-        bad={developer.bad}
-      />
+      <CompareBlock title="Директологу" lead={DIRECTOLOGIST_LEAD} rows={direct} />
+      <LandingBlock rows={landingMap({ niche: project.niche, regionName: project.regionName, findings })} />
+      <CompareBlock title="Разработчику" lead={DEVELOPER_LEAD} rows={seoRows} />
       {GROUP_ORDER.map((kind) => (
         <section key={kind}>
           <h2 style={{ fontSize: "var(--text-lg)", margin: "0 0 8px" }}>{GROUP_LABELS[kind]}</h2>

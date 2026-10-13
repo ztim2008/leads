@@ -1,37 +1,40 @@
-export default function CompareBlock({
-  title,
-  lead,
-  good,
-  bad,
-}: {
-  title: string;
-  lead: string;
-  good: string[];
-  bad: string[];
-}) {
-  const count = Math.max(good.length, bad.length, 1);
+import { ACTION_HEADER, CHECK_HEADER, FACT_HEADER, checkVerdict, type CheckRow } from "@/lib/briefs/seo";
+
+export default function CompareBlock({ title, lead, rows }: { title: string; lead: string; rows: CheckRow[] }) {
   return (
     <section style={{ display: "grid", gap: 8 }}>
       <h2 style={{ margin: 0, fontSize: "var(--text-lg)", fontWeight: 650 }}>{title}</h2>
       <p style={{ margin: 0, color: "var(--ink-muted)", lineHeight: 1.5 }}>{lead}</p>
-      <div style={{ overflowX: "auto" }}>
-        <table className="brief-table">
-          <thead>
-            <tr>
-              <th>Хорошо</th>
-              <th>Плохо</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Array.from({ length: count }, (_, index) => (
-              <tr key={index}>
-                <td>{good[index] || ""}</td>
-                <td>{bad[index] || ""}</td>
+      {rows.length === 0 ? (
+        <p style={{ margin: 0, color: "var(--ink-muted)" }}>Нет данных.</p>
+      ) : (
+        <div style={{ overflowX: "auto" }}>
+          <table className="brief-table">
+            <thead>
+              <tr>
+                <th>{CHECK_HEADER}</th>
+                <th>{FACT_HEADER}</th>
+                <th>{ACTION_HEADER}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.check}>
+                  <td>
+                    <strong style={{ fontWeight: 650 }}>{checkVerdict(row)}</strong>
+                    <span className="brief-table-meta">{row.check}</span>
+                  </td>
+                  <td>
+                    {row.fact}
+                    {row.url && <span className="brief-table-meta">{row.url}</span>}
+                  </td>
+                  <td>{row.action}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </section>
   );
 }

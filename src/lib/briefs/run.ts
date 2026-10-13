@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { factsFromPages, readSite } from "@/lib/briefs/fetch-site";
+import { factsFromPages, factsFromSiteFiles, readSite, readSiteFiles, type SiteFiles } from "@/lib/briefs/fetch-site";
 import { interpretSite } from "@/lib/briefs/interpret";
 import { collectWordstat, publicWordstatError, type WordstatPhrase, type WordstatRegion } from "@/lib/briefs/wordstat";
 
@@ -25,7 +25,15 @@ export async function processBriefRun(runId: string): Promise<void> {
 
   try {
     const pages = await readSite(run.project.siteUrl);
-    const facts = factsFromPages(pages);
+    let files: SiteFiles | null = null;
+    if (pages[0] && pages[0].status > 0 && pages[0].status < 400) {
+      try {
+        files = await readSiteFiles(pages[0].url);
+      } catch (error) {
+        console.error("[briefs] files", error instanceof Error ? error.message : error);
+      }
+    }
+    const facts = [...factsFromPages(pages), ...(files ? factsFromSiteFiles(files) : [])];
     let model: string | null = null;
     let interpreted: Awaited<ReturnType<typeof interpretSite>> = [];
     const apiKey = await resolveOpenRouterKey();
@@ -84,7 +92,7 @@ export async function processBriefRun(runId: string): Promise<void> {
           status: "done",
           finishedAt: new Date(),
           error: null,
-          pages: { model, pages },
+          pages: { model, pages, files },
         },
       }),
       db.briefProject.update({

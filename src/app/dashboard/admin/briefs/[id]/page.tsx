@@ -8,8 +8,8 @@ import { GROUP_LABELS, type FindingKind } from "@/lib/briefs/sections";
 import { adsFromFindings } from "@/lib/briefs/ads";
 import { companyName, findingsByKind, telegramBrief, type PresentFinding } from "@/lib/briefs/present";
 import { strategyOutline } from "@/lib/briefs/strategy";
-import { developerCompare, directologistCompare } from "@/lib/briefs/compare";
-import { seoOutline } from "@/lib/briefs/seo";
+import { directologistChecks } from "@/lib/briefs/compare";
+import { DEVELOPER_LEAD, DIRECTOLOGIST_LEAD, checkVerdict, seoOutline } from "@/lib/briefs/seo";
 import { wordstatEnabled } from "@/lib/briefs/wordstat";
 import FindingEditor from "@/components/briefs/finding-editor";
 import BriefNotes from "@/components/briefs/notes-form";
@@ -21,6 +21,8 @@ import SemanticsBlock from "@/components/briefs/semantics-block";
 import StrategyBlock from "@/components/briefs/strategy-block";
 import AdsBlock from "@/components/briefs/ads-block";
 import CompareBlock from "@/components/briefs/compare-block";
+import LandingBlock from "@/components/briefs/landing-block";
+import { landingMap } from "@/lib/briefs/landing";
 
 const STATUS: Record<string, string> = {
   queued: "В очереди",
@@ -62,12 +64,11 @@ export default async function BriefProjectPage({ params }: Ctx) {
     regionName: project.regionName,
     findings: siteFindings,
   });
-  const direct = directologistCompare({
+  const direct = directologistChecks({
     niche: project.niche,
     regionName: project.regionName,
     findings: siteFindings,
   });
-  const developer = developerCompare(seoRows);
   const text = telegramBrief({
     company,
     siteUrl: project.siteUrl,
@@ -76,7 +77,10 @@ export default async function BriefProjectPage({ params }: Ctx) {
     goal: project.goal,
     findings: siteFindings,
     semantics,
-    seo: direct.bad.slice(0, 3),
+    seo: [...direct, ...seoRows]
+      .filter((row) => row.tone === "bad")
+      .slice(0, 4)
+      .map((row) => `${checkVerdict(row)} · ${row.check}: ${row.action}`),
   });
   const outline = strategyOutline({
     company,
@@ -126,18 +130,9 @@ export default async function BriefProjectPage({ params }: Ctx) {
       </header>
 
       <BriefSlots findings={siteFindings} />
-      <CompareBlock
-        title="Директологу"
-        lead="Что можно брать в Директ и чего в текст объявления ставить нельзя, пока этого нет на сайте."
-        good={direct.good}
-        bad={direct.bad}
-      />
-      <CompareBlock
-        title="Разработчику"
-        lead="Что в HTML изученных страниц уже в порядке и что исправить. Позиции и трафик не измерялись."
-        good={developer.good}
-        bad={developer.bad}
-      />
+      <CompareBlock title="Директологу" lead={DIRECTOLOGIST_LEAD} rows={direct} />
+      <LandingBlock rows={landingMap({ niche: project.niche, regionName: project.regionName, findings: siteFindings })} />
+      <CompareBlock title="Разработчику" lead={DEVELOPER_LEAD} rows={seoRows} />
 
       {GROUP_ORDER.map((kind) => (
         <section key={kind} style={{ display: "grid", gap: 4 }}>
