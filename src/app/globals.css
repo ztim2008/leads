@@ -294,6 +294,26 @@ a:hover { color: var(--accent-hover); }
   font-size: var(--text-xs);
 }
 
+.brief-verdict {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 650;
+  color: var(--ink-heading);
+}
+
+.brief-verdict::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+
+.brief-verdict[data-mark="good"]::before { background: var(--green); }
+.brief-verdict[data-mark="later"]::before { background: var(--amber); }
+.brief-verdict[data-mark="before"]::before { background: var(--red); }
+
 .brief-dialog {
   border: 1px solid var(--border);
   border-radius: var(--radius-md);

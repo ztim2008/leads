@@ -13,7 +13,7 @@ import { FINDING_KINDS, GROUP_LABELS } from "@/lib/briefs/sections";
 import { strategyOutline } from "@/lib/briefs/strategy";
 import { directologistChecks } from "@/lib/briefs/compare";
 import { LANDING_HEADERS, landingMap } from "@/lib/briefs/landing";
-import { ACTION_HEADER, CHECK_HEADER, FACT_HEADER, checkVerdict, seoOutline, type CheckRow } from "@/lib/briefs/seo";
+import { ACTION_HEADER, CHECK_HEADER, FACT_HEADER, checkMark, checkVerdict, seoOutline, type CheckRow } from "@/lib/briefs/seo";
 
 const CONTENT_W = twoCol().reduce((sum, width) => sum + width, 0);
 const LABEL_W = twoCol()[0];
@@ -165,6 +165,7 @@ function checksTable(title: string, rows: CheckRow[]): PdfTable {
       row.url ? `${row.fact}\n${row.url}` : row.fact,
       row.action,
     ]),
+    marks: rows.map(checkMark),
   };
 }
 

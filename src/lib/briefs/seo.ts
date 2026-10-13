@@ -27,6 +27,10 @@ export function checkVerdict(row: CheckRow): string {
   return row.when === "before" ? "Плохо · до запуска" : "Плохо · можно позже";
 }
 
+export function checkMark(row: CheckRow): "good" | "before" | "later" {
+  return row.tone === "good" ? "good" : row.when;
+}
+
 export function sortChecks(rows: CheckRow[]): CheckRow[] {
   const rank = (row: CheckRow) => (row.tone === "good" ? 2 : row.when === "before" ? 0 : 1);
   return [...rows].sort((a, b) => rank(a) - rank(b));

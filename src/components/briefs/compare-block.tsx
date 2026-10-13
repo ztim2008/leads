@@ -1,4 +1,4 @@
-import { ACTION_HEADER, CHECK_HEADER, FACT_HEADER, checkVerdict, type CheckRow } from "@/lib/briefs/seo";
+import { ACTION_HEADER, CHECK_HEADER, FACT_HEADER, checkMark, checkVerdict, type CheckRow } from "@/lib/briefs/seo";
 
 export default function CompareBlock({ title, lead, rows }: { title: string; lead: string; rows: CheckRow[] }) {
   return (
@@ -21,7 +21,9 @@ export default function CompareBlock({ title, lead, rows }: { title: string; lea
               {rows.map((row) => (
                 <tr key={row.check}>
                   <td>
-                    <strong style={{ fontWeight: 650 }}>{checkVerdict(row)}</strong>
+                    <strong className="brief-verdict" data-mark={checkMark(row)}>
+                      {checkVerdict(row)}
+                    </strong>
                     <span className="brief-table-meta">{row.check}</span>
                   </td>
                   <td>

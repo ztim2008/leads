@@ -66,6 +66,28 @@ test("client pdf keeps checks and offer but hides team notes", async () => {
   assert.equal(pdf.subarray(0, 5).toString(), "%PDF-");
 });
 
+test("a row taller than a page continues on the next one", async () => {
+  const lines = Array.from({ length: 90 }, (_, index) => `Раздел ${index + 1}`).join("\n");
+  const pdf = await renderBriefPdf({
+    company: "Тест",
+    siteUrl: "https://example.ru/",
+    intro: "",
+    edition: "Для команды",
+    notes: "",
+    tables: [
+      {
+        title: "Разделы",
+        headers: ["Проверка", "Текст"],
+        widths: [170, 608],
+        rows: [["Хорошо\nРазделы", lines]],
+        marks: ["good"],
+      },
+    ],
+  });
+  const pages = pdf.toString("latin1").match(/\/Type \/Page\b/g)?.length ?? 0;
+  assert.ok(pages >= 3, `ожидали 3+ страниц, вышло ${pages}`);
+});
+
 test("short links drop the protocol but keep the path", () => {
   assert.equal(shortUrl("https://www.k-spec.ru/"), "www.k-spec.ru");
   assert.equal(shortUrl("https://www.k-spec.ru/uslugi"), "www.k-spec.ru/uslugi");
