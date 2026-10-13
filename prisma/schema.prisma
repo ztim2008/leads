@@ -32,6 +32,7 @@ model User {
   sessions         Session[]
   crmClientsOwned  CrmClient[] @relation("CrmOwner")
   crmClientsCreated CrmClient[] @relation("CrmCreator")
+  briefProjects    BriefProject[]
 
   @@map("users")
 }
@@ -60,6 +61,7 @@ model CrmClient {
   createdBy        User?         @relation("CrmCreator", fields: [createdById], references: [id], onDelete: SetNull)
   linkedWorkspace  Workspace?    @relation(fields: [linkedWorkspaceId], references: [id], onDelete: SetNull)
   contacts         CrmContact[]
+  briefProjects    BriefProject[]
 
   @@index([status])
   @@index([ownerId])
@@ -337,6 +339,8 @@ model AppConfig {
 
   /// Whitelist email для Ideas Board («Партнеры идеи»). Админы имеют доступ всегда.
   ideasBoardEmails String[] @default([]) @map("ideas_board_emails")
+  /// Whitelist email директолога для раздела «Стратег». Админы имеют доступ всегда.
+  briefsEmails     String[] @default([]) @map("briefs_emails")
 
   updatedAt DateTime @updatedAt @map("updated_at")
 
@@ -453,6 +457,83 @@ model JobVacancy {
   @@index([status, firstSeenAt])
   @@index([track, status])
   @@map("job_vacancies")
+}
+
+/// Внутренний бриф продвижения. Не связан с заявками партнёров и Job Radar.
+model BriefProject {
+  id          String   @id @default(uuid())
+  siteUrl     String   @map("site_url")
+  regionName  String   @map("region_name")
+  niche       String
+  goal        String   @db.Text
+  /// queued | running | ready | failed
+  status      String   @default("queued")
+  createdById String   @map("created_by_id")
+  crmClientId String?  @map("crm_client_id")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  createdBy User          @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  crmClient CrmClient?    @relation(fields: [crmClientId], references: [id], onDelete: SetNull)
+  runs      BriefRun[]
+  findings  BriefFinding[]
+  document  BriefDocument?
+
+  @@index([createdById])
+  @@index([status])
+  @@index([crmClientId])
+  @@map("brief_projects")
+}
+
+model BriefRun {
+  id         String    @id @default(uuid())
+  projectId  String    @map("project_id")
+  /// queued | running | done | failed
+  status     String    @default("queued")
+  error      String?   @db.Text
+  pages      Json?
+  startedAt  DateTime? @map("started_at")
+  finishedAt DateTime? @map("finished_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  project BriefProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, createdAt])
+  @@index([status, createdAt])
+  @@map("brief_runs")
+}
+
+model BriefFinding {
+  id             String   @id @default(uuid())
+  projectId      String   @map("project_id")
+  runId          String?  @map("run_id")
+  /// site | competitors | semantics | strategy | proposal
+  section        String
+  /// fact | hypothesis | recommendation
+  kind           String
+  title          String
+  body           String   @db.Text
+  evidenceUrl    String?  @map("evidence_url")
+  evidenceQuote  String?  @map("evidence_quote") @db.Text
+  sort           Int      @default(0)
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  project BriefProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, section, sort])
+  @@map("brief_findings")
+}
+
+model BriefDocument {
+  id        String   @id @default(uuid())
+  projectId String   @unique @map("project_id")
+  body      String   @default("") @db.Text
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  project BriefProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("brief_documents")
 }
 
 model CrashLog {

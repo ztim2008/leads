@@ -28,10 +28,12 @@ export default async function middleware(req: NextRequest) {
   const isAdmin = isAdminRole(payload.role) && !payload.impersonatorId;
   const isSales = isSalesRole(payload.role);
   const isAdminRoute = path.startsWith("/dashboard/admin") || path.startsWith("/api/admin");
+  const isBriefsRoute =
+    path.startsWith("/dashboard/admin/briefs") || path.startsWith("/api/admin/briefs");
   const isCrmRoute = path.startsWith("/dashboard/crm") || path.startsWith("/api/crm");
   const isIdeasRoute = path.startsWith("/dashboard/ideas") || path.startsWith("/api/ideas");
 
-  if (isAdminRoute && !isAdmin) {
+  if (isAdminRoute && !isAdmin && !isBriefsRoute) {
     return NextResponse.redirect(new URL(homePathForRole(payload.role), req.url));
   }
 

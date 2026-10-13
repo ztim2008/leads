@@ -41,6 +41,17 @@ module.exports = {
       max_memory_restart: '256M',
     },
     {
+      name: 'leads-briefs',
+      script: 'src/collectors/briefs-worker.ts',
+      cwd: '/var/www/www-root/data/www/leads.konversus.ru',
+      interpreter: '/usr/bin/npx',
+      interpreter_args: 'tsx',
+      max_restarts: 5,
+      min_uptime: '10s',
+      restart_delay: 30000,
+      max_memory_restart: '256M',
+    },
+    {
       name: 'leads-health',
       script: 'src/collectors/health-monitor.ts',
       cwd: '/var/www/www-root/data/www/leads.konversus.ru',

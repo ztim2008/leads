@@ -1034,3 +1034,39 @@ Partner buys VPS, downloads zip, fills config.json (Profi login/password + Teleg
 - Jabka не подключать без команды
 - Пилот `93.188.186.13` не рестартить
 - **Не** этап 6 AI, полный 4.9, deep scan без команды
+
+## Итоги дня · 13 октября 2026
+
+### Сделано
+- Внутренний раздел «Стратег»: сайт по HTTP (до 5 страниц), факты с цитатой, гипотезы и рекомендации только если цитата есть на скачанной странице. Не Job Radar, не заявки, не Profi.
+- Админ подключает директолога по email из уже существующих пользователей. Отдельный логин не заводили, whitelist пустой.
+- Пилот k-spec.ru, ниша «Производство спецодежды», регион «Московская область, Подольск». Повторный разбор нашёл цены `2 500 000Р` и `1 000 000Р`. Раньше сумма с буквой «Р» без «руб.» терялась.
+- Два блока «Хорошо / Плохо». Директологу — что можно брать в Директ. Разработчику — что поправить в HTML: title, H1, описание, alt, noindex. Позиции и трафик не выдумываем.
+- Черновик стратегии и КП: цена и срок пустые, их ставит человек. Тексты объявлений в отчёт не публикуются в кабинет.
+- PDF для мессенджера, не для печати: таблицы, ширина 520 pt.
+- Wordstat написан и выключен: счёт Yandex Cloud не оплачен, `BRIEFS_WORDSTAT` не включён. Повторный разбор в API не ходит.
+
+### Файлы
+- `DEVLOG.md`, `docs/STRATEG.md`, `docs/PLAN_2026-08-10.md`, `AGENTS.md`
+- `prisma/schema.prisma`, миграция `20261013140000_briefs`
+- `ecosystem.config.cjs`, `next.config.ts`, `package.json`, `package-lock.json`
+- `src/middleware.ts`, `src/app/dashboard/layout.tsx`, `src/app/globals.css`
+- `src/collectors/briefs-worker.ts`
+- `src/lib/briefs/**`, `src/components/briefs/**`
+- `src/app/api/admin/briefs/**`, `src/app/dashboard/admin/briefs/**`
+
+### Production
+- `npm run build` ✅ · `localhost:3005` → **200**
+- PM2: `leads-konversus` restart · `leads-briefs` online · `leads-radar` не трогали · `leads-health` online · Profi на хабе **off**
+- `profiOnHub: false`
+- Пилот VPS не трогали
+- Ключ Search API и `.env` в git не попадали
+
+### Осталось
+- Wordstat и конкуренты в выдаче — после оплаты счёта Yandex Cloud и `BRIEFS_WORDSTAT=1`
+- Кабинет Директа и сравнение прогонов (S.5) — после живого клиента на этапах 1–3
+- Цену и срок в КП заполняет человек
+- Whitelist директолога пустой: подключать по email, когда будет человек
+- Jabka не подключать без команды
+- Пилот `93.188.186.13` не рестартить
+- **Не** этап 6 AI, полный 4.9, deep scan без команды

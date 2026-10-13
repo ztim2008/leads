@@ -14,6 +14,7 @@ import {
   Users,
   UserCog,
   Lightbulb,
+  ClipboardList,
 } from "lucide-react";
 import ThemeToggle from "@/components/layout/theme-toggle";
 import StatusIndicator from "@/components/layout/status-indicator";
@@ -21,6 +22,7 @@ import SignOutButton from "@/components/layout/signout-button";
 import ExitImpersonationButton from "@/components/layout/exit-impersonation-button";
 import { isAdminRole, isSalesRole, ROLE_LABELS } from "@/lib/auth/roles";
 import { canAccessIdeas } from "@/lib/ideas/access";
+import { canAccessBriefs } from "@/lib/briefs/access";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
@@ -53,6 +55,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const isSales = isSalesRole(user.role) && !isImpersonating;
   const isPartner = !isAdmin && !isSales;
   const showIdeasNav = await canAccessIdeas(user.email, isImpersonating ? "user" : user.role);
+  const showBriefsNav = await canAccessBriefs(user.email, isImpersonating ? "user" : user.role, isImpersonating);
 
   const PARTNER_NAV = [
     { href: "/dashboard", label: "Обзор", icon: LayoutDashboard },
@@ -65,6 +68,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     { href: "/dashboard/admin/ops", label: "Пульт", icon: Radio },
     { href: "/dashboard/admin", label: "Партнёры", icon: Shield },
     { href: "/dashboard/crm", label: "Клиенты", icon: Users },
+    { href: "/dashboard/admin/briefs", label: "Стратег", icon: ClipboardList },
     { href: "/dashboard/admin/billing", label: "Счета", icon: CreditCard },
     { href: "/dashboard/admin/team", label: "Команда", icon: UserCog },
     { href: "/dashboard/admin/assistant", label: "Помощник", icon: Sparkles },
@@ -255,6 +259,30 @@ export default async function DashboardLayout({ children }: { children: React.Re
             </>
           )}
 
+          {showBriefsNav && !isAdmin && (
+            <ul style={{ listStyle: "none", padding: 0, margin: "0 0 12px" }}>
+              <li>
+                <Link
+                  href="/dashboard/admin/briefs"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                    padding: "10px 14px",
+                    borderRadius: "var(--radius-sm)",
+                    fontSize: "var(--text-sm)",
+                    fontWeight: 500,
+                    color: "var(--ink-body)",
+                    textDecoration: "none",
+                  }}
+                >
+                  <ClipboardList size={18} strokeWidth={1.75} />
+                  Стратег
+                </Link>
+              </li>
+            </ul>
+          )}
+
           {showIdeasNav && (
             <>
               <div style={{ margin: "12px 0 8px 14px", fontSize: "var(--text-xs)", fontWeight: 700, color: "var(--ink-muted)", textTransform: "uppercase", letterSpacing: 1, opacity: 0.6 }}>
@@ -317,7 +345,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <SignOutButton />
         </div>
       </aside>
-      <main style={{ flex: 1, minWidth: 0, padding: "32px 36px" }}>
+      <main className="dash-main" style={{ flex: 1, minWidth: 0, padding: "32px 36px" }}>
         {isPartner && (
           <div style={{ marginBottom: 24, display: "flex", justifyContent: "flex-end" }}>
             <StatusIndicator />
