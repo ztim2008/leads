@@ -524,6 +524,44 @@ export function runChecks(signals: Signals, business: BusinessType, ai: AiVision
       : check(tap, "unknown", UNKNOWN, url, "render"),
   );
 
+  const popup: Spec = {
+    id: "ux.popup",
+    category: "ux",
+    title: "Сайт не перекрывается окном при входе",
+    weight: 1,
+    why: "Человек из рекламы ещё не увидел предложение, а его уже просят подписаться или скачать приложение. Часть людей закрывает вкладку вместо окна.",
+    fix: "Показывать окно не сразу, а через 30–60 секунд, при попытке уйти или после прокрутки. Cookies и выбор города — небольшой плашкой, без затемнения страницы.",
+    severity: "important",
+    impact: "medium",
+    effort: "low",
+  };
+  if (desktop || mobile) {
+    const views = [
+      ["компьютере", desktop],
+      ["телефоне", mobile],
+    ] as const;
+    const modals = views.flatMap(([where, view]) => {
+      const modal = view?.popups?.find((item) => item.kind === "modal");
+      if (!modal) return [];
+      const label = modal.label.length > 60 ? `${modal.label.slice(0, 60).replace(/\s+\S*$/, "")}…` : modal.label;
+      return [`на ${where}: «${label || "окно без текста"}»`];
+    });
+    const closed = [...new Set(views.flatMap(([, view]) => view?.popups ?? []).map((item) => (item.kind === "cookies" ? "cookies" : item.kind === "city" ? "выбор города" : null)))].filter(Boolean);
+    out.push(
+      check(
+        popup,
+        modals.length ? "warn" : "pass",
+        modals.length
+          ? `При входе появляется окно поверх сайта ${modals.join("; ")}. Для скриншотов его закрыли.`
+          : closed.length
+            ? `Большого окна при входе нет. Перед скриншотом закрыли: ${closed.join(", ")}.`
+            : "Окон поверх сайта при входе нет.",
+        url,
+        "render",
+      ),
+    );
+  }
+
   out.push(
     check(
       {

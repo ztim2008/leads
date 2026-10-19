@@ -2,7 +2,7 @@ import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
 import { isPrivateIp } from "@/lib/briefs/fetch-site";
 import { shotPath } from "@/lib/diagnost/shots";
-import type { FoldMark, PerfSignals, RenderSignals, ViewSignals } from "@/lib/diagnost/types";
+import type { FoldMark, PerfSignals, RenderSignals, ViewPopup, ViewSignals } from "@/lib/diagnost/types";
 
 const CHROME_UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36 KonversusDiagnost/1.0";
@@ -14,6 +14,7 @@ const STRONG_CTA_SOURCE =
 
 type Browser = import("playwright").Browser;
 type BrowserContext = import("playwright").BrowserContext;
+type Page = import("playwright").Page;
 
 const hostCache = new Map<string, boolean>();
 
@@ -177,6 +178,147 @@ const COLLECT_FOLD = String.raw`function collectFold(ctaSource) {
   };
 }`;
 
+// Ссылки с настоящим href не нажимаются, чтобы не уйти со страницы.
+const DISMISS = String.raw`function dismiss(mode) {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const COOKIE = /cookie|куки|персональн|конфиденциальн/i;
+  const CONSENT = /использ|соглас|продолжая|обработк|we use|accept|agree/i;
+  const isDialog = (el) => el.getAttribute("role") === "dialog" || el.getAttribute("aria-modal") === "true" || el.tagName === "DIALOG";
+  const CITY = /ваш город|ваш регион|выберите (?:ваш )?город|это ваш город|угадали (?:город|регион)|город определ/i;
+  const ACCEPT = /^(?:принять(?: все| и закрыть)?|принимаю|(?:я )?согласен|(?:я )?согласна|соглашаюсь|согласиться|понятно|хорошо|ок|ok|окей|accept(?: all)?|agree|got it|allow(?: all)?|разрешить|продолжить|закрыть)$/i;
+  const CONFIRM = /^(?:да|да,? верно|верно|всё верно|все верно|да,? всё верно|правильно|подтвердить|угадали|ок|ok)$/i;
+  const CLOSE = /^(?:×|✕|✖|x|закрыть|не сейчас|нет,? спасибо|позже|спасибо,? не надо|остаться в браузере|продолжить в браузере|close|no,? thanks)$/i;
+  const found = [];
+  const shown = (el) => {
+    const rect = el.getBoundingClientRect();
+    if (rect.width < 4 || rect.height < 4 || rect.bottom <= 0 || rect.right <= 0 || rect.top >= vh || rect.left >= vw) return null;
+    const style = getComputedStyle(el);
+    if (style.visibility === "hidden" || style.display === "none" || Number(style.opacity) < 0.1) return null;
+    return rect;
+  };
+  const textOf = (el) => (el.innerText || el.textContent || "").replace(/\s+/g, " ").trim();
+  const labelOf = (el) => (textOf(el) || el.getAttribute("aria-label") || el.getAttribute("title") || el.value || "").trim();
+  const clickable = (el) => {
+    if (el.tagName === "A") {
+      const href = (el.getAttribute("href") || "").trim();
+      return !href || href === "#" || href.startsWith("javascript:");
+    }
+    return true;
+  };
+  const note = (kind, el) => {
+    if (!found.some((item) => item.kind === kind)) found.push({ kind, label: textOf(el).slice(0, 80) });
+  };
+  const hide = (el, kind) => {
+    el.style.setProperty("display", "none", "important");
+    note(kind, el);
+  };
+  const press = (box, re, kind) => {
+    for (const el of Array.from(box.querySelectorAll('button, [role=button], a, input[type=button], input[type=submit], [class*=close], [aria-label]'))) {
+      if (!shown(el) || !clickable(el)) continue;
+      const label = labelOf(el);
+      const aria = (el.getAttribute("aria-label") || "") + " " + (typeof el.className === "string" ? el.className : "");
+      if (re.test(label) || (re === CLOSE && !label && /close|закры/i.test(aria))) {
+        el.click();
+        note(kind, box);
+        return true;
+      }
+    }
+    return false;
+  };
+  const anchored = (el) => {
+    for (let node = el, depth = 0; node && node !== document.body && depth < 8; node = node.parentElement, depth++) {
+      const style = getComputedStyle(node);
+      if (style.position === "fixed" || style.position === "absolute" || isDialog(node)) return node;
+    }
+    return null;
+  };
+
+  const floating = (el) => {
+    for (let node = el, depth = 0; node && node !== document.body && depth < 8; node = node.parentElement, depth++) {
+      const position = getComputedStyle(node).position;
+      if (position === "fixed" || position === "sticky" || isDialog(node)) return true;
+    }
+    return false;
+  };
+
+  const all = Array.from(document.body.querySelectorAll("*")).slice(0, 30000);
+  const overlays = [];
+  // Большие sticky-блоки только закрываем кнопкой: в них часто живёт и меню сайта.
+  const stickies = [];
+  for (const el of all) {
+    const style = getComputedStyle(el);
+    const dialog = isDialog(el);
+    const sticky = style.position === "sticky";
+    if (style.position !== "fixed" && !sticky && !dialog) continue;
+    if (style.pointerEvents === "none") continue;
+    const rect = shown(el);
+    if (!rect) continue;
+    const z = parseInt(style.zIndex, 10);
+    if ((rect.width * rect.height) / (vw * vh) < 0.25 || !(dialog || z >= 1)) continue;
+    overlays.push(el);
+    if (sticky && !dialog) stickies.push(el);
+  }
+  const cityBoxes = [];
+  const cookieBars = [];
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  while (walker.nextNode()) {
+    const el = walker.currentNode.parentElement;
+    const value = walker.currentNode.textContent || "";
+    if (!el || el.tagName === "SCRIPT" || el.tagName === "STYLE") continue;
+    if (CITY.test(value) && shown(el)) {
+      const box = anchored(el);
+      if (box && !cityBoxes.includes(box) && textOf(box).length < 300 && shown(box)) cityBoxes.push(box);
+    }
+    if (COOKIE.test(value) && shown(el)) {
+      // Поднимаемся до самой плашки, не захватывая соседние блоки (меню, футер).
+      let node = el;
+      let bar = el;
+      while (node.parentElement && node.parentElement !== document.body) {
+        const length = textOf(node).length;
+        const parentLength = textOf(node.parentElement).length;
+        if (parentLength > length * 1.2 + 30 || parentLength > 1200) break;
+        node = node.parentElement;
+        if (shown(node)) bar = node;
+      }
+      const text = textOf(bar);
+      const rect = shown(bar);
+      const ok =
+        rect &&
+        !cookieBars.includes(bar) &&
+        CONSENT.test(text) &&
+        text.length < 1200 &&
+        (rect.width * rect.height) / (vw * vh) < 0.6 &&
+        !bar.closest("form") &&
+        !overlays.some((overlay) => overlay.contains(bar)) &&
+        floating(bar);
+      if (ok) cookieBars.push(bar);
+    }
+  }
+  const overlayKind = (el) => {
+    const text = textOf(el);
+    return /cookie|куки/i.test(text) && text.length < 1200 ? "cookies" : "modal";
+  };
+
+  if (mode === "click") {
+    for (const box of cityBoxes) press(box, CONFIRM, "city");
+    for (const bar of cookieBars) press(bar, ACCEPT, "cookies");
+    for (const el of overlays) {
+      const kind = overlayKind(el);
+      press(el, kind === "cookies" ? ACCEPT : CLOSE, kind);
+    }
+    return found;
+  }
+
+  for (const box of cityBoxes) hide(box, "city");
+  for (const bar of cookieBars) hide(bar, "cookies");
+  for (const el of overlays) if (!stickies.includes(el) && shown(el)) hide(el, overlayKind(el));
+  for (const root of [document.documentElement, document.body]) {
+    if (getComputedStyle(root).overflowY === "hidden") root.style.setProperty("overflow", "visible", "important");
+  }
+  return found;
+}`;
+
 const PERF_SCRIPT = String.raw`(() => {
   const nav = performance.getEntriesByType("navigation")[0];
   const fcp = performance.getEntriesByName("first-contentful-paint")[0];
@@ -199,6 +341,32 @@ async function openPage(context: BrowserContext, url: string) {
   }
   await page.waitForTimeout(1500);
   return page;
+}
+
+async function clearPopups(page: Page): Promise<ViewPopup[]> {
+  const url = page.url();
+  const found: ViewPopup[] = [];
+  const merge = (items: ViewPopup[]) => {
+    for (const item of items) if (!found.some((known) => known.kind === item.kind)) found.push(item);
+  };
+  try {
+    // Повторные проходы ловят окна, которые сайт показывает по таймеру через 2–5 секунд.
+    for (const pause of [0, 1500, 2000]) {
+      await page.waitForTimeout(pause);
+      const clicked = (await page.evaluate(`(${DISMISS})("click")`)) as ViewPopup[];
+      merge(clicked);
+      if (clicked.length) await page.waitForTimeout(700);
+      if (page.url() !== url) {
+        await page.goto(url, { waitUntil: "load", timeout: 30_000 }).catch(() => undefined);
+        await page.waitForTimeout(1500);
+      }
+      merge((await page.evaluate(`(${DISMISS})("hide")`)) as ViewPopup[]);
+    }
+    if (found.length) await page.waitForTimeout(300);
+  } catch (error) {
+    console.error("[diagnost] popups", error instanceof Error ? error.message : error);
+  }
+  return found;
 }
 
 export async function renderSite(url: string, auditId: string): Promise<RenderSignals> {
@@ -232,6 +400,7 @@ export async function renderSite(url: string, auditId: string): Promise<RenderSi
       lcp: number | null;
       cls: number | null;
     };
+    const desktopPopups = await clearPopups(desktopPage);
     const desktopFold = (await desktopPage.evaluate(`(${COLLECT_FOLD})(${JSON.stringify(STRONG_CTA_SOURCE)})`)) as FoldData;
     const desktopShot = shotPath(auditId, "desktop");
     await desktopPage.screenshot({ path: desktopShot, type: "jpeg", quality: 78 });
@@ -264,10 +433,11 @@ export async function renderSite(url: string, auditId: string): Promise<RenderSi
       });
       await guard(mobileContext);
       const mobilePage = await openPage(mobileContext, url);
+      const mobilePopups = await clearPopups(mobilePage);
       const mobileFold = (await mobilePage.evaluate(`(${COLLECT_FOLD})(${JSON.stringify(STRONG_CTA_SOURCE)})`)) as FoldData;
       const mobileShot = shotPath(auditId, "mobile");
       await mobilePage.screenshot({ path: mobileShot, type: "jpeg", quality: 70 });
-      mobile = { ...mobileFold, shot: mobileShot, width: 390, height: 844 };
+      mobile = { ...mobileFold, popups: mobilePopups, shot: mobileShot, width: 390, height: 844 };
       await mobileContext.close();
     } catch (error) {
       console.error("[diagnost] mobile", error instanceof Error ? error.message : error);
@@ -276,7 +446,7 @@ export async function renderSite(url: string, auditId: string): Promise<RenderSi
     return {
       ok: true,
       error: null,
-      desktop: { ...desktopFold, shot: desktopShot, width: 1440, height: 900 },
+      desktop: { ...desktopFold, popups: desktopPopups, shot: desktopShot, width: 1440, height: 900 },
       mobile,
       perf,
       html,

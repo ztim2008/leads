@@ -93,7 +93,11 @@ export type ViewSignals = {
   baseFontPx: number | null;
   smallTapShare: number | null;
   foldText: string;
+  /** Окна, закрытые перед скриншотом (нет в аудитах до 19.10.2026) */
+  popups?: ViewPopup[];
 };
+
+export type ViewPopup = { kind: "cookies" | "city" | "modal"; label: string };
 
 export type PerfSignals = {
   ttfbMs: number | null;
