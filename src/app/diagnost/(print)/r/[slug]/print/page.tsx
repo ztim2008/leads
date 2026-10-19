@@ -378,6 +378,14 @@ function ProReport({ result, createdAt, slug }: { result: AuditResult; createdAt
         <div className="mt-1 text-[11px]" style={{ color: "var(--dg-muted)" }}>
           {date(createdAt)} · страниц проверено: {result.pages.length} · AI: {result.ai.model || `нет (${result.ai.error || "недоступен"})`} · отчёт /diagnost/r/{slug}
         </div>
+        {result.ai.usage && (
+          <div className="mt-0.5 text-[11px]" style={{ color: "var(--dg-muted)" }}>
+            Токены AI: {(result.ai.usage.promptTokens + result.ai.usage.completionTokens).toLocaleString("ru-RU")} (вход {result.ai.usage.promptTokens.toLocaleString("ru-RU")}, ответ{" "}
+            {result.ai.usage.completionTokens.toLocaleString("ru-RU")}, из них размышления {result.ai.usage.reasoningTokens.toLocaleString("ru-RU")}) · ≈ ${result.ai.usage.costUsd.toFixed(4)}
+            {result.ai.reused?.vision ? " · анализ скриншотов взят из прошлого аудита" : ""}
+            {result.ai.reused?.summary ? " · сводка взята из прошлого аудита" : ""}
+          </div>
+        )}
       </section>
 
       <section className="mt-5 grid grid-cols-[1fr_1.2fr] gap-5">

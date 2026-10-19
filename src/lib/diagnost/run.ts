@@ -1,6 +1,6 @@
 import type { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
-import { aiAvailable, AI_MODEL, analyzeVision, writeSummary } from "@/lib/diagnost/ai";
+import { aiAvailable, AI_MODEL, analyzeVision, emptyUsage, hashOf, summaryPayload, visionFacts, writeSummary } from "@/lib/diagnost/ai";
 import { detectBusiness, runChecks } from "@/lib/diagnost/checks";
 import { fetchFollow, parseHome, pickInner, readFiles, readInner } from "@/lib/diagnost/fetch";
 import { LEVEL_LABELS, VERDICT_LABELS, levelOf } from "@/lib/diagnost/levels";
@@ -17,6 +17,22 @@ import {
 } from "@/lib/diagnost/types";
 
 const STALE_MS = 6 * 60 * 1000;
+const AI_REUSE_DAYS = 30;
+
+async function previousAi(host: string, excludeId: string, path: string[], value: string): Promise<AuditResult["ai"] | null> {
+  const row = await db.diagnostAudit.findFirst({
+    where: {
+      host,
+      status: "done",
+      id: { not: excludeId },
+      createdAt: { gte: new Date(Date.now() - AI_REUSE_DAYS * 24 * 60 * 60 * 1000) },
+      result: { path, equals: value },
+    },
+    orderBy: { createdAt: "desc" },
+    select: { result: true },
+  });
+  return (row?.result as AuditResult | null)?.ai ?? null;
+}
 
 export async function claimNextAudit(): Promise<string | null> {
   await db.diagnostAudit.updateMany({
@@ -136,9 +152,20 @@ export async function processAudit(id: string): Promise<void> {
     await set("recommendations", "processing");
     let vision: AiVision | null = null;
     let aiError: string | null = null;
+    const usage = emptyUsage();
+    const reused = { vision: false, summary: false };
+    // Текст первого экрана не входит в отпечаток: карусели баннеров меняют его между прогонами.
+    const stableFacts: Partial<ReturnType<typeof visionFacts>> = visionFacts(signals, hint);
+    delete stableFacts.first_screen_text_desktop;
+    delete stableFacts.first_screen_text_mobile;
+    const fingerprint = hashOf({ model: AI_MODEL, facts: stableFacts });
     if (aiAvailable() && (signals.render.desktop || signals.home.text.length > 200)) {
       try {
-        vision = await analyzeVision(signals, hint);
+        const cached = await previousAi(audit.host, id, ["ai", "fingerprint"], fingerprint);
+        if (cached?.vision) {
+          vision = cached.vision;
+          reused.vision = true;
+        } else vision = await analyzeVision(signals, hint, usage);
         if (!hint) business = vision.business.type;
       } catch (error) {
         aiError = error instanceof Error ? error.message.slice(0, 200) : "AI недоступен";
@@ -157,9 +184,11 @@ export async function processAudit(id: string): Promise<void> {
 
     let summary = fallbackSummary(overall, ad.score, criticalCount, top);
     let ads = fallbackAds(verdict, criticalCount, top, ad.caps, signals.home);
+    let summaryKey: string | null = null;
+    let summaryText: { summary: string; comment: string } | null = null;
     if (vision) {
       try {
-        const written = await writeSummary({
+        const payload = summaryPayload({
           host: new URL(finalUrl).hostname,
           business: BUSINESS_LABELS[business],
           overall,
@@ -170,18 +199,23 @@ export async function processAudit(id: string): Promise<void> {
           criticalCount,
           strengths: good.map((item) => item.title),
         });
-        if (written.summary) summary = written.summary;
-        ads = {
-          ...ads,
-          comment: written.comment || ads.comment,
-          risks: written.risks.length ? written.risks : ads.risks,
-          beforeLaunch: written.beforeLaunch.length ? written.beforeLaunch : ads.beforeLaunch,
-        };
+        summaryKey = hashOf({ model: AI_MODEL, payload });
+        const cached = await previousAi(audit.host, id, ["ai", "summaryKey"], summaryKey);
+        if (cached?.summaryText) {
+          summaryText = cached.summaryText;
+          reused.summary = true;
+        } else summaryText = await writeSummary(payload, usage);
+        if (summaryText.summary) summary = summaryText.summary;
+        ads = { ...ads, comment: summaryText.comment || ads.comment };
       } catch (error) {
         console.error("[diagnost] summary", error instanceof Error ? error.message : error);
       }
     }
-    await set("recommendations", vision ? "completed" : "warning", vision ? `Модель ${AI_MODEL} · оффер ${vision.offer.clarity}/10` : `Без AI: ${aiError}`);
+    await set(
+      "recommendations",
+      vision ? "completed" : "warning",
+      vision ? `Модель ${AI_MODEL} · оффер ${vision.offer.clarity}/10${reused.vision ? " · сайт не менялся, анализ взят из прошлого аудита" : ""}` : `Без AI: ${aiError}`,
+    );
 
     // 11. Отчёт
     await set("report", "processing");
@@ -232,7 +266,16 @@ export async function processAudit(id: string): Promise<void> {
       },
       perf: signals.render.perf,
       pages: [{ url: finalUrl, status: signals.home.status, title: signals.home.title, h1: signals.home.h1s[0] || "" }, ...signals.inner],
-      ai: { model: vision ? AI_MODEL : null, error: vision ? null : aiError },
+      ai: {
+        model: vision ? AI_MODEL : null,
+        error: vision ? null : aiError,
+        usage,
+        vision,
+        fingerprint: vision ? fingerprint : null,
+        summaryKey: summaryText ? summaryKey : null,
+        summaryText,
+        reused,
+      },
       generatedAt: new Date().toISOString(),
     };
     await set("report", "completed", `${overall}/100 · ${LEVEL_LABELS[levelOf(overall)]}`);

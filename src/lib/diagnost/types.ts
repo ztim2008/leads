@@ -278,6 +278,24 @@ export type AuditResult = {
   marks: { desktop: FoldMark[]; mobile: FoldMark[]; desktopSize: [number, number]; mobileSize: [number, number] };
   perf: PerfSignals | null;
   pages: InnerPage[];
-  ai: { model: string | null; error: string | null };
+  ai: {
+    model: string | null;
+    error: string | null;
+    usage?: AiUsage;
+    vision?: AiVision | null;
+    fingerprint?: string | null;
+    summaryKey?: string | null;
+    summaryText?: { summary: string; comment: string } | null;
+    reused?: { vision: boolean; summary: boolean };
+  };
   generatedAt: string;
+};
+
+export type AiUsage = {
+  calls: number;
+  promptTokens: number;
+  cacheHitTokens: number;
+  completionTokens: number;
+  reasoningTokens: number;
+  costUsd: number;
 };
