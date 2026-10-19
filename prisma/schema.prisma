@@ -550,3 +550,35 @@ model CrashLog {
   @@index([service, createdAt])
   @@map("crash_log")
 }
+
+/// Техосмотр сайта (/diagnost): публичный аудит готовности сайта к рекламе.
+model DiagnostAudit {
+  id           String    @id @default(uuid())
+  slug         String    @unique
+  /// Кука браузера владельца — «Мои аудиты» без регистрации
+  ownerToken   String    @map("owner_token")
+  ipHash       String?   @map("ip_hash")
+  url          String
+  host         String
+  /// ecommerce | services | b2b | saas | local | info | other — выбор пользователя
+  businessHint String?   @map("business_hint")
+  /// queued | running | done | failed
+  status       String    @default("queued")
+  stages       Json?
+  progress     Int       @default(0)
+  result       Json?
+  overall      Int?
+  adReadiness  Int?      @map("ad_readiness")
+  /// Прошлый готовый аудит того же сайта у того же владельца — «Было → Стало»
+  prevId       String?   @map("prev_id")
+  error        String?   @db.Text
+  startedAt    DateTime? @map("started_at")
+  finishedAt   DateTime? @map("finished_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  @@index([ownerToken, createdAt])
+  @@index([status, createdAt])
+  @@index([ipHash, createdAt])
+  @@index([host, createdAt])
+  @@map("diagnost_audits")
+}

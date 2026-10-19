@@ -1,0 +1,260 @@
+/* Техосмотр сайта — тёмная приборная панель на токенах проекта (.dark из globals.css) */
+
+.dg {
+  --dg-bg: var(--bg-root);
+  --dg-panel: color-mix(in oklab, var(--bg-surface) 82%, transparent);
+  --dg-panel-solid: var(--bg-surface);
+  --dg-line: var(--border);
+  --dg-line-soft: var(--border-light);
+  --dg-ink: var(--ink-heading);
+  --dg-body: var(--ink-body);
+  --dg-muted: var(--ink-muted);
+  --dg-accent: var(--green);
+  --dg-accent-ink: #04130d;
+  --dg-excellent: var(--green);
+  --dg-good: color-mix(in oklab, var(--green) 70%, var(--amber));
+  --dg-fair: var(--amber);
+  --dg-poor: #fb923c;
+  --dg-critical: var(--red);
+  --dg-control-h: 48px;
+  --dg-control-h-hero: 60px;
+  --dg-radius: 14px;
+
+  min-height: 100vh;
+  background:
+    radial-gradient(900px 420px at 12% -8%, color-mix(in oklab, var(--green) 9%, transparent), transparent 70%),
+    var(--dg-bg);
+  color: var(--dg-body);
+  font-family: var(--font-sans);
+}
+
+.dg h1,
+.dg h2,
+.dg h3 {
+  font-family: var(--font-montserrat), var(--font-sans);
+  color: var(--dg-ink);
+  letter-spacing: -0.025em;
+}
+
+.dg-mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.dg-eyebrow {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--dg-muted);
+}
+
+.dg-panel {
+  background: var(--dg-panel);
+  border: 1px solid var(--dg-line);
+  border-radius: var(--dg-radius);
+  backdrop-filter: blur(10px);
+}
+
+.dg-tile {
+  background: color-mix(in oklab, var(--bg-layer) 70%, transparent);
+  border: 1px solid var(--dg-line);
+  border-radius: 10px;
+}
+
+.dg-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: var(--dg-control-h);
+  padding: 0 18px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  white-space: nowrap;
+  transition: background-color 0.15s, border-color 0.15s, transform 0.15s, color 0.15s;
+  cursor: pointer;
+}
+.dg-btn:disabled { opacity: 0.55; cursor: default; }
+.dg-btn-primary { background: var(--dg-accent); color: var(--dg-accent-ink); }
+.dg-btn-primary:hover:not(:disabled) { background: color-mix(in oklab, var(--dg-accent) 88%, white); transform: translateX(2px); }
+.dg-btn-ghost { background: transparent; color: var(--dg-ink); border: 1px solid var(--dg-line); }
+.dg-btn-ghost:hover:not(:disabled) { background: var(--bg-hover); }
+
+.dg a.dg-link { color: var(--dg-accent); }
+.dg a.dg-link:hover { color: color-mix(in oklab, var(--dg-accent) 80%, white); }
+
+.dg-chip {
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--dg-line);
+  font-size: 13px;
+  color: var(--dg-body);
+  background: transparent;
+  transition: border-color 0.15s, background-color 0.15s, color 0.15s;
+  cursor: pointer;
+}
+.dg-chip:hover { background: var(--bg-hover); }
+.dg-chip[aria-pressed="true"] {
+  border-color: color-mix(in oklab, var(--dg-accent) 60%, transparent);
+  background: color-mix(in oklab, var(--dg-accent) 12%, transparent);
+  color: var(--dg-ink);
+}
+
+.dg-input {
+  height: var(--dg-control-h-hero);
+  width: 100%;
+  background: transparent;
+  border: 0;
+  outline: none;
+  color: var(--dg-ink);
+  font-family: var(--font-mono);
+  font-size: 15px;
+}
+.dg-input::placeholder { color: var(--ink-placeholder); }
+
+/* Уровни: цвет всегда рядом с текстом */
+.dg-l-excellent { --lvl: var(--dg-excellent); }
+.dg-l-good { --lvl: var(--dg-good); }
+.dg-l-fair { --lvl: var(--dg-fair); }
+.dg-l-poor { --lvl: var(--dg-poor); }
+.dg-l-critical { --lvl: var(--dg-critical); }
+.dg-l-none { --lvl: var(--dg-muted); }
+
+.dg-lvl-text { color: var(--lvl); }
+.dg-dot { width: 8px; height: 8px; border-radius: 999px; background: var(--lvl); flex: none; }
+.dg-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in oklab, var(--lvl) 45%, transparent);
+  background: color-mix(in oklab, var(--lvl) 10%, transparent);
+  color: var(--dg-ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+.dg-bar { height: 4px; border-radius: 999px; background: var(--dg-line); overflow: hidden; }
+.dg-bar > span { display: block; height: 100%; background: var(--lvl); border-radius: inherit; transition: width 0.9s cubic-bezier(0.2, 0.8, 0.2, 1); }
+
+.dg-card-btn {
+  text-align: left;
+  transition: border-color 0.15s, background-color 0.15s;
+  cursor: pointer;
+}
+.dg-card-btn:hover { border-color: color-mix(in oklab, var(--dg-ink) 22%, transparent); }
+.dg-card-btn[aria-expanded="true"] { border-color: color-mix(in oklab, var(--lvl) 55%, transparent); }
+
+/* Спидометр */
+.dg-needle { transition: transform 1.6s cubic-bezier(0.22, 1, 0.36, 1); transform-origin: 0 0; }
+
+/* Этапы */
+.dg-stage { transition: background-color 0.3s; }
+.dg-stage[data-state="processing"] { background: color-mix(in oklab, var(--dg-accent) 6%, transparent); }
+.dg-spin { animation: dg-spin 0.9s linear infinite; }
+@keyframes dg-spin { to { transform: rotate(360deg); } }
+
+.dg-fade { animation: dg-fade 0.5s ease both; }
+@keyframes dg-fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+.dg-skeleton {
+  background: linear-gradient(90deg, var(--bg-layer), var(--bg-hover), var(--bg-layer));
+  background-size: 200% 100%;
+  animation: dg-shimmer 1.4s ease infinite;
+  border-radius: 8px;
+}
+@keyframes dg-shimmer { to { background-position: -200% 0; } }
+
+/* Метки на скриншоте первого экрана */
+.dg-mark {
+  position: absolute;
+  border: 2px solid var(--mk);
+  border-radius: 6px;
+  background: color-mix(in oklab, var(--mk) 10%, transparent);
+  pointer-events: none;
+}
+.dg-mark > span {
+  position: absolute;
+  left: -2px;
+  top: -22px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: var(--mk);
+  color: var(--dg-accent-ink);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.dg-mk-h1 { --mk: var(--ink-heading); }
+.dg-mk-cta { --mk: var(--green); }
+.dg-mk-phone { --mk: var(--amber); }
+.dg-mk-form { --mk: var(--blue); }
+.dg-mk-trust { --mk: #f9a8d4; }
+
+.dg-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.dg-table th { text-align: left; font-weight: 500; color: var(--dg-muted); padding: 10px 12px; border-bottom: 1px solid var(--dg-line); }
+.dg-table td { padding: 12px; border-bottom: 1px solid var(--dg-line-soft); }
+.dg-table tr:hover td { background: color-mix(in oklab, var(--bg-hover) 50%, transparent); }
+
+@media (prefers-reduced-motion: reduce) {
+  .dg-needle, .dg-bar > span, .dg-fade, .dg-spin, .dg-skeleton { animation: none !important; transition: none !important; }
+}
+
+/* ── Печать (PDF): светлый консалтинговый отчёт на светлых токенах ── */
+.dgp {
+  /* светлые значения токенов проекта из :root — html всегда .dark */
+  --bg-root: #ffffff;
+  --bg-layer: #f8f9fa;
+  --bg-surface: #ffffff;
+  --ink-heading: #0f172a;
+  --ink-body: #1e293b;
+  --ink-muted: #64748b;
+  --green: #10b981;
+  --amber: #f59e0b;
+  --red: #ef4444;
+  --blue: #3b82f6;
+  --border: #e5e7eb;
+  --border-light: #f3f4f6;
+
+  --dg-panel-solid: var(--bg-surface);
+  --dg-line: var(--border);
+  --dg-line-soft: var(--border-light);
+  --dg-ink: var(--ink-heading);
+  --dg-body: var(--ink-body);
+  --dg-muted: var(--ink-muted);
+  --dg-accent: var(--green);
+  --dg-excellent: var(--green);
+  --dg-good: color-mix(in oklab, var(--green) 70%, var(--amber));
+  --dg-fair: var(--amber);
+  --dg-poor: #ea580c;
+  --dg-critical: var(--red);
+  background: var(--bg-root);
+  color: var(--dg-body);
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+.dgp h1, .dgp h2, .dgp h3 { font-family: var(--font-montserrat), var(--font-sans); color: var(--dg-ink); letter-spacing: -0.02em; }
+.dgp .dg-mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+.dgp-page { width: 210mm; min-height: 297mm; padding: 18mm 16mm; break-after: page; position: relative; }
+.dgp-page:last-child { break-after: auto; }
+.dgp-flow { width: 210mm; padding: 14mm 16mm; }
+.dgp-flow > section { break-inside: avoid; }
+.dgp-num { font-family: var(--font-mono); font-size: 11px; color: var(--dg-accent); letter-spacing: 0.08em; }
+.dgp-h2 { font-size: 22px; font-weight: 800; margin: 2px 0 12px; }
+.dgp-rule { height: 1px; background: var(--dg-line); margin: 18px 0; }
+.dgp-table { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+.dgp-table th { text-align: left; font-weight: 600; color: var(--dg-muted); padding: 7px 8px; border-bottom: 1.5px solid var(--dg-ink); }
+.dgp-table td { padding: 8px; border-bottom: 1px solid var(--dg-line); vertical-align: top; }
+.dgp-table tr { break-inside: avoid; }
+.dgp-box { border: 1px solid var(--dg-line); border-radius: 10px; padding: 12px 14px; break-inside: avoid; }
+.dgp .dg-dot { width: 7px; height: 7px; border-radius: 999px; background: var(--lvl); display: inline-block; flex: none; }
+.dgp .dg-lvl-text { color: var(--lvl); }
+.dgp-footer { position: absolute; bottom: 10mm; left: 16mm; right: 16mm; display: flex; justify-content: space-between; font-size: 10px; color: var(--dg-muted); }
+.dgp-check { width: 12px; height: 12px; border: 1.5px solid var(--dg-ink); border-radius: 3px; display: inline-block; flex: none; margin-top: 3px; }
+@page { size: A4; margin: 0; }
+html:has(.dgp), body:has(.dgp) { background: white; }
