@@ -2,77 +2,18 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import {
-  Menu, X, ChevronDown, Globe, Search, Shield, Zap,
-  ShoppingBag, FileText, ExternalLink, Layers
-} from "lucide-react";
+import { Menu, X, ChevronDown, ExternalLink } from "lucide-react";
+import { ABOUT_URL, CONTACT_TELEGRAM, PRODUCTS, STATUS_LABELS, type Product } from "@/config/products";
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Экосистема Konversus — описание всех сервисов
-// ДЛЯ ДОБАВЛЕНИЯ НОВОГО ПРОЕКТА: добавить объект в PRODUCTS ниже
-// ═══════════════════════════════════════════════════════════════════════════
-
-const PRODUCTS = [
-  {
-    name: "Ловец лидов",
-    description: "AI-поиск заявок с Profi.ru. Мгновенные уведомления в Telegram. AI-анализ и авто-отклики.",
-    href: "https://leads.konversus.ru",
-    icon: Zap,
-    color: "#22c55e",
-    badge: "Новое",
-  },
-  {
-    name: "SSL Doctor",
-    description: "AI-мониторинг SSL и безопасности сайта. Авто-восстановление сертификатов 24/7.",
-    href: "https://ssl.konversus.ru",
-    icon: Shield,
-    color: "#3b82f6",
-  },
-  {
-    name: "SEO AI",
-    description: "Анализ позиций в Яндексе, ключевые слова, аудит сайта. Российский рынок.",
-    href: "https://seo.konversus.ru",
-    icon: Search,
-    color: "#8b5cf6",
-    badge: "Новое",
-  },
-  {
-    name: "Архитектор сайта",
-    description: "AI-аудит сайта: SEO, скорость, безопасность. Умные рекомендации по росту.",
-    href: "/architect",
-    icon: Search,
-    color: "#8b5cf6",
-  },
-  {
-    name: "Конструктор сайтов",
-    description: "Скандинавский no-code конструктор. Создание сайтов без программирования.",
-    href: "https://nordic-builder.ru",
-    icon: Globe,
-    color: "#f97316",
-  },
-  {
-    name: "Тайный покупатель",
-    description: "AI-поиск клиентов. Авто-аудит сайтов, генерация КП, email-рассылки.",
-    href: "/dashboard/secret-shopper",
-    icon: ShoppingBag,
-    color: "#ec4899",
-  },
-  {
-    name: "Telegram-консультант",
-    description: "Клиенты пишут на сайте — вы отвечаете из Telegram. AI + человек без CRM.",
-    href: "https://chat.konversus.ru",
-    icon: Globe,
-    color: "#22c55e",
-    badge: "Новое",
-  },
-  {
-    name: "Портфолио",
-    description: "Работы за 17 лет в digital. Брендинг, сайты, полиграфия.",
-    href: "/about",
-    icon: Layers,
-    color: "#14b8a6",
-  },
-];
+function ProductBadge({ product }: { product: Product }) {
+  if (product.status === "live") return null;
+  const soon = product.status === "soon";
+  return (
+    <span style={{ fontSize: "0.65rem", padding: "1px 7px", borderRadius: 100, border: "1px solid var(--border)", color: soon ? "var(--ink-muted)" : "var(--green)", fontWeight: 600 }}>
+      {STATUS_LABELS[product.status]}
+    </span>
+  );
+}
 
 export default function KonversusNav() {
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -141,51 +82,53 @@ export default function KonversusNav() {
                 <div style={{
                   position: "absolute", top: "100%", left: "50%", transform: "translateX(-50%)",
                   marginTop: 8, width: 680,
-                  background: "rgba(24,24,27,0.98)", backdropFilter: "blur(24px)",
-                  border: "1px solid rgba(255,255,255,0.08)", borderRadius: 16,
+                  background: "var(--bg-surface)",
+                  border: "1px solid var(--border)", borderRadius: 16,
                   padding: "24px 28px",
                   display: "grid", gridTemplateColumns: "1fr 1fr",
                   gap: "10px 24px",
                   boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
                   animation: "fadeIn 0.15s ease",
                 }}>
-                  {PRODUCTS.map((prod) => (
-                    <a
-                      key={prod.href}
-                      href={prod.href}
-                      target={prod.href.startsWith("http") ? "_blank" : undefined}
-                      rel={prod.href.startsWith("http") ? "noopener" : undefined}
-                      onClick={() => setMegaOpen(false)}
-                      style={{
-                        display: "flex", alignItems: "flex-start", gap: 12,
-                        padding: "12px 14px", borderRadius: 10,
-                        textDecoration: "none",
-                        transition: "background 0.15s ease",
-                      }}
-                      onMouseEnter={(e) => (e.currentTarget.style.background = "rgba(255,255,255,0.04)")}
-                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                    >
-                      <div style={{ width: 36, height: 36, borderRadius: 8, background: prod.color + "20", color: prod.color, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                        <prod.icon size={18} strokeWidth={1.75} />
-                      </div>
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                          <span style={{ fontWeight: 600, fontSize: "0.85rem", color: "#fafafa" }}>{prod.name}</span>
-                          {prod.badge && (
-                            <span style={{ fontSize: "0.6rem", padding: "1px 6px", borderRadius: 100, background: "#22c55e20", color: "#22c55e", fontWeight: 700 }}>{prod.badge}</span>
-                          )}
+                  {PRODUCTS.map((prod) => {
+                    const inner = (
+                      <>
+                        <div style={{ width: 36, height: 36, borderRadius: 8, background: "var(--bg-hover)", color: prod.status === "soon" ? "var(--ink-muted)" : "var(--green)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                          <prod.icon size={18} strokeWidth={1.75} />
                         </div>
-                        <p style={{ fontSize: "0.75rem", color: "#71717a", marginTop: 2, lineHeight: 1.4 }}>{prod.description}</p>
-                      </div>
-                    </a>
-                  ))}
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                            <span style={{ fontWeight: 600, fontSize: "0.85rem", color: prod.status === "soon" ? "var(--ink-muted)" : "var(--ink-heading)" }}>{prod.name}</span>
+                            <ProductBadge product={prod} />
+                          </div>
+                          <p style={{ fontSize: "0.75rem", color: "var(--ink-muted)", marginTop: 2, lineHeight: 1.4 }}>{prod.tagline}</p>
+                        </div>
+                      </>
+                    );
+                    const rowStyle: React.CSSProperties = { display: "flex", alignItems: "flex-start", gap: 12, padding: "12px 14px", borderRadius: 10, textDecoration: "none" };
+                    if (!prod.href) return <div key={prod.id} style={{ ...rowStyle, cursor: "default" }} aria-disabled="true">{inner}</div>;
+                    return (
+                      <a
+                        key={prod.id}
+                        href={prod.href}
+                        target={prod.external ? "_blank" : undefined}
+                        rel={prod.external ? "noopener" : undefined}
+                        onClick={() => setMegaOpen(false)}
+                        style={{ ...rowStyle, transition: "background-color 0.15s ease" }}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-hover)")}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                      >
+                        {inner}
+                      </a>
+                    );
+                  })}
                 </div>
               )}
             </div>
 
-            <NavLink href="/about">Обо мне</NavLink>
+            <NavLink href={ABOUT_URL} external>Обо мне</NavLink>
             <NavLink href="/docs">Документация</NavLink>
-            <NavLink href="https://t.me/bilarius" external>Контакты</NavLink>
+            <NavLink href={CONTACT_TELEGRAM} external>Контакты</NavLink>
           </div>
 
           {/* Мобильная кнопка */}
@@ -211,28 +154,28 @@ export default function KonversusNav() {
             animation: "fadeIn 0.15s ease",
           }} className="nav-mobile-menu">
             <MobileSection title="Продукты">
-              {PRODUCTS.map((prod) => (
+              {PRODUCTS.filter((prod) => prod.href).map((prod) => (
                 <a
-                  key={prod.href}
-                  href={prod.href}
-                  target={prod.href.startsWith("http") ? "_blank" : undefined}
-                  rel={prod.href.startsWith("http") ? "noopener" : undefined}
+                  key={prod.id}
+                  href={prod.href!}
+                  target={prod.external ? "_blank" : undefined}
+                  rel={prod.external ? "noopener" : undefined}
                   onClick={() => setMobileOpen(false)}
                   style={{
                     display: "flex", alignItems: "center", gap: 10,
                     padding: "10px 0", textDecoration: "none",
-                    borderBottom: "1px solid rgba(255,255,255,0.04)",
+                    borderBottom: "1px solid var(--border-light)",
                   }}
                 >
-                  <prod.icon size={16} style={{ color: prod.color }} />
-                  <span style={{ color: "#d4d4d8", fontSize: "0.9rem" }}>{prod.name}</span>
-                  {prod.badge && <span style={{ fontSize: "0.6rem", padding: "1px 6px", borderRadius: 100, background: "#22c55e20", color: "#22c55e", fontWeight: 700, marginLeft: "auto" }}>{prod.badge}</span>}
+                  <prod.icon size={16} style={{ color: "var(--green)" }} />
+                  <span style={{ color: "var(--ink-body)", fontSize: "0.9rem" }}>{prod.name}</span>
+                  <span style={{ marginLeft: "auto" }}><ProductBadge product={prod} /></span>
                 </a>
               ))}
             </MobileSection>
-            <MobileLink href="/about" onClick={() => setMobileOpen(false)}>Обо мне</MobileLink>
+            <MobileLink href={ABOUT_URL} onClick={() => setMobileOpen(false)} external>Обо мне</MobileLink>
             <MobileLink href="/docs" onClick={() => setMobileOpen(false)}>Документация</MobileLink>
-            <MobileLink href="https://t.me/bilarius" onClick={() => setMobileOpen(false)} external>Telegram @bilarius</MobileLink>
+            <MobileLink href={CONTACT_TELEGRAM} onClick={() => setMobileOpen(false)} external>Telegram @bilarius</MobileLink>
           </div>
         )}
       </nav>

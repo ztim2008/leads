@@ -1,19 +1,12 @@
 "use client";
 import Link from "next/link";
-import { Phone, Mail, ExternalLink } from "lucide-react";
-
-const PRODUCTS = [
-  { name: "Ловец лидов", href: "https://leads.konversus.ru", ext: true },
-  { name: "SSL Doctor", href: "https://ssl.konversus.ru", ext: true },
-  { name: "Архитектор сайта", href: "/architect" },
-  { name: "Тайный покупатель", href: "/dashboard/secret-shopper" },
-  { name: "Конструктор сайтов", href: "https://nordic-builder.ru", ext: true },
-];
+import { Phone, Mail, Send, ExternalLink } from "lucide-react";
+import { ABOUT_URL, CONTACT_TELEGRAM, PRODUCTS } from "@/config/products";
 
 const ABOUT = [
-  { name: "Обо мне", href: "/about" },
-  { name: "Портфолио", href: "/about#portfolio" },
-  { name: "Документация", href: "/docs" },
+  { name: "Обо мне", href: ABOUT_URL, ext: true },
+  { name: "Портфолио", href: `${ABOUT_URL}#portfolio`, ext: true },
+  { name: "Документация", href: "/docs", ext: false },
 ];
 
 export default function KonversusFooter() {
@@ -30,7 +23,7 @@ export default function KonversusFooter() {
               Konversus
             </Link>
             <p style={{ color: "#71717a", fontSize: "0.8rem", lineHeight: 1.7, maxWidth: 280 }}>
-              Экосистема digital-инструментов для роста бизнеса. Создаю сервисы которые приносят реальную выручку.
+              Хаб сервисов для бизнеса: проверка сайта перед рекламой, заявки, чат на сайте и быстрые прототипы.
             </p>
           </div>
 
@@ -38,13 +31,13 @@ export default function KonversusFooter() {
           <div>
             <h4 style={{ fontWeight: 600, color: "#a1a1aa", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 14 }}>Продукты</h4>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {PRODUCTS.map((p) => (
-                <a key={p.href} href={p.href} target={p.ext ? "_blank" : undefined} rel={p.ext ? "noopener" : undefined}
+              {PRODUCTS.filter((p) => p.href).map((p) => (
+                <a key={p.id} href={p.href!} target={p.external ? "_blank" : undefined} rel={p.external ? "noopener" : undefined}
                   style={{ color: "#71717a", fontSize: "0.85rem", textDecoration: "none", display: "flex", alignItems: "center", gap: 4, transition: "color 0.15s" }}
                   onMouseEnter={(e) => (e.currentTarget.style.color = "#fafafa")}
                   onMouseLeave={(e) => (e.currentTarget.style.color = "#71717a")}
                 >
-                  {p.name}{p.ext && <ExternalLink size={10} />}
+                  {p.name}{p.external && <ExternalLink size={10} />}
                 </a>
               ))}
             </div>
@@ -55,11 +48,11 @@ export default function KonversusFooter() {
             <h4 style={{ fontWeight: 600, color: "#a1a1aa", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 14 }}>О проекте</h4>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {ABOUT.map((a) => (
-                <Link key={a.href} href={a.href}
+                <a key={a.href} href={a.href} target={a.ext ? "_blank" : undefined} rel={a.ext ? "noopener" : undefined}
                   style={{ color: "#71717a", fontSize: "0.85rem", textDecoration: "none", transition: "color 0.15s" }}
                 >
                   {a.name}
-                </Link>
+                </a>
               ))}
             </div>
           </div>
@@ -68,11 +61,11 @@ export default function KonversusFooter() {
           <div>
             <h4 style={{ fontWeight: 600, color: "#a1a1aa", fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 14 }}>Контакты</h4>
             <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-              <a href="https://t.me/bilarius" target="_blank" style={{ color: "#71717a", fontSize: "0.85rem", textDecoration: "none", display: "flex", alignItems: "center", gap: 6, transition: "color 0.15s" }}
+              <a href={CONTACT_TELEGRAM} target="_blank" rel="noopener" style={{ color: "#71717a", fontSize: "0.85rem", textDecoration: "none", display: "flex", alignItems: "center", gap: 6, transition: "color 0.15s" }}
                 onMouseEnter={(e) => (e.currentTarget.style.color = "#fafafa")}
                 onMouseLeave={(e) => (e.currentTarget.style.color = "#71717a")}
               >
-                <span style={{ width: 20, height: 20, borderRadius: 4, background: "#3b82f620", color: "#3b82f6", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10 }}>✈</span>
+                <Send size={14} />
                 @bilarius
               </a>
               <a href="mailto:bilariuss@yandex.ru" style={{ color: "#71717a", fontSize: "0.85rem", textDecoration: "none", display: "flex", alignItems: "center", gap: 6, transition: "color 0.15s" }}
@@ -98,7 +91,7 @@ export default function KonversusFooter() {
           <span style={{ color: "#52525b", fontSize: "0.75rem" }}>© {new Date().getFullYear()} Тимофеев Алексей · ИНН 532002912418</span>
           <div style={{ display: "flex", gap: 16 }}>
             <a href="https://vk.com/bilarius" target="_blank" style={{ color: "#52525b", fontSize: "0.75rem", textDecoration: "none" }}>VK</a>
-            <a href="https://t.me/bilarius" target="_blank" style={{ color: "#52525b", fontSize: "0.75rem", textDecoration: "none" }}>Telegram</a>
+            <a href={CONTACT_TELEGRAM} target="_blank" style={{ color: "#52525b", fontSize: "0.75rem", textDecoration: "none" }}>Telegram</a>
             <a href="https://www.behance.net/timofeev_aleksey" target="_blank" style={{ color: "#52525b", fontSize: "0.75rem", textDecoration: "none" }}>Behance</a>
           </div>
         </div>

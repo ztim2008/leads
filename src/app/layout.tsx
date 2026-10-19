@@ -24,8 +24,8 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Konversus Leads AI — Умный поиск заказов",
-  description: "Автоматический мониторинг заказов с Profi.ru. AI-анализ, Telegram-уведомления и готовые отклики.",
+  title: "Konversus — сервисы для бизнеса: аудит сайта, заявки, чат",
+  description: "Хаб инструментов Konversus: проверка сайта перед рекламой, заявки из Profi в Telegram, чат на сайте и быстрый прототип.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
