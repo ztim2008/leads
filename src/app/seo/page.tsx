@@ -4,6 +4,7 @@ import KonversusFooter from "@/components/konversus-footer";
 import Factors from "@/components/seo/factors";
 import GrowthChart from "@/components/seo/growth-chart";
 import LossCalculator from "@/components/seo/loss-calculator";
+import PriceCalculator from "@/components/seo/price-calculator";
 import Quiz from "@/components/seo/quiz";
 
 const COMPARE: [string, string, string][] = [
@@ -32,14 +33,25 @@ const STEPS: [string, string, string][] = [
   ["Отчёт и план", "Каждый месяц показываем позиции, переходы, заявки и план на следующий месяц.", "Ежемесячный отчёт"],
 ];
 
-const METHODS: [string, string, string][] = [
-  ["Полезные страницы под каждую услугу", "Работает годами", "ok"],
-  ["Исправление техники и скорости", "Работает годами", "ok"],
-  ["Цены, отзывы, контакты, Яндекс Карты", "Работает годами", "ok"],
-  ["Упоминания на тематических сайтах", "Работает, если без спешки", "ok"],
-  ["Тексты, набитые ключевыми словами", "Фильтр, сайт падает в поиске", "bad"],
-  ["Покупка сотен ссылок разом", "Санкции Яндекса", "bad"],
-  ["Накрутка поведения ботами", "Бан, выход занимает месяцы", "bad"],
+const WHITE: [string, string][] = [
+  ["Полезные страницы под каждую услугу", "Человек находит ответ — Яндекс поднимает страницу"],
+  ["Исправление техники и скорости", "Сайт быстро открывается и без ошибок читается роботом"],
+  ["Цены, отзывы, контакты, гарантии", "Яндекс и люди видят настоящий бизнес"],
+  ["Карточки на Яндекс Картах и в 2ГИС", "Клиенты из вашего района находят вас на карте"],
+  ["Статьи и видео, которые отвечают на вопросы", "Приводят людей из поиска годами"],
+  ["Ссылки с тематических сайтов, постепенно", "Работают как рекомендации знакомых"],
+  ["Отзывы от реальных клиентов", "Растёт доверие и в поиске, и на картах"],
+];
+
+const BLACK: [string, string][] = [
+  ["Покупка сотен ссылок на биржах", "Фильтр Яндекса, сайт падает в поиске"],
+  ["Контент-фермы: сотни текстов без смысла и редактуры", "Страницы выкидывают из поиска как мусор"],
+  ["Массовый постинг ссылок по форумам и комментариям", "Спам, бан аккаунтов, вред репутации"],
+  ["Накрутка поведения ботами", "Бан на месяцы, выход стоит дороже продвижения"],
+  ["Тексты, набитые ключевыми словами, и скрытый текст", "Фильтр за переспам"],
+  ["Дорвеи и сетки сайтов-пустышек со ссылками", "Санкции на весь домен"],
+  ["Купленные и фейковые отзывы", "Карточку на картах помечают или блокируют"],
+  ["Копирование чужих текстов", "Яндекс считает вас копией и не показывает"],
 ];
 
 const CANT: [string, string][] = [
@@ -69,7 +81,7 @@ const FAQ: [string, string][] = [
   ["Что нужно от меня?", "Доступ к сайту и Яндекс Метрике, ответы на вопросы о вашем бизнесе, фото работ, цены и отзывы. Около часа в неделю в первый месяц, дальше меньше."],
   ["Мой сайт сделан на конструкторе — его можно продвигать?", "Да, на Тильде, Битриксе, WordPress и других. Иногда у конструктора есть ограничения — скажем о них на аудите."],
   ["Что будет, если прекратить продвижение?", "Сайт не исчезнет из поиска сразу. Позиции держатся месяцами, но постепенно конкуренты обойдут — так же, как магазин без обновлений теряет покупателей."],
-  ["Сколько стоит SEO?", "Зависит от ниши, города и состояния сайта. Пройдите опрос ниже — после разбора назовём точную сумму и что в неё входит."],
+  ["Сколько стоит SEO?", "Примерную сумму можно прикинуть в калькуляторе выше: в среднем по России это от 20 000 ₽ в месяц плюс разовые работы на старте. Точная цена обсуждается под конкретный заказ — пройдите опрос, и после разбора назовём сумму и что в неё входит."],
 ];
 
 const GLOSSARY: [string, string][] = [
@@ -264,36 +276,42 @@ export default function SeoPage() {
           <div className="seo-wrap">
             <SectionHead
               n="05"
-              title="Методы: что работает, а за что Яндекс наказывает"
-              lead="Быстрые трюки дают рост на пару месяцев, а потом сайт попадает под фильтр и выпадает из поиска. Мы работаем только честными методами."
+              title="Белое и чёрное SEO"
+              lead="Белое SEO — честная работа над сайтом, которая приносит результат годами. Чёрное — трюки, которые дают рост на пару месяцев, а потом сайт попадает под фильтр и выпадает из поиска. Мы работаем только по-белому."
             />
-            <div className="seo-panel seo-scroll mt-10">
-              <table className="seo-table min-w-[560px]">
-                <thead>
-                  <tr>
-                    <th>Метод</th>
-                    <th>Результат</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {METHODS.map(([method, result, kind]) => (
-                    <tr key={method}>
-                      <td style={{ color: "var(--seo-ink)", width: "55%" }}>
-                        <span className="flex items-center gap-3">
-                          {kind === "ok" ? (
-                            <Check size={18} style={{ color: "var(--seo-accent)", flex: "none" }} />
-                          ) : (
-                            <X size={18} style={{ color: "var(--red)", flex: "none" }} />
-                          )}
-                          {method}
-                        </span>
-                      </td>
-                      <td style={{ color: kind === "ok" ? "var(--seo-body)" : "var(--red)" }}>{result}</td>
-                    </tr>
+            <div className="mt-10 grid gap-4 lg:grid-cols-2">
+              <div className="seo-panel seo-side-white p-6 md:p-8">
+                <h3 className="text-xl font-bold">Белое SEO — делаем</h3>
+                <ul className="mt-5 grid gap-4">
+                  {WHITE.map(([t, d]) => (
+                    <li key={t} className="flex gap-3">
+                      <Check size={20} style={{ color: "var(--seo-accent)", flex: "none", marginTop: 2 }} />
+                      <span>
+                        <span className="block font-semibold" style={{ color: "var(--seo-ink)" }}>{t}</span>
+                        <span className="block text-[15px] seo-muted">{d}</span>
+                      </span>
+                    </li>
                   ))}
-                </tbody>
-              </table>
+                </ul>
+              </div>
+              <div className="seo-panel seo-side-black p-6 md:p-8">
+                <h3 className="text-xl font-bold">Чёрное SEO — не делаем и вам не советуем</h3>
+                <ul className="mt-5 grid gap-4">
+                  {BLACK.map(([t, d]) => (
+                    <li key={t} className="flex gap-3">
+                      <X size={20} style={{ color: "var(--red)", flex: "none", marginTop: 2 }} />
+                      <span>
+                        <span className="block font-semibold" style={{ color: "var(--seo-ink)" }}>{t}</span>
+                        <span className="block text-[15px]" style={{ color: "var(--red)" }}>{d}</span>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
+            <p className="mt-6 max-w-[760px]">
+              Если подрядчик обещает сотни ссылок за неделю или «гарантированный ТОП» по низкой цене — почти наверняка это чёрные методы. Платить за них потом придётся дважды: сначала за накрутку, потом за выход из-под фильтра.
+            </p>
           </div>
         </section>
 
@@ -346,10 +364,21 @@ export default function SeoPage() {
           </div>
         </section>
 
-        <section className="seo-section">
+        <section id="price" className="seo-section">
           <div className="seo-wrap">
             <SectionHead
               n="07"
+              title="Сколько стоит SEO"
+              lead="Отметьте, что нужно вашему бизнесу, — сумма посчитается сразу. Цены средние по России. Всё обсуждается под конкретный заказ: что-то у вас уже может быть сделано, а что-то не понадобится."
+            />
+            <PriceCalculator />
+          </div>
+        </section>
+
+        <section className="seo-section">
+          <div className="seo-wrap">
+            <SectionHead
+              n="08"
               title="Сколько клиентов вы можете терять прямо сейчас"
               lead="Подвигайте ползунки под свой бизнес. Это клиенты, которые ищут вашу услугу в Яндексе, но уходят к тем, кто выше."
             />
@@ -364,7 +393,7 @@ export default function SeoPage() {
         <section className="seo-section">
           <div className="seo-wrap grid gap-14 lg:grid-cols-[1.2fr_0.8fr]">
             <div>
-              <SectionHead n="08" title="Частые вопросы" />
+              <SectionHead n="09" title="Частые вопросы" />
               <div className="mt-8">
                 {FAQ.map(([q, a]) => (
                   <details key={q} className="seo-faq">
@@ -395,7 +424,7 @@ export default function SeoPage() {
         <section id="quiz" className="seo-section">
           <div className="seo-wrap">
             <SectionHead
-              n="09"
+              n="10"
               title="Узнайте, подойдёт ли SEO вашему бизнесу"
               lead="Шесть коротких вопросов — около двух минут. Мы посмотрим ваш сайт и нишу и бесплатно напишем, с чего начать и сколько это будет стоить."
             />

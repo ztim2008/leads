@@ -157,6 +157,56 @@
   color: var(--seo-accent);
 }
 
+/* Калькулятор стоимости */
+.seo-price-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  transition: background-color 0.15s;
+}
+.seo-price-row:hover { background: var(--bg-hover); }
+.seo-price-row[data-on="true"] { background: color-mix(in oklab, var(--seo-accent) 7%, transparent); }
+.seo-price-main {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex: 1 1 320px;
+  min-width: 0;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+}
+.seo-check {
+  width: 20px; height: 20px; flex: none; margin-top: 2px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 6px;
+  border: 1.5px solid var(--seo-line);
+  color: var(--seo-accent-ink);
+}
+.seo-price-main[aria-pressed="true"] .seo-check { background: var(--seo-accent); border-color: var(--seo-accent); }
+.seo-price-side { display: flex; align-items: center; gap: 12px; margin-left: 32px; }
+.seo-stepper {
+  display: inline-flex; align-items: center;
+  border: 1px solid var(--seo-line); border-radius: 8px;
+}
+.seo-stepper button {
+  width: 30px; height: 30px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: transparent; border: 0; color: var(--seo-body); cursor: pointer;
+}
+.seo-stepper button:hover { color: var(--seo-ink); }
+.seo-stepper span { min-width: 36px; text-align: center; font-size: 14px; color: var(--seo-ink); }
+
+/* Белое и чёрное SEO */
+.seo-side-white { border-top: 3px solid var(--seo-accent); }
+.seo-side-black { border-top: 3px solid var(--red); }
+
 /* Поля */
 .seo-field {
   width: 100%;
