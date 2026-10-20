@@ -1,10 +1,13 @@
 import Link from "next/link";
 import { Gauge } from "lucide-react";
+import KonversusNav from "@/components/konversus-nav";
+import KonversusFooter from "@/components/konversus-footer";
 
 export default function DiagnostAppLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="dark dg">
-      <header className="mx-auto flex max-w-[1240px] items-center justify-between px-5 py-5 md:px-8">
+      <KonversusNav />
+      <div className="mx-auto flex max-w-[1240px] flex-wrap items-center justify-between gap-3 px-5 pb-2 pt-[76px] md:px-8">
         <Link href="/diagnost" className="flex items-center gap-3" style={{ color: "var(--dg-ink)" }}>
           <span className="dg-tile flex h-10 w-10 items-center justify-center" style={{ color: "var(--dg-accent)" }}>
             <Gauge size={20} strokeWidth={2} />
@@ -24,14 +27,11 @@ export default function DiagnostAppLayout({ children }: { children: React.ReactN
             Методика
           </Link>
         </nav>
-      </header>
+      </div>
       {children}
-      <footer className="mx-auto mt-24 flex max-w-[1240px] flex-wrap items-center justify-between gap-3 border-t px-5 py-8 text-xs md:px-8" style={{ borderColor: "var(--dg-line)", color: "var(--dg-muted)" }}>
-        <span>Техосмотр сайта — сервис Konversus для директологов и агентств</span>
-        <a href="https://leads.konversus.ru" style={{ color: "var(--dg-muted)" }}>
-          leads.konversus.ru
-        </a>
-      </footer>
+      <div className="mt-24">
+        <KonversusFooter />
+      </div>
     </div>
   );
 }

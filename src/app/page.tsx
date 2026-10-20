@@ -4,6 +4,7 @@ import { ArrowRight, ArrowUpRight, Briefcase, Building2, Send, UserRound } from 
 import KonversusNav from "@/components/konversus-nav";
 import KonversusFooter from "@/components/konversus-footer";
 import Gauge from "@/components/diagnost/gauge";
+import SeoMiniChart from "@/components/seo/mini-chart";
 import { CONTACT_TELEGRAM, PRODUCTS, STATUS_LABELS, type Product, type ProductStatus } from "@/config/products";
 import "./diagnost/diagnost.css";
 
@@ -30,7 +31,7 @@ const AUDIENCES = [
     icon: Building2,
     title: "Владельцам бизнеса",
     text: "Быстро получить сайт, не терять обращения с него и понимать, что мешает заявкам.",
-    products: ["nordic", "chat", "diagnost"],
+    products: ["seo-promo", "nordic", "chat", "diagnost"],
   },
   {
     icon: UserRound,
@@ -42,6 +43,7 @@ const AUDIENCES = [
 
 const byId = (id: string) => PRODUCTS.find((product) => product.id === id)!;
 const featured = byId("diagnost");
+const seoPromo = byId("seo-promo");
 const liveCount = PRODUCTS.filter((product) => product.status !== "soon").length;
 
 function StatusBadge({ status }: { status: ProductStatus }) {
@@ -193,6 +195,36 @@ export default function HubHome() {
                 Отчёты открываются по ссылке без регистрации
               </span>
             </div>
+          </div>
+        </section>
+
+        <section className="dg-panel mt-6 grid items-center gap-10 p-8 md:grid-cols-[1fr_auto] md:p-10">
+          <div>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="dg-eyebrow">Для владельцев бизнеса</span>
+              <StatusBadge status={seoPromo.status} />
+            </div>
+            <h2 className="mt-3 text-3xl font-bold sm:text-4xl">{seoPromo.name}: как клиенты находят вас в Яндексе</h2>
+            <p className="mt-4 max-w-2xl leading-relaxed">{seoPromo.description}</p>
+            <ul className="mt-5 grid gap-2 text-sm sm:grid-cols-3">
+              {seoPromo.benefits.map((benefit) => (
+                <li key={benefit} className="dg-tile px-4 py-3" style={{ color: "var(--dg-ink)" }}>
+                  {benefit}
+                </li>
+              ))}
+            </ul>
+            <div className="mt-7 flex flex-wrap items-center gap-3">
+              <Link href="/seo" className="dg-btn dg-btn-primary">
+                Разобраться в SEO
+                <ArrowRight size={16} />
+              </Link>
+              <Link href="/seo#price" className="dg-btn dg-btn-ghost">
+                Посчитать стоимость
+              </Link>
+            </div>
+          </div>
+          <div className="mx-auto">
+            <SeoMiniChart />
           </div>
         </section>
 

@@ -1277,3 +1277,24 @@ Partner buys VPS, downloads zip, fills config.json (Profi login/password + Teleg
 
 ### Production
 - `npm run build` ✅ · `/seo` → **200** · перезапущен `leads-konversus` · Profi на хабе **off**
+
+---
+
+## Единая шапка, SEO в меню и на главной, индексация · 20 октября 2026
+
+### Сделано
+- «SEO-продвижение» (`/seo`) добавлено в `src/config/products.ts` — появилось в мега-меню «Продукты», футере и списке сервисов главной. В верхнем меню — отдельные пункты «Техосмотр» и «SEO-продвижение».
+- Главная: баннер SEO-продвижения под баннером Техосмотра, в том же стиле, с мини-графиком «SEO растёт, реклама обрывается». SEO добавлено в блок «Владельцам бизнеса».
+- Единая шапка Konversus: Техосмотр (вместо своей шапки — общая, а «Мои аудиты» и «Методика» во втором ряду, плюс общий футер), документация, контакты, оферта, политика, возврат (старая шапка «Leads AI» с индиго-логотипом заменена). В общий футер добавлены ссылки «Контакты», «Оферта», «Политика конфиденциальности», «Правила возврата».
+- Индексация: новые `robots.txt` (закрыты `/dashboard`, `/api/`, `/auth`, отчёты `/diagnost/r/`) и `sitemap.xml` (9 публичных страниц). У `/seo` — canonical, Open Graph и разметка FAQ (JSON-LD).
+- Шапка входа `/auth` и печатные PDF Техосмотра не тронуты.
+
+### Файлы
+- `src/config/products.ts`, `src/components/konversus-nav.tsx`, `konversus-footer.tsx`, `legal-layout.tsx`, `src/components/seo/mini-chart.tsx`
+- `src/app/page.tsx`, `src/app/diagnost/(app)/layout.tsx`, `src/app/docs/page.tsx`, `src/app/seo/layout.tsx`, `src/app/seo/page.tsx`, `src/app/robots.ts`, `src/app/sitemap.ts`
+
+### Production
+- `npm run build` ✅ · `/`, `/seo`, `/diagnost`, `/docs`, `/lovec`, юр. страницы, `/robots.txt`, `/sitemap.xml` → **200** · перезапущен `leads-konversus` · Profi на хабе **off**
+
+### Дальше
+- Добавить `sitemap.xml` в Яндекс Вебмастер и отправить `/seo` на переобход

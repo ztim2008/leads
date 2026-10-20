@@ -1,8 +1,11 @@
 import Link from "next/link";
+import KonversusNav from "@/components/konversus-nav";
 
 export default function DocsPage() {
   return (
-    <div style={{ maxWidth: 800, margin: "0 auto", padding: "40px 24px", background: "var(--bg-root)", minHeight: "100vh", color: "var(--ink-body)", fontFamily: "var(--font-sans)" }}>
+    <div style={{ background: "var(--bg-root)", minHeight: "100vh" }}>
+      <KonversusNav />
+    <div style={{ maxWidth: 800, margin: "0 auto", padding: "96px 24px 40px", color: "var(--ink-body)", fontFamily: "var(--font-sans)" }}>
       <Link href="/dashboard/admin" style={{ color: "var(--accent)", fontSize: "var(--text-sm)", fontWeight: 600, textDecoration: "none" }}>← Админка</Link>
       <h1 style={{ fontSize: "var(--text-3xl)", fontWeight: 800, marginTop: 24, marginBottom: 8, color: "var(--ink-heading)" }}>Документация</h1>
       <p style={{ color: "var(--ink-muted)", marginBottom: 40 }}>Как работает Konversus Leads AI и как начать получать заявки.</p>
@@ -98,6 +101,7 @@ export default function DocsPage() {
       <p style={{ marginTop: 48, paddingTop: 24, borderTop: "1px solid var(--border)", color: "var(--ink-muted)", fontSize: "var(--text-sm)" }}>
         © 2025 Konversus Leads AI. По вопросам: @bilarius в Telegram.
       </p>
+    </div>
     </div>
   );
 }

@@ -9,6 +9,13 @@ const ABOUT = [
   { name: "Документация", href: "/docs", ext: false },
 ];
 
+const LEGAL = [
+  { name: "Контакты", href: "/contacts" },
+  { name: "Оферта", href: "/oferta" },
+  { name: "Политика конфиденциальности", href: "/privacy" },
+  { name: "Правила возврата", href: "/refund" },
+];
+
 export default function KonversusFooter() {
   return (
     <footer style={{ borderTop: "1px solid rgba(255,255,255,0.06)", padding: "60px 0 32px", background: "rgba(9,9,11,0.6)" }}>
@@ -89,6 +96,11 @@ export default function KonversusFooter() {
         {/* Нижняя строка */}
         <div style={{ borderTop: "1px solid rgba(255,255,255,0.06)", marginTop: 40, paddingTop: 20, display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 12 }}>
           <span style={{ color: "#52525b", fontSize: "0.75rem" }}>© {new Date().getFullYear()} Тимофеев Алексей · ИНН 532002912418</span>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
+            {LEGAL.map((l) => (
+              <a key={l.href} href={l.href} style={{ color: "#52525b", fontSize: "0.75rem", textDecoration: "none" }}>{l.name}</a>
+            ))}
+          </div>
           <div style={{ display: "flex", gap: 16 }}>
             <a href="https://vk.com/bilarius" target="_blank" style={{ color: "#52525b", fontSize: "0.75rem", textDecoration: "none" }}>VK</a>
             <a href={CONTACT_TELEGRAM} target="_blank" style={{ color: "#52525b", fontSize: "0.75rem", textDecoration: "none" }}>Telegram</a>

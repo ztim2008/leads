@@ -1,4 +1,4 @@
-import { Gauge, Globe, LayoutTemplate, MessageCircle, Search, ShieldCheck, ShoppingBag, Zap, type LucideIcon } from "lucide-react";
+import { Gauge, Globe, LayoutTemplate, MessageCircle, Search, ShieldCheck, ShoppingBag, TrendingUp, Zap, type LucideIcon } from "lucide-react";
 
 export type ProductStatus = "live" | "new" | "soon";
 
@@ -36,6 +36,18 @@ export const PRODUCTS: Product[] = [
     status: "new",
     icon: Gauge,
     audience: "Директологам и агентствам",
+  },
+  {
+    id: "seo-promo",
+    name: "SEO-продвижение",
+    tagline: "Как попасть в Яндекс и сколько это стоит",
+    description: "Объясняем простыми словами, как Яндекс выбирает сайты и сколько ждать результата. Калькулятор стоимости работ и бесплатный разбор вашего бизнеса.",
+    benefits: ["SEO без технических слов", "Калькулятор стоимости работ", "Только белые методы"],
+    href: "/seo",
+    external: false,
+    status: "new",
+    icon: TrendingUp,
+    audience: "Владельцам бизнеса",
   },
   {
     id: "lovec",

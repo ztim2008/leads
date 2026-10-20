@@ -126,6 +126,8 @@ export default function KonversusNav() {
               )}
             </div>
 
+            <NavLink href="/diagnost">Техосмотр</NavLink>
+            <NavLink href="/seo">SEO-продвижение</NavLink>
             <NavLink href={ABOUT_URL} external>Обо мне</NavLink>
             <NavLink href="/docs">Документация</NavLink>
             <NavLink href={CONTACT_TELEGRAM} external>Контакты</NavLink>

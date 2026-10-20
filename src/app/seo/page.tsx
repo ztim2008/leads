@@ -143,6 +143,16 @@ function Serp() {
 export default function SeoPage() {
   return (
     <div className="seo">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            mainEntity: FAQ.map(([q, a]) => ({ "@type": "Question", name: q, acceptedAnswer: { "@type": "Answer", text: a } })),
+          }).replace(/</g, "\\u003c"),
+        }}
+      />
       <KonversusNav />
       <main>
         <section className="seo-wrap grid items-center gap-12 pt-28 pb-20 lg:grid-cols-[1.1fr_0.9fr] lg:pt-36">
