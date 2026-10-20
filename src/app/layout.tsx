@@ -1,5 +1,5 @@
-import Script from "next/script";
 import type { Metadata } from "next";
+import YandexMetrika from "@/components/yandex-metrika";
 import { Inter, JetBrains_Mono, Montserrat } from "next/font/google";
 import "./globals.css";
 import KonversusNav from "@/components/konversus-nav";
@@ -26,6 +26,8 @@ const jetbrains = JetBrains_Mono({
 export const metadata: Metadata = {
   title: "Konversus — сервисы для бизнеса: аудит сайта, заявки, чат",
   description: "Хаб инструментов Konversus: проверка сайта перед рекламой, заявки из Profi в Telegram, чат на сайте и быстрый прототип.",
+  metadataBase: new URL("https://leads.konversus.ru"),
+  verification: { yandex: "f9c5fd333ceeca7f" },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
@@ -44,9 +46,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body className={`${inter.variable} ${montserrat.variable} ${jetbrains.variable} antialiased`}
         style={{ fontFamily: "var(--font-sans)" }}>
         {children}
-        <Script id="yandex-metrika" strategy="afterInteractive">
-          {`(function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};m[i].l=1*new Date();for(var j=0;j<document.scripts.length;j++){if(document.scripts[j].src===r)return}k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})(window,document,"script","https://mc.yandex.ru/metrika/tag.js","ym");ym(109448101,"init",{clickmap:true,trackLinks:true,accurateTrackBounce:true,webvisor:true});`}
-        </Script>
+        <YandexMetrika />
       </body>
     </html>
   );

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { ArrowRight, Check, Minus, Plus } from "lucide-react";
+import { reachGoal } from "@/lib/metrika";
 
 type Bill = "once" | "month";
 
@@ -209,7 +210,11 @@ export default function PriceCalculator() {
             </div>
           </div>
 
-          <a href="#quiz" className="seo-btn seo-btn-primary mt-6 w-full">
+          <a
+            href="#quiz"
+            className="seo-btn seo-btn-primary mt-6 w-full"
+            onClick={() => reachGoal("seo_price_cta", { once: fmt(totals.once), month: fmt(totals.month) })}
+          >
             Получить точную смету
             <ArrowRight size={18} />
           </a>

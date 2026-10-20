@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ArrowLeft, ArrowRight, Check, Loader2, Send } from "lucide-react";
 import { CONTACT_TELEGRAM } from "@/config/products";
+import { reachGoal } from "@/lib/metrika";
 
 type Answers = {
   niche: string;
@@ -79,6 +80,7 @@ export default function Quiz() {
       });
       const data = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
       if (!res.ok || !data.ok) throw new Error(data.error || "Не получилось отправить");
+      reachGoal("seo_quiz_sent", { budget: a.budget, goal: a.goal });
       setDone(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Не получилось отправить");
@@ -95,7 +97,7 @@ export default function Quiz() {
           Посмотрим ваш сайт и нишу и напишем в течение рабочего дня: что можно улучшить и с чего начать. Не хотите ждать — напишите нам в Telegram прямо сейчас.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
-          <a href={CONTACT_TELEGRAM} target="_blank" rel="noopener" className="seo-btn seo-btn-primary">
+          <a href={CONTACT_TELEGRAM} target="_blank" rel="noopener" className="seo-btn seo-btn-primary" onClick={() => reachGoal("seo_quiz_telegram")}>
             <Send size={18} />
             Написать в Telegram
           </a>
@@ -219,7 +221,15 @@ export default function Quiz() {
           Назад
         </button>
         {step < STEPS.length - 1 ? (
-          <button type="button" className="seo-btn seo-btn-primary" onClick={() => setStep((s) => s + 1)} disabled={!canNext}>
+          <button
+            type="button"
+            className="seo-btn seo-btn-primary"
+            onClick={() => {
+              if (step === 0) reachGoal("seo_quiz_start");
+              setStep((s) => s + 1);
+            }}
+            disabled={!canNext}
+          >
             Дальше
             <ArrowRight size={18} />
           </button>

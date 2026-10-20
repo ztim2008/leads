@@ -1298,3 +1298,19 @@ Partner buys VPS, downloads zip, fills config.json (Profi login/password + Teleg
 
 ### Дальше
 - Добавить `sitemap.xml` в Яндекс Вебмастер и отправить `/seo` на переобход
+
+---
+
+## Метрика и Вебмастер · 20 октября 2026
+
+### Сделано
+- Счётчик Метрики заменён: `109448101` → `113690601`. Вынесен в `src/components/yandex-metrika.tsx`: вебвизор, карта кликов, внешние ссылки, точный показатель отказов, `noscript`-пиксель, учёт переходов между страницами без перезагрузки (`hit` при смене адреса). Номер — в `src/lib/metrika.ts`.
+- Мета-тег Вебмастера `yandex-verification` через `metadata.verification` в корневом layout — есть на всех страницах. Добавлен `metadataBase`.
+- Цели на `/seo`: `seo_quiz_start` (начал опрос), `seo_quiz_sent` (отправил, с бюджетом и целью), `seo_quiz_telegram` (перешёл в Telegram после опроса), `seo_price_cta` («Получить точную смету» в калькуляторе, с суммами).
+- Проверено в браузере: `yaCounter113690601` активен, старого счётчика нет.
+
+### Файлы
+- `src/app/layout.tsx`, `src/components/yandex-metrika.tsx`, `src/lib/metrika.ts`, `src/components/seo/quiz.tsx`, `src/components/seo/price-calculator.tsx`
+
+### Production
+- `npm run build` ✅ · `/`, `/seo`, `/diagnost` → **200** · перезапущен `leads-konversus` · Profi на хабе **off**
