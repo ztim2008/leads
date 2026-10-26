@@ -1468,3 +1468,20 @@ Partner buys VPS, downloads zip, fills config.json (Profi login/password + Teleg
 
 ### Дальше
 - D.15: API `/api/rentgen` + лимиты.
+
+## Рентген D.15 — API и лимиты · 26 октября 2026
+
+**Сделано:**
+- `POST /api/rentgen` — проверка адреса (`normalizeInputUrl`, защита от внутренних адресов), кука `rg_owner`, лимит 10 сканов в сутки на IP (админ без лимита), очередь не больше 20, тот же адрес за час отдаёт готовый `slug` (`reused: true`).
+- `GET /api/rentgen/[slug]` — статус, прогресс, место в очереди, результат без внутренних путей; у видов `shot` — ссылка на снимок.
+- `GET /api/rentgen/[slug]/shot/[view]` — JPEG (desktop/mobile).
+- Прогресс скана пишется по ходу: 10 / 55 / 85 / 100; запоздавшее обновление не перетирает готовый скан.
+- Путь к снимкам вынесен в `src/lib/rentgen/shots.ts`, чтобы маршрут API не тянул браузерный модуль.
+
+**Проверено вживую:** 400 на `127.0.0.1` и пустой запрос, создание → повтор с другого IP отдал тот же slug, 404 на чужой slug, скан krovla-siding.ru прошёл queued → 10 → 55 → 100 за ~30 с, снимки 200 image/jpeg, 404 на неверный вид, 429 на одиннадцатый скан с одного IP. Тестовые записи и снимки удалены.
+
+**Файлы:** `src/lib/rentgen/{data,shots,render,run}.ts`, `src/app/api/rentgen/**`, `docs/RENTGEN.md`, `docs/PLAN_2026-08-10.md`.
+
+**Production:** `npm run build`, `pm2 restart leads-konversus leads-diagnost`, главная 200. Profi на хабе выключен. Старая ошибка `diagnost_audits does not exist` в логе воркера — запись времени аварии (06:53 UTC), сейчас таблица на месте.
+
+**Дальше:** D.16 — интерфейс `/rentgen` и `/rentgen/r/[slug]` (сначала аудит design-anti-slop и согласование).

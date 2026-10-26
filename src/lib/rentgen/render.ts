@@ -1,7 +1,6 @@
-import { mkdirSync } from "node:fs";
-import { join } from "node:path";
 import { CHROME_UA, MOBILE_UA, clearPopups, guard, openPage } from "@/lib/diagnost/render";
 import { COLLECT_CLICKS, FLATTEN_STICKY, PROBE_ARM, PROBE_DISPATCH, PROBE_READ, SCROLL_THROUGH, SCROLL_TO, TOGGLE_FIXED } from "@/lib/rentgen/collect";
+import { rentgenShotPath } from "@/lib/rentgen/shots";
 import { checkLinks, pickLinks, type LinkCheck } from "@/lib/rentgen/links";
 import type { ClickItem, RawClick, RawView, RentgenResult, RentgenView, ViewKind } from "@/lib/rentgen/types";
 
@@ -18,12 +17,6 @@ const TARGET_PX = 24;
 const ANALYTICS = /mc\.yandex|yandex\.ru\/(clck|watch)|google-analytics|googletagmanager|doubleclick|top-fwz1\.mail\.ru|vk\.com\/rtrg|facebook\.(com|net)|pixel/i;
 const MESSENGER_HOSTS = /^(t\.me|telegram\.me|wa\.me|api\.whatsapp\.com|chat\.whatsapp\.com|vk\.me|max\.ru|viber\.click|invite\.viber\.com)$/i;
 
-const SHOT_DIR = join(process.cwd(), "storage", "rentgen");
-
-export function rentgenShotPath(scanId: string, view: ViewKind): string {
-  mkdirSync(SHOT_DIR, { recursive: true });
-  return join(SHOT_DIR, `${scanId.replace(/[^a-zA-Z0-9-]/g, "")}-${view}.jpg`);
-}
 
 const emptyHref = (href: string | null) => !href || href === "#" || /^javascript:/i.test(href);
 
@@ -288,20 +281,23 @@ async function renderView(
   }
 }
 
-export async function renderRentgen(url: string, scanId: string): Promise<RentgenResult> {
+export async function renderRentgen(url: string, scanId: string, onProgress: (percent: number) => void = () => undefined): Promise<RentgenResult> {
   const started = Date.now();
   let browser: Browser | null = null;
   try {
     const { chromium } = await import("playwright");
     browser = await chromium.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"] });
     const known = new Map<string, boolean | null>();
+    onProgress(10);
     const desktop = await renderView(browser, url, scanId, "desktop", known);
+    onProgress(55);
     let mobile: RentgenView | null = null;
     try {
       mobile = (await renderView(browser, desktop.finalUrl, scanId, "mobile", known)).view;
     } catch (error) {
       console.error("[rentgen] mobile", error instanceof Error ? error.message : error);
     }
+    onProgress(85);
     const views = [desktop.view, mobile].filter((view): view is RentgenView => view !== null);
     const linkItems = views.flatMap((view) => view.items).filter((item) => (item.kind === "ok" || item.kind === "small") && !item.contact && item.href && /^https?:/i.test(item.href));
     const urls = pickLinks(linkItems.map((item) => item.href!), desktop.finalUrl);

@@ -22,7 +22,9 @@ export async function processScan(id: string): Promise<void> {
   const scan = await db.rentgenScan.findUnique({ where: { id } });
   if (!scan || scan.status !== "running") return;
   try {
-    const result = await renderRentgen(scan.url, scan.id);
+    const result = await renderRentgen(scan.url, scan.id, (progress) => {
+      db.rentgenScan.updateMany({ where: { id, status: "running" }, data: { progress } }).catch(() => undefined);
+    });
     await db.rentgenScan.update({
       where: { id },
       data: { status: "done", progress: 100, result: result as unknown as Prisma.InputJsonValue, finishedAt: new Date() },

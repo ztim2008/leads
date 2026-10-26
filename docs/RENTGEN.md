@@ -133,9 +133,17 @@ type RentgenView = {
 
 | Метод | Путь | Что делает |
 |---|---|---|
-| POST | `/api/rentgen` | `{ url }` → валидация, лимиты, создание скана → `{ slug }` |
-| GET | `/api/rentgen/[slug]` | статус, прогресс, `result` |
-| GET | `/api/rentgen/[slug]/shot?view=` | JPEG снимка |
+| POST | `/api/rentgen` | `{ url }` → валидация, лимиты, создание скана → `{ slug, reused }` |
+| GET | `/api/rentgen/[slug]` | статус, прогресс, `queueAhead`, `result` (без путей к файлам; `shot` — URL снимка) |
+| GET | `/api/rentgen/[slug]/shot/[view]` | JPEG снимка, `view` = `desktop` \| `mobile` |
+
+Доступ публичный, без входа. Лимиты в `src/lib/rentgen/data.ts`:
+- 10 новых сканов в сутки на IP (`RENTGEN_DAILY_LIMIT`), админ без лимита;
+- не больше 20 сканов в очереди одновременно → 429;
+- тот же адрес за последний час (готов или в работе) → отдаём существующий `slug`, лимит не списывается;
+- кука владельца `rg_owner`, `ipHash` = sha256(`rentgen:<ip>`).
+
+Прогресс: 5 — взят в работу, 10 — ПК, 55 — телефон, 85 — ссылки, 100 — готово.
 
 ### 4.8 Интерфейс
 
