@@ -24,8 +24,8 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Konversus — сервисы для бизнеса: аудит сайта, заявки, чат",
-  description: "Хаб инструментов Konversus: проверка сайта перед рекламой, заявки из Profi в Telegram, чат на сайте и быстрый прототип.",
+  title: "Konversus — сервисы для бизнеса: аудит сайта, проверка кнопок, заявки",
+  description: "Хаб инструментов Konversus: проверка сайта перед рекламой, поиск неработающих кнопок и ссылок, заявки из Profi в Telegram, чат на сайте и быстрый прототип.",
   metadataBase: new URL("https://leads.konversus.ru"),
   verification: { yandex: "f9c5fd333ceeca7f" },
 };

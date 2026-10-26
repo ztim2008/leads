@@ -1577,3 +1577,16 @@ Partner buys VPS, downloads zip, fills config.json (Profi login/password + Teleg
 **Production:** build, `pm2 restart leads-konversus leads-diagnost`, 200. Новые файлы в `public/` видны только после рестарта `leads-konversus`.
 
 **Дальше:** не удалять скан `e5y24kqwdq3q` — на него ссылается стартовая страница.
+
+## Рентген на главной и в SEO хаба · 26 октября 2026
+
+**Сделано:**
+- Главная: баннер «Рентген сайта: какие кнопки не работают» после «Показа» — текст, три пункта, «Просветить сайт» и «Пример отчёта» (демо-скан). Иллюстрация `src/components/rentgen/hub-art.tsx` — снимок демо-страницы с рамками на токенах хаба (`--green/--red/--amber`).
+- `products.ts`: описание и пункты Рентгена про три слоя — меню «Продукты», футер и карточка обновились сами.
+- SEO: title и description главной и корневого layout упоминают проверку кнопок и ссылок. `/rentgen` — канонический адрес, Open Graph с картинкой примера, JSON-LD `WebApplication` (бесплатно, список возможностей, Konversus). Метаданные заданы в `page.tsx`, а не в layout — чтобы отчёты `/rentgen/r/*` не унаследовали канонический адрес (у них `noindex`). В sitemap `/rentgen` уже был.
+
+**Файлы:** `src/app/page.tsx`, `src/app/layout.tsx`, `src/app/rentgen/page.tsx`, `src/components/rentgen/hub-art.tsx`, `src/config/products.ts`.
+
+**Production:** build, `pm2 restart leads-konversus`, 200; проверены canonical, og:image, JSON-LD, noindex у отчётов.
+
+**Дальше:** отправить `/rentgen` на переобход в Яндекс Вебмастере; завести 4 цели Рентгена в Метрике.

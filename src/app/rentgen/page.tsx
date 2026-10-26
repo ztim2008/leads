@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import ShotOverlay, { type OverlayItem } from "@/components/rentgen/shot-overlay";
@@ -7,6 +8,41 @@ import demo from "@/lib/rentgen/demo.json";
 import { GROUP_OF, GROUPS } from "@/lib/rentgen/groups";
 
 export const dynamic = "force-dynamic";
+
+const TITLE = "Рентген сайта — какие кнопки и ссылки не работают";
+const DESCRIPTION =
+  "Бесплатная проверка сайта по ссылке: открываем страницу на ПК и телефоне, нажимаем каждую кнопку и ссылку и показываем на снимке, что ведёт в пустоту, что плохо читается и куда посмотрят в первую секунду.";
+const PAGE_URL = "https://leads.konversus.ru/rentgen";
+
+/** Канонический адрес — только у стартовой страницы: отчёты /rentgen/r/* закрыты от индексации */
+export const metadata: Metadata = {
+  title: TITLE,
+  description: DESCRIPTION,
+  alternates: { canonical: "/rentgen" },
+  openGraph: {
+    title: TITLE,
+    description: DESCRIPTION,
+    url: PAGE_URL,
+    siteName: "Konversus",
+    locale: "ru_RU",
+    type: "website",
+    images: [{ url: demo.shot, width: 960, height: Math.round((960 * demo.height) / demo.width), alt: "Снимок страницы с рамками вокруг неработающих кнопок" }],
+  },
+};
+
+const JSON_LD = {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  name: "Рентген сайта",
+  url: PAGE_URL,
+  description: DESCRIPTION,
+  applicationCategory: "BusinessApplication",
+  operatingSystem: "Any",
+  inLanguage: "ru",
+  offers: { "@type": "Offer", price: "0", priceCurrency: "RUB" },
+  featureList: ["Проверка кнопок и ссылок на ПК и телефоне", "Ошибки доступности: контраст, подписи полей, alt", "Прогноз внимания на первом экране", "Картинка с рамками для клиента"],
+  provider: { "@type": "Organization", name: "Konversus", url: "https://leads.konversus.ru/" },
+};
 
 const STATUS: Record<string, string> = { queued: "В очереди", running: "Идёт", failed: "Не получилось" };
 
@@ -38,6 +74,7 @@ export default async function RentgenPage() {
 
   return (
     <main className="mx-auto max-w-[1400px] px-5 md:px-8">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(JSON_LD).replace(/</g, "\\u003c") }} />
       <section className="grid items-center gap-12 pt-8 pb-14 lg:grid-cols-[1fr_1.1fr] lg:pt-12">
         <div>
           <h1 className="text-[38px] font-bold leading-[1.06] md:text-[54px]">

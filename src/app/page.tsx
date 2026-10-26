@@ -6,12 +6,14 @@ import KonversusFooter from "@/components/konversus-footer";
 import Gauge from "@/components/diagnost/gauge";
 import SeoMiniChart from "@/components/seo/mini-chart";
 import PokazDevicesArt from "@/components/pokaz/devices-art";
+import RentgenHubArt from "@/components/rentgen/hub-art";
+import rentgenDemo from "@/lib/rentgen/demo.json";
 import { CONTACT_TELEGRAM, PRODUCTS, STATUS_LABELS, type Product, type ProductStatus } from "@/config/products";
 import "./diagnost/diagnost.css";
 
-const TITLE = "Konversus — сервисы для бизнеса: аудит сайта, заявки, чат";
+const TITLE = "Konversus — сервисы для бизнеса: аудит сайта, проверка кнопок, заявки";
 const DESCRIPTION =
-  "Хаб инструментов Konversus: проверка сайта перед рекламой, заявки из Profi в Telegram, чат на сайте и быстрый прототип. Каждый сервис решает одну задачу и сразу показывает результат.";
+  "Хаб инструментов Konversus: проверка сайта перед рекламой, поиск неработающих кнопок и ссылок, заявки из Profi в Telegram, чат на сайте и быстрый прототип. Каждый сервис решает одну задачу и сразу показывает результат.";
 
 export const metadata: Metadata = {
   title: TITLE,
@@ -46,6 +48,7 @@ const byId = (id: string) => PRODUCTS.find((product) => product.id === id)!;
 const featured = byId("diagnost");
 const seoPromo = byId("seo-promo");
 const pokaz = byId("pokaz");
+const rentgen = byId("rentgen");
 const liveCount = PRODUCTS.filter((product) => product.status !== "soon").length;
 
 function StatusBadge({ status }: { status: ProductStatus }) {
@@ -264,6 +267,38 @@ export default function HubHome() {
                 Работает в браузере, без регистрации
               </span>
             </div>
+          </div>
+        </section>
+
+        <section className="dg-panel mt-6 grid items-center gap-10 p-8 md:grid-cols-[1fr_auto] md:p-10">
+          <div>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="dg-eyebrow">Бесплатная проверка</span>
+              <StatusBadge status={rentgen.status} />
+            </div>
+            <h2 className="mt-3 text-3xl font-bold sm:text-4xl">{rentgen.name}: какие кнопки не работают</h2>
+            <p className="mt-4 max-w-2xl leading-relaxed">{rentgen.description}</p>
+            <ul className="mt-5 grid gap-2 text-sm sm:grid-cols-3">
+              {rentgen.benefits.map((benefit) => (
+                <li key={benefit} className="dg-tile px-4 py-3" style={{ color: "var(--dg-ink)" }}>
+                  {benefit}
+                </li>
+              ))}
+            </ul>
+            <div className="mt-7 flex flex-wrap items-center gap-3">
+              <Link href="/rentgen" className="dg-btn dg-btn-primary">
+                Просветить сайт
+                <ArrowRight size={16} />
+              </Link>
+              {rentgenDemo.report && (
+                <Link href={rentgenDemo.report} className="dg-btn dg-btn-ghost">
+                  Пример отчёта
+                </Link>
+              )}
+            </div>
+          </div>
+          <div className="mx-auto w-full md:w-[420px]">
+            <RentgenHubArt />
           </div>
         </section>
 
