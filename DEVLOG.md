@@ -1590,3 +1590,28 @@ Partner buys VPS, downloads zip, fills config.json (Profi login/password + Teleg
 **Production:** build, `pm2 restart leads-konversus`, 200; проверены canonical, og:image, JSON-LD, noindex у отчётов.
 
 **Дальше:** отправить `/rentgen` на переобход в Яндекс Вебмастере; завести 4 цели Рентгена в Метрике.
+
+## Итоги дня · 26 октября 2026
+
+**Сделано:**
+- Утром: восстановление `leads_ai` из слепка 03:10 UTC после стирания через `--shadow-database-url`; в AGENTS.md добавлены правила по базе данных.
+- «Рентген сайта» `/rentgen` с нуля до production, этапы D.13–D.19:
+  - сбор кликов на ПК и телефоне, пробные нажатия, проверка ссылок, очередь в `leads-diagnost`;
+  - API с лимитами (10 в сутки на IP, повтор за час, очередь 20), история «Мои проверки» по куке;
+  - интерфейс: снимок с рамками ↔ список, «плёнка», картинка для клиента, переход в Техосмотр, цели Метрики;
+  - слой «Ошибки» на axe-core + свои проверки телефона;
+  - слой «Внимание»: модель Foveacast (первый взгляд 1 с, int8) через onnxruntime-node, тепловая карта первого экрана, доля внимания кнопок;
+  - демо-страница «Кедровый пар» с заложенными ошибками как пример; на ней найдены и исправлены два пропуска (хэш-ссылки, блок шире экрана на телефоне);
+  - баннер на главной, Рентген в меню/футере/карточках, SEO `/rentgen` (canonical, OG, JSON-LD).
+- «Показ» `/pokaz` в хабе (D.12) — утренний блок.
+
+**Файлы (основное):** `src/lib/rentgen/*`, `src/components/rentgen/*`, `src/app/rentgen/*`, `src/app/api/rentgen/*`, `src/app/page.tsx`, `src/config/products.ts`, `public/rentgen/*`, `scripts/rentgen-*.{ts,sh}`, `prisma` (таблица `rentgen_scans`), `.npmrc`, `docs/RENTGEN.md`, план.
+
+**Production:** build ✓, главная 200. PM2: `leads-konversus`, `leads-diagnost`, `leads-radar`, `leads-health`, `leads-briefs` — online; `leads-kwork` — stopped (не трогали). Profi на хабе выключен (`profiOnHub: false`), `leads-profi` не запускался. Заявки партнёров не затрагивались.
+
+**Завтра:**
+- Метрика: завести цели `rentgen_start`, `rentgen_done`, `rentgen_png`, `rentgen_to_diagnost` (делает владелец).
+- Яндекс Вебмастер: переобход `/rentgen` и главной.
+- Не удалять скан `e5y24kqwdq3q` (на него ссылаются `/rentgen` и главная).
+- На новом сервере: `npm run rentgen:model` (веса не в git).
+- Пилот RysyevIV / 4.11.4 — по плану.
