@@ -111,6 +111,12 @@ git add -A && git commit -m "feat: ..." && git push origin main
 
 ---
 
+## Критические правила (база данных)
+
+- В `DATABASE_URL` из `.env` — **рабочая** база. Против неё только `npx prisma migrate deploy` и `migrate status`.
+- **Никогда** не передавать рабочую базу в `--shadow-database-url` и не запускать `prisma migrate dev` / `migrate reset` / `db push --force-reset`: Prisma **очищает** теневую базу. Так 26.10.2026 была стёрта `leads_ai` (восстановлена из слепка 03:10 UTC, утро потеряно).
+- Проверка новой миграции — только на отдельной временной базе (`createdb` в контейнере `leads-pg`), после — удалить.
+
 ## Production deploy
 
 ```bash

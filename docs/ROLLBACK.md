@@ -104,4 +104,14 @@ gunzip -c /tmp/leads-snap/leads_ai.sql.gz | docker exec -i leads-pg psql -U lead
 git clone /tmp/leads-snap/code.bundle /tmp/leads-from-snap
 ```
 
+Дамп без `DROP` — если в базе уже есть таблицы, сначала остановить `leads-health leads-konversus leads-radar leads-briefs leads-diagnost`, затем:
+
+```bash
+docker exec leads-pg psql -U leads_user -d leads_ai -v ON_ERROR_STOP=1 -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+gunzip -c /tmp/leads-snap/leads_ai.sql.gz | docker exec -i leads-pg psql -U leads_user -d leads_ai -v ON_ERROR_STOP=1 -q
+npx prisma migrate status   # pending — только свои новые миграции
+```
+
+Время в базе и в имени ночного слепка — UTC (03:10 UTC = 06:10 МСК). Отработано 26.10.2026.
+
 **Не делать при восстановлении:** `pm2 start leads-profi`, рестарт `leads-agent-v2` на VPS.
