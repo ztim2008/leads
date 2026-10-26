@@ -31,6 +31,25 @@ export type IssueItem = {
   box: PxBox;
 };
 
+export type AttentionItem = {
+  label: string;
+  /** Доля прогнозного внимания первого экрана, 0..1 */
+  share: number;
+  /** Во сколько раз внимание на элементе выше среднего по экрану для той же площади */
+  lift: number;
+  box: PxBox;
+};
+
+export type RentgenAttention = {
+  /** Путь к PNG тепловой карты (на клиенте — адрес API) */
+  map: string;
+  /** Высота первого экрана в CSS px — карта покрывает 0..height */
+  height: number;
+  /** Доля внимания на самых «горячих» 10% площади: чем выше, тем собраннее взгляд */
+  focus: number;
+  items: AttentionItem[];
+};
+
 export type RentgenView = {
   shot: string;
   width: number;
@@ -41,6 +60,8 @@ export type RentgenView = {
   unprobed: number;
   /** Слой «Ошибки»; у сканов до D.18a поля нет */
   issues?: IssueItem[];
+  /** Слой «Внимание» — прогноз модели на первый экран; у сканов до D.18b поля нет */
+  attention?: RentgenAttention;
 };
 
 export type RentgenResult = {

@@ -57,6 +57,7 @@ function publicView(slug: string, kind: ViewKind, view: RentgenView): PublicView
     ...view,
     shot: `/api/rentgen/${slug}/shot/${kind}`,
     items: view.items.map(({ path: _path, ...item }) => item),
+    attention: view.attention && { ...view.attention, map: `/api/rentgen/${slug}/shot/${kind}-attn` },
   };
 }
 

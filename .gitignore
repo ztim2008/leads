@@ -47,3 +47,6 @@ next-env.d.ts
 
 # Техосмотр сайта: скриншоты аудитов
 /storage/
+
+# Веса моделей Рентгена — npm run rentgen:model
+/models/

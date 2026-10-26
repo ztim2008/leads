@@ -1,5 +1,6 @@
 import { CHROME_UA, MOBILE_UA, clearPopups, guard, openPage } from "@/lib/diagnost/render";
 import { COLLECT_CLICKS, FLATTEN_STICKY, PROBE_ARM, PROBE_DISPATCH, PROBE_READ, SCROLL_THROUGH, SCROLL_TO, TOGGLE_FIXED } from "@/lib/rentgen/collect";
+import { attendView, openAttention, type AttentionModel } from "@/lib/rentgen/attention";
 import { collectIssues } from "@/lib/rentgen/issues";
 import { rentgenShotPath } from "@/lib/rentgen/shots";
 import { checkLinks, pickLinks, type LinkCheck } from "@/lib/rentgen/links";
@@ -288,6 +289,27 @@ async function renderView(
   }
 }
 
+/** Слой «Внимание» не обязателен: без весов или при сбое модели отчёт выходит без него */
+export async function addAttention(scanId: string, desktop: RentgenView, mobile: RentgenView | null) {
+  let model: AttentionModel | null = null;
+  try {
+    model = await openAttention();
+    if (!model) return;
+    for (const [kind, view] of [["desktop", desktop], ["mobile", mobile]] as const) {
+      if (!view) continue;
+      try {
+        view.attention = await attendView(model, scanId, kind, view, VIEWS[kind].height);
+      } catch (error) {
+        console.error("[rentgen] attention", kind, error instanceof Error ? error.message : error);
+      }
+    }
+  } catch (error) {
+    console.error("[rentgen] attention", error instanceof Error ? error.message : error);
+  } finally {
+    await model?.release().catch(() => undefined);
+  }
+}
+
 export async function renderRentgen(url: string, scanId: string, onProgress: (percent: number) => void = () => undefined): Promise<RentgenResult> {
   const started = Date.now();
   let browser: Browser | null = null;
@@ -318,6 +340,8 @@ export async function renderRentgen(url: string, scanId: string, onProgress: (pe
         }),
       );
     }
+    onProgress(95);
+    await addAttention(scanId, desktop.view, mobile);
     return { finalUrl: desktop.finalUrl, framework: desktop.framework, views: { desktop: desktop.view, mobile }, linksChecked: checks.size, ms: Date.now() - started };
   } finally {
     await browser?.close().catch(() => undefined);

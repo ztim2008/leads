@@ -1,13 +1,15 @@
-import { GROUP_OF, type Group } from "@/lib/rentgen/groups";
-import type { OverlayItem } from "@/components/rentgen/shot-overlay";
+import { GROUP_OF } from "@/lib/rentgen/groups";
+import type { OverlayGroup, OverlayItem } from "@/components/rentgen/shot-overlay";
 
 type ExportInput = {
   root: HTMLElement;
   shot: string;
   width: number;
+  /** Высота кадра; с heat — первый экран, снимок обрезается */
   height: number;
+  heat?: string;
   items: OverlayItem[];
-  legend: { label: string; group: Group; count: number }[];
+  legend: { label: string; group: OverlayGroup; count?: number }[];
   film: boolean;
   host: string;
   subtitle: string;
@@ -42,7 +44,7 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
 /** Картинка для клиента: шапка со сводкой, снимок с рамками, подпись сервиса. Всё на токенах страницы. */
 export async function exportShot(input: ExportInput) {
   const { root, items, film } = input;
-  const img = await loadImage(input.shot);
+  const [img, heat] = await Promise.all([loadImage(input.shot), input.heat ? loadImage(input.heat) : null]);
   const shotW = MAX_SHOT_W(input.width);
   const scale = shotW / input.width;
   const shotH = Math.round(input.height * scale);
@@ -53,14 +55,15 @@ export async function exportShot(input: ExportInput) {
   canvas.height = HEAD + shotH + FOOT;
   const ctx = canvas.getContext("2d")!;
 
-  const colors: Record<Group, string> = {
+  const ink = token(root, "--rg-ink");
+  const colors: Record<OverlayGroup, string> = {
     ok: token(root, "--rg-ok"),
     dead: token(root, "--rg-dead"),
     check: token(root, "--rg-check"),
     unknown: token(root, "--rg-unknown"),
+    attn: ink,
   };
   const bg = token(root, "--rg-bg");
-  const ink = token(root, "--rg-ink");
   const muted = token(root, "--rg-muted");
   const heading = getComputedStyle(root.querySelector("h1") ?? root).fontFamily;
   const body = getComputedStyle(root).fontFamily;
@@ -83,12 +86,20 @@ export async function exportShot(input: ExportInput) {
     ctx.lineWidth = 2;
     ctx.strokeRect(x + 1, 88, 12, 12);
     ctx.fillStyle = ink;
-    const text = `${entry.label} ${entry.count}`;
+    const text = entry.count === undefined ? entry.label : `${entry.label} ${entry.count}`;
     ctx.fillText(text, x + 20, 99);
     x += 20 + ctx.measureText(text).width + 24;
   }
 
-  ctx.drawImage(img, shotX, shotY, shotW, shotH);
+  if (heat) {
+    const srcH = (input.height / input.width) * img.naturalWidth;
+    ctx.filter = "saturate(0.3) brightness(0.55)";
+    ctx.drawImage(img, 0, 0, img.naturalWidth, srcH, shotX, shotY, shotW, shotH);
+    ctx.filter = "none";
+    ctx.drawImage(heat, shotX, shotY, shotW, shotH);
+  } else {
+    ctx.drawImage(img, shotX, shotY, shotW, shotH);
+  }
   const problems = items.filter((item) => item.n !== null);
   if (film && problems.length) {
     ctx.fillStyle = "rgba(0,0,0,0.62)";
@@ -101,7 +112,7 @@ export async function exportShot(input: ExportInput) {
 
   const shown = film && problems.length ? problems : items;
   for (const item of shown) {
-    const color = colors[GROUP_OF[item.kind]];
+    const color = colors[item.group ?? GROUP_OF[item.kind]];
     const fx = shotX + item.box.x * scale;
     const fy = shotY + item.box.y * scale;
     const fw = Math.max(2, item.box.w * scale);

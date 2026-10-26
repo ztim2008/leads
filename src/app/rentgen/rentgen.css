@@ -44,6 +44,7 @@
 .rg-g-dead { --g: var(--rg-dead); }
 .rg-g-check { --g: var(--rg-check); }
 .rg-g-unknown { --g: var(--rg-unknown); }
+.rg-g-attn { --g: var(--rg-ink); }
 .rg-swatch { width: 14px; height: 14px; border: 2px solid var(--g); border-radius: 3px; background: color-mix(in oklab, var(--g) 18%, transparent); flex: none; }
 
 /* Кнопки и поле */
@@ -105,6 +106,11 @@
 .rg-shot { position: relative; width: 100%; line-height: 0; background: var(--rg-layer); }
 .rg-shot > img { width: 100%; height: auto; display: block; transition: filter 0.35s; }
 .rg-shot[data-film="true"] > img { filter: grayscale(1) brightness(0.38) contrast(1.15); }
+/* «Внимание»: виден только первый экран, основа приглушена, чтобы читалась тепловая карта */
+.rg-shot[data-heat] { overflow: hidden; }
+.rg-shot[data-heat] > img:first-child { filter: saturate(0.3) brightness(0.55); }
+.rg-shot > img.rg-heat { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.rg-shot[data-heat] .rg-frame { background: transparent; }
 
 .rg-frame {
   position: absolute;
@@ -135,6 +141,7 @@ button.rg-frame:hover, .rg-frame[data-active="true"] { box-shadow: 0 0 0 3px col
   font: 700 11px/18px var(--font-sans);
   text-align: center;
 }
+.rg-frame[data-edge] > .rg-tag { bottom: auto; top: 100%; margin: 2px 0 0; }
 
 /* Список проблем */
 .rg-row { display: flex; gap: 12px; width: 100%; padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--rg-line-soft); cursor: pointer; transition: background-color 0.15s; }

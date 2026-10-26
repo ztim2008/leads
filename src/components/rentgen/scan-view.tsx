@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Circle, Download, Loader2, Monitor, Smartphone } from "lucide-react";
 import { exportShot } from "@/components/rentgen/export-shot";
-import ShotOverlay, { type OverlayItem } from "@/components/rentgen/shot-overlay";
+import ShotOverlay, { type OverlayGroup, type OverlayItem } from "@/components/rentgen/shot-overlay";
 import { reachGoal } from "@/lib/metrika";
 import StartForm from "@/components/rentgen/start-form";
 import type { PublicView, ScanView as View } from "@/lib/rentgen/data";
@@ -16,6 +16,7 @@ const STEPS: { label: string; from: number }[] = [
   { label: "Нажимаем кнопки на ПК", from: 10 },
   { label: "Повторяем на телефоне", from: 55 },
   { label: "Проверяем ссылки на другие страницы", from: 85 },
+  { label: "Прогнозируем, куда посмотрят", from: 95 },
 ];
 
 function ProgressScreen({ view }: { view: View }) {
@@ -73,9 +74,19 @@ function shortHref(href: string) {
   return href.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "");
 }
 
-type Layer = "clicks" | "issues";
+type Layer = "clicks" | "issues" | "attention";
 
-type Row = { n: number; group: Group; label: string; reason: string; href?: string };
+type Row = { n: number; group: OverlayGroup; label: string; reason: string; href?: string };
+
+const LAYER_LABEL: Record<Layer, string> = { clicks: "клики", issues: "ошибки", attention: "внимание" };
+
+const percent = (share: number) => `${(share * 100).toFixed(share < 0.1 ? 1 : 0).replace(".", ",")}%`;
+
+function focusVerdict(focus: number) {
+  if (focus >= 0.6) return "Взгляд собран: у экрана есть явная точка входа.";
+  if (focus >= 0.45) return "Взгляд делится между несколькими местами.";
+  return "Взгляд рассеян: на экране нет явного центра.";
+}
 
 function Result({ view }: { view: View }) {
   const result = view.result!;
@@ -84,28 +95,39 @@ function Result({ view }: { view: View }) {
   const current = (kind === "mobile" ? result.views.mobile : null) ?? result.views.desktop;
   const hasIssues = Array.isArray(current.issues);
   const issues = useMemo(() => current.issues ?? [], [current]);
+  const attention = current.attention;
+  const heatOn = layer === "attention" && !!attention;
 
   const overlay: OverlayItem[] = useMemo(
     () =>
-      layer === "issues"
-        ? issues.map((issue) => ({ n: issue.n, kind: issue.severity === "error" ? "dead" : "fake", label: issue.label, reason: issue.reason, box: issue.box }))
-        : current.items,
-    [layer, issues, current],
+      layer === "attention"
+        ? (attention?.items ?? []).map((item, index) => ({ n: index + 1, kind: "ok", group: "attn", label: item.label, reason: `${percent(item.share)} внимания`, box: item.box }))
+        : layer === "issues"
+          ? issues.map((issue) => ({ n: issue.n, kind: issue.severity === "error" ? "dead" : "fake", label: issue.label, reason: issue.reason, box: issue.box }))
+          : current.items,
+    [layer, issues, current, attention],
   );
   const rows: Row[] = useMemo(
     () =>
-      layer === "issues"
-        ? issues.map((issue) => ({ n: issue.n, group: issue.severity === "error" ? "dead" : "check", label: issue.label, reason: issue.reason }))
-        : current.items
-            .filter((item) => item.n !== null)
-            .sort((a, b) => (a.n ?? 0) - (b.n ?? 0))
-            .map((item) => ({ n: item.n!, group: GROUP_OF[item.kind], label: item.label, reason: item.reason, href: item.href })),
-    [layer, issues, current],
+      layer === "attention"
+        ? (attention?.items ?? []).map((item, index) => ({
+            n: index + 1,
+            group: "attn",
+            label: item.label,
+            reason: `${percent(item.share)} внимания первого экрана${item.lift >= 1.5 ? ` · заметнее среднего в ${String(item.lift).replace(".", ",")} раза` : item.lift < 0.8 ? " · заметен слабее фона" : ""}`,
+          }))
+        : layer === "issues"
+          ? issues.map((issue) => ({ n: issue.n, group: issue.severity === "error" ? "dead" : "check", label: issue.label, reason: issue.reason }))
+          : current.items
+              .filter((item) => item.n !== null)
+              .sort((a, b) => (a.n ?? 0) - (b.n ?? 0))
+              .map((item) => ({ n: item.n!, group: GROUP_OF[item.kind], label: item.label, reason: item.reason, href: item.href })),
+    [layer, issues, current, attention],
   );
 
   const [film, setFilm] = useState(rows.length > 0);
   const [active, setActive] = useState<number | null>(null);
-  const filmOn = film && rows.length > 0;
+  const filmOn = film && rows.length > 0 && layer !== "attention";
   const counts = countGroups(current);
   const errors = issues.filter((issue) => issue.severity === "error").length;
   const prefix = `rg-f-${layer}-${kind}`;
@@ -113,13 +135,17 @@ function Result({ view }: { view: View }) {
   const [saveError, setSaveError] = useState<string | null>(null);
   const dateLabel = new Date(view.createdAt).toLocaleString("ru-RU", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Moscow" });
 
-  const legend =
-    layer === "issues"
-      ? [
-          { label: "Мешает", group: "dead" as Group, count: errors },
-          { label: "Стоит поправить", group: "check" as Group, count: issues.length - errors },
-        ]
-      : GROUPS.map((group) => ({ label: group.label, group: group.id, count: counts[group.id] }));
+  const legend: { label: string; group: OverlayGroup; count?: number }[] =
+    layer === "attention"
+      ? attention
+        ? [{ label: `${percent(attention.focus)} внимания — на 10% первого экрана`, group: "attn" }]
+        : []
+      : layer === "issues"
+        ? [
+            { label: "Мешает", group: "dead", count: errors },
+            { label: "Стоит поправить", group: "check", count: issues.length - errors },
+          ]
+        : GROUPS.map((group) => ({ label: group.label, group: group.id, count: counts[group.id] }));
 
   async function download() {
     const root = document.querySelector<HTMLElement>(".rg");
@@ -132,12 +158,13 @@ function Result({ view }: { view: View }) {
         root,
         shot: current.shot,
         width: current.width,
-        height: current.height,
+        height: heatOn ? attention!.height : current.height,
+        heat: heatOn ? attention!.map : undefined,
         items: overlay,
         legend,
         film: filmOn,
         host: view.host,
-        subtitle: `${kind === "mobile" ? "Телефон" : "ПК"} · ${layer === "issues" ? "ошибки" : "клики"} · ${dateLabel} · находок: ${rows.length}`,
+        subtitle: `${kind === "mobile" ? "Телефон" : "ПК"} · ${LAYER_LABEL[layer]} · ${dateLabel}${heatOn ? " · прогноз первой секунды" : ` · находок: ${rows.length}`}`,
         fileName: `rentgen-${view.host}-${kind === "mobile" ? "phone" : "pc"}-${layer}.jpg`,
       });
     } catch (error) {
@@ -148,6 +175,8 @@ function Result({ view }: { view: View }) {
   }
 
   function switchView(next: ViewKind) {
+    const target = (next === "mobile" ? result.views.mobile : null) ?? result.views.desktop;
+    if ((layer === "issues" && !target.issues) || (layer === "attention" && !target.attention)) setLayer("clicks");
     setKind(next);
     setActive(null);
   }
@@ -210,6 +239,9 @@ function Result({ view }: { view: View }) {
             <button type="button" aria-pressed={layer === "issues"} disabled={!hasIssues} title={hasIssues ? undefined : "Есть в проверках с 26 октября 2026 — запустите заново"} onClick={() => switchLayer("issues")}>
               Ошибки
             </button>
+            <button type="button" aria-pressed={layer === "attention"} disabled={!attention} title={attention ? "Куда посмотрят в первую секунду — прогноз модели" : "Есть в проверках с 26 октября 2026 — запустите заново"} onClick={() => switchLayer("attention")}>
+              Внимание
+            </button>
           </div>
           <div className="rg-seg" role="group" aria-label="Экран">
             <button type="button" aria-pressed={kind === "desktop"} onClick={() => switchView("desktop")}>
@@ -219,14 +251,16 @@ function Result({ view }: { view: View }) {
               <Smartphone size={15} /> Телефон
             </button>
           </div>
-          <div className="rg-seg" role="group" aria-label="Что показывать">
-            <button type="button" aria-pressed={!filmOn} onClick={() => setFilm(false)}>
-              Все
-            </button>
-            <button type="button" aria-pressed={filmOn} disabled={!rows.length} onClick={() => setFilm(true)}>
-              Только проблемы
-            </button>
-          </div>
+          {layer !== "attention" && (
+            <div className="rg-seg" role="group" aria-label="Что показывать">
+              <button type="button" aria-pressed={!filmOn} onClick={() => setFilm(false)}>
+                Все
+              </button>
+              <button type="button" aria-pressed={filmOn} disabled={!rows.length} onClick={() => setFilm(true)}>
+                Только проблемы
+              </button>
+            </div>
+          )}
           <button type="button" className="rg-btn rg-btn-ghost" onClick={download} disabled={saving} title="Картинка с рамками и сводкой — для клиента или подрядчика">
             {saving ? <Loader2 size={15} className="rg-spin" /> : <Download size={15} />}
             Скачать картинку
@@ -245,15 +279,20 @@ function Result({ view }: { view: View }) {
             key={`${layer}-${kind}`}
             shot={current.shot}
             width={current.width}
-            height={current.height}
+            height={heatOn ? attention!.height : current.height}
+            heat={heatOn ? attention!.map : undefined}
             items={overlay}
             film={filmOn}
             activeN={active}
             idPrefix={prefix}
             onPick={pickFromShot}
-            alt={`Снимок ${view.host} на ${kind === "mobile" ? "телефоне" : "ПК"} с рамками`}
+            alt={heatOn ? `Первый экран ${view.host} с тепловой картой внимания` : `Снимок ${view.host} на ${kind === "mobile" ? "телефоне" : "ПК"} с рамками`}
           />
-          {current.truncated && (
+          {heatOn ? (
+            <p className="border-t px-4 py-3 text-[13px] leading-snug" style={{ borderColor: "var(--rg-line)", color: "var(--rg-muted)" }}>
+              Первый экран {current.width}×{attention!.height}. Светлее — туда посмотрят в первую секунду.
+            </p>
+          ) : current.truncated && (
             <p className="border-t px-4 py-3 text-[13px]" style={{ borderColor: "var(--rg-line)", color: "var(--rg-muted)" }}>
               Страница длиннее {kind === "mobile" ? "6000" : "8000"} px — ниже снимка не проверяли.
             </p>
@@ -262,7 +301,31 @@ function Result({ view }: { view: View }) {
 
         <aside className="rg-panel order-first overflow-hidden lg:order-none lg:sticky lg:top-[72px] lg:flex lg:max-h-[calc(100vh-88px)] lg:flex-col">
           <div className="border-b px-4 py-4" style={{ borderColor: "var(--rg-line)" }}>
-            {layer === "issues" ? (
+            {layer === "attention" && attention ? (
+              <>
+                <p className="text-[15px] font-semibold" style={{ color: "var(--rg-ink)" }}>
+                  {percent(attention.focus)} внимания — на 10% экрана
+                </p>
+                <p className="mt-1 text-[13px] leading-snug" style={{ color: "var(--rg-body)" }}>
+                  {focusVerdict(attention.focus)} Ниже — кнопки и ссылки первого экрана по доле внимания.
+                </p>
+                <p className="mt-3 text-[13px] leading-snug" style={{ color: "var(--rg-muted)" }}>
+                  Прогноз модели, а не запись взгляда живых людей. Хуже работает на тёмных сайтах и плотных таблицах. Модель{" "}
+                  <a href="https://github.com/alexanderkroner/saliency" target="_blank" rel="noopener noreferrer" className="rg-link">
+                    MSI-Net
+                  </a>
+                  , обучение{" "}
+                  <a href="https://github.com/khawkins98/Foveacast" target="_blank" rel="noopener noreferrer" className="rg-link">
+                    Foveacast
+                  </a>{" "}
+                  на наборе{" "}
+                  <a href="https://github.com/YueJiang-nj/UEyes-CHI2023" target="_blank" rel="noopener noreferrer" className="rg-link">
+                    UEyes
+                  </a>{" "}
+                  (CC BY 4.0).
+                </p>
+              </>
+            ) : layer === "issues" ? (
               <>
                 <p className="text-[15px] font-semibold" style={{ color: "var(--rg-ink)" }}>
                   {issues.length ? `Находок: ${issues.length}` : "Ошибок не нашли"}
@@ -306,7 +369,11 @@ function Result({ view }: { view: View }) {
           </div>
           {rows.length === 0 ? (
             <p className="px-4 py-5 text-sm leading-relaxed" style={{ color: "var(--rg-body)" }}>
-              {layer === "issues" ? "Автоматическая проверка ничего не нашла на этом экране." : "Все кнопки и ссылки, которые мы смогли нажать на этом экране, сработали."}
+              {layer === "attention"
+                ? "В первую секунду кнопки и ссылки почти не получают внимания — взгляд уходит на заголовок и картинки."
+                : layer === "issues"
+                  ? "Автоматическая проверка ничего не нашла на этом экране."
+                  : "Все кнопки и ссылки, которые мы смогли нажать на этом экране, сработали."}
             </p>
           ) : layer === "issues" ? (
             <div className="lg:overflow-y-auto">
