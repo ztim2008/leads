@@ -1457,7 +1457,7 @@ Partner buys VPS, downloads zip, fills config.json (Profi login/password + Teleg
 - `docs/RENTGEN.md` обновлён под фактическую логику.
 
 ### Итог на 5 сайтах
-- krovla-siding.ru — 2 ссылки-заглушки `#` в подвале (реальная находка), 29 с; dkbani.ru (Тильда) — 1 ложная кнопка, 32 с; divan.ru — 1 «проверьте», 81 с; proektmap.ru — 0 проблем, 40 с; baishalex.ru — 0 проблем, 7 мелких зон на телефоне, 37 с.
+- krovla-siding.ru — 2 значка часов в подвале обёрнуты в ссылки `#` (верно, но мелко), 29 с; dkbani.ru (Тильда) — 1 ложная кнопка, 32 с; divan.ru — 1 «проверьте», 81 с; proektmap.ru — 0 проблем, 40 с; baishalex.ru — 0 проблем, 7 мелких зон на телефоне, 37 с.
 - Через очередь `leads-diagnost`: dkbani.ru — 44 с, 11 ссылок; тестовая запись удалена.
 
 ### Файлы
