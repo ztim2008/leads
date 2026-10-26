@@ -76,7 +76,7 @@ function shortHref(href: string) {
 
 type Layer = "clicks" | "issues" | "attention";
 
-type Row = { n: number; group: OverlayGroup; label: string; reason: string; href?: string };
+type Row = { n: number; group: OverlayGroup; label: string; reason: string; href?: string; hint?: string };
 
 const LAYER_LABEL: Record<Layer, string> = { clicks: "клики", issues: "ошибки", attention: "внимание" };
 
@@ -124,7 +124,7 @@ function Result({ view }: { view: View }) {
             reason: `${percent(item.share)} внимания первого экрана${item.lift >= 1.5 ? ` · заметнее среднего в ${String(item.lift).replace(".", ",")} раза` : item.lift < 0.8 ? " · заметен слабее фона" : ""}`,
           }))
         : layer === "issues"
-          ? issues.map((issue) => ({ n: issue.n, group: issue.severity === "error" ? "dead" : "check", label: issue.label, reason: issue.reason }))
+          ? issues.map((issue) => ({ n: issue.n, group: issue.severity === "error" ? "dead" : "check", label: issue.label, reason: issue.reason, hint: issue.hint }))
           : current.items
               .filter((item) => item.n !== null)
               .sort((a, b) => (a.n ?? 0) - (b.n ?? 0))
@@ -218,6 +218,11 @@ function Result({ view }: { view: View }) {
             {row.href && (
               <span className="rg-mono mt-1 block truncate text-xs" style={{ color: "var(--rg-muted)" }}>
                 {shortHref(row.href)}
+              </span>
+            )}
+            {row.hint && (
+              <span className="mt-1 block text-xs leading-snug" style={{ color: "var(--rg-muted)" }} title="Заготовка из текста рядом с картинкой — проверьте, что она описывает изображение">
+                Подсказка: <span className="rg-mono select-all" style={{ color: "var(--rg-body)" }}>alt="{row.hint}"</span>
               </span>
             )}
           </span>

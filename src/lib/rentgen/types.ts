@@ -29,6 +29,8 @@ export type IssueItem = {
   label: string;
   reason: string;
   box: PxBox;
+  /** Только для alt: заготовка описания из соседнего текста страницы */
+  hint?: string;
 };
 
 export type AttentionItem = {

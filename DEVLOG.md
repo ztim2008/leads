@@ -1625,3 +1625,11 @@ Partner buys VPS, downloads zip, fills config.json (Profi login/password + Teleg
 - Данные сканов не менялись — старые отчёты показываются по-новому сразу.
 
 Проверено на демо: 11 находок по умолчанию, 16 с мелочами. Файлы: `src/lib/rentgen/groups.ts`, `src/components/rentgen/scan-view.tsx`, `src/app/rentgen/page.tsx`. Production: build, `pm2 restart leads-konversus`, 200.
+
+## Рентген: подсказки alt · 26 октября 2026
+
+- Для картинок без alt собирается заготовка описания без ИИ и токенов (`issues.ts`, `altHint`): `title` картинки → `figcaption` → текст ссылки вокруг → заголовок ближайшего блока (только если блок не больше 4 площадей картинки — иначе подхватывался заголовок соседнего виджета, «Рубрики» на baishalex.ru) → понятное имя файла (хэши, `img`, `banner`, размеры отбрасываются). Нет подходящего — подсказки нет.
+- `IssueItem.hint`; в списке «Ошибок» строка «Подсказка: alt="…"» (выделяется целиком для копирования). Видна при раскрытых «Мелочах».
+- Демо пересканировано (подсказка «Бани из кедра под ключ за 30 дней»): пример отчёта теперь `/rentgen/r/pwmakwcjeh5g`, старый `e5y24kqwdq3q` удалён. Подсказки — только в новых сканах.
+
+Файлы: `src/lib/rentgen/{issues,types}.ts`, `src/components/rentgen/scan-view.tsx`, `src/lib/rentgen/demo.json`. Production: build, `pm2 restart leads-konversus leads-diagnost`, 200.

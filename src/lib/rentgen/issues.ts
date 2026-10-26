@@ -7,7 +7,7 @@ let axeSource: string | null = null;
 
 const AXE_RULES = ["color-contrast", "label", "select-name", "image-alt", "input-image-alt", "button-name", "link-name"];
 
-type RawIssue = { rule: string; label: string; box: PxBox; data?: { ratio?: number; expected?: number; px?: number } };
+type RawIssue = { rule: string; label: string; box: PxBox; data?: { ratio?: number; expected?: number; px?: number }; hint?: string };
 
 /** В странице: axe по выбранным правилам + свои проверки телефона. Координаты — px документа. */
 const COLLECT_ISSUES = String.raw`async (opts) => {
@@ -34,6 +34,32 @@ const COLLECT_ISSUES = String.raw`async (opts) => {
     if (el.querySelector("svg")) return "Иконка";
     return "";
   };
+  const clean = (text) => (text || "").replace(/\s+/g, " ").trim().slice(0, 100);
+  // Заготовка alt из того, что рядом на странице: title, подпись, текст ссылки, заголовок блока, имя файла
+  const altHint = (img) => {
+    const own = clean(img.getAttribute("title"));
+    if (own) return own;
+    const caption = clean(img.closest("figure") && img.closest("figure").querySelector("figcaption") && img.closest("figure").querySelector("figcaption").innerText);
+    if (caption) return caption;
+    const link = img.closest("a");
+    const linkText = link && clean(link.innerText);
+    if (linkText) return linkText;
+    const ir = img.getBoundingClientRect();
+    const area = Math.max(1, ir.width * ir.height);
+    let node = img.parentElement;
+    for (let depth = 0; node && node !== document.body && depth < 5; depth++, node = node.parentElement) {
+      // Заголовок соседнего виджета в большой колонке картинку не описывает
+      const nr = node.getBoundingClientRect();
+      if (nr.width * nr.height > area * 4) break;
+      const heading = node.querySelector("h1,h2,h3,h4,h5,h6,[class*=title],[class*=Title],[class*=name]");
+      const text = heading && heading !== img && clean(heading.innerText);
+      if (text && text.length >= 3) return text;
+    }
+    const file = fileOf(img.currentSrc || img.getAttribute("src")).replace(/\.[a-z0-9]{2,5}$/i, "");
+    const words = decodeURIComponent(file).replace(/[-_.+]+/g, " ").replace(/\b\d+(x\d+)?\b/gi, "").trim();
+    if (/^[0-9a-f ]{12,}$/i.test(words) || /^(img|image|photo|pic|banner|bg|dsc|screenshot|untitled)( |$)/i.test(words) || words.length < 4) return "";
+    return words.slice(0, 60);
+  };
   const perRule = {};
   const push = (rule, el, data, limit) => {
     perRule[rule] = perRule[rule] || 0;
@@ -41,7 +67,8 @@ const COLLECT_ISSUES = String.raw`async (opts) => {
     const box = boxOf(el);
     if (!box) return;
     perRule[rule] += 1;
-    out.push({ rule, label: labelOf(el), box, data });
+    const hint = rule === "image-alt" || rule === "input-image-alt" ? altHint(el) : "";
+    out.push({ rule, label: labelOf(el), box, data, hint: hint || undefined });
   };
 
   try {
@@ -160,7 +187,7 @@ export async function collectIssues(page: Page, view: ViewKind, maxHeight: numbe
   const items = raw
     .map((item) => {
       const meta = describe(item);
-      return meta ? { n: 0, ...meta, label: item.label, box: item.box } : null;
+      return meta ? { n: 0, ...meta, label: item.label, box: item.box, ...(item.hint ? { hint: item.hint } : {}) } : null;
     })
     .filter((item): item is IssueItem => item !== null);
   const seen: Partial<Record<IssueRule, number>> = {};
