@@ -4,11 +4,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRight, CheckCircle2, Circle, Download, Loader2, Monitor, Smartphone } from "lucide-react";
 import { exportShot } from "@/components/rentgen/export-shot";
-import ShotOverlay from "@/components/rentgen/shot-overlay";
+import ShotOverlay, { type OverlayItem } from "@/components/rentgen/shot-overlay";
 import { reachGoal } from "@/lib/metrika";
 import StartForm from "@/components/rentgen/start-form";
 import type { PublicView, ScanView as View } from "@/lib/rentgen/data";
-import { GROUP_OF, GROUPS, type Group } from "@/lib/rentgen/groups";
+import { GROUP_OF, GROUPS, ISSUE_RULES, type Group } from "@/lib/rentgen/groups";
 import type { ViewKind } from "@/lib/rentgen/types";
 
 const STEPS: { label: string; from: number }[] = [
@@ -73,37 +73,72 @@ function shortHref(href: string) {
   return href.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "");
 }
 
+type Layer = "clicks" | "issues";
+
+type Row = { n: number; group: Group; label: string; reason: string; href?: string };
+
 function Result({ view }: { view: View }) {
   const result = view.result!;
   const [kind, setKind] = useState<ViewKind>("desktop");
+  const [layer, setLayer] = useState<Layer>("clicks");
   const current = (kind === "mobile" ? result.views.mobile : null) ?? result.views.desktop;
-  const problems = useMemo(() => current.items.filter((item) => item.n !== null).sort((a, b) => (a.n ?? 0) - (b.n ?? 0)), [current]);
-  const [film, setFilm] = useState(problems.length > 0);
+  const hasIssues = Array.isArray(current.issues);
+  const issues = useMemo(() => current.issues ?? [], [current]);
+
+  const overlay: OverlayItem[] = useMemo(
+    () =>
+      layer === "issues"
+        ? issues.map((issue) => ({ n: issue.n, kind: issue.severity === "error" ? "dead" : "fake", label: issue.label, reason: issue.reason, box: issue.box }))
+        : current.items,
+    [layer, issues, current],
+  );
+  const rows: Row[] = useMemo(
+    () =>
+      layer === "issues"
+        ? issues.map((issue) => ({ n: issue.n, group: issue.severity === "error" ? "dead" : "check", label: issue.label, reason: issue.reason }))
+        : current.items
+            .filter((item) => item.n !== null)
+            .sort((a, b) => (a.n ?? 0) - (b.n ?? 0))
+            .map((item) => ({ n: item.n!, group: GROUP_OF[item.kind], label: item.label, reason: item.reason, href: item.href })),
+    [layer, issues, current],
+  );
+
+  const [film, setFilm] = useState(rows.length > 0);
   const [active, setActive] = useState<number | null>(null);
-  const filmOn = film && problems.length > 0;
+  const filmOn = film && rows.length > 0;
   const counts = countGroups(current);
-  const prefix = `rg-f-${kind}`;
+  const errors = issues.filter((issue) => issue.severity === "error").length;
+  const prefix = `rg-f-${layer}-${kind}`;
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const dateLabel = new Date(view.createdAt).toLocaleString("ru-RU", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Moscow" });
+
+  const legend =
+    layer === "issues"
+      ? [
+          { label: "Мешает", group: "dead" as Group, count: errors },
+          { label: "Стоит поправить", group: "check" as Group, count: issues.length - errors },
+        ]
+      : GROUPS.map((group) => ({ label: group.label, group: group.id, count: counts[group.id] }));
 
   async function download() {
     const root = document.querySelector<HTMLElement>(".rg");
     if (!root || saving) return;
     setSaving(true);
     setSaveError(null);
-    reachGoal("rentgen_png", { view: kind });
+    reachGoal("rentgen_png", { view: kind, layer });
     try {
       await exportShot({
         root,
         shot: current.shot,
         width: current.width,
         height: current.height,
-        items: current.items,
+        items: overlay,
+        legend,
         film: filmOn,
         host: view.host,
-        subtitle: `${kind === "mobile" ? "Телефон" : "ПК"} · ${dateLabel} · проблем: ${problems.length}`,
-        fileName: `rentgen-${view.host}-${kind === "mobile" ? "phone" : "pc"}.jpg`,
+        subtitle: `${kind === "mobile" ? "Телефон" : "ПК"} · ${layer === "issues" ? "ошибки" : "клики"} · ${dateLabel} · находок: ${rows.length}`,
+        fileName: `rentgen-${view.host}-${kind === "mobile" ? "phone" : "pc"}-${layer}.jpg`,
       });
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : "Не удалось собрать картинку");
@@ -117,6 +152,11 @@ function Result({ view }: { view: View }) {
     setActive(null);
   }
 
+  function switchLayer(next: Layer) {
+    setLayer(next);
+    setActive(null);
+  }
+
   function pickFromList(n: number) {
     setActive(n);
     document.getElementById(`${prefix}-${n}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -124,7 +164,30 @@ function Result({ view }: { view: View }) {
 
   function pickFromShot(n: number) {
     setActive(n);
-    document.getElementById(`rg-row-${n}`)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    document.getElementById(`rg-row-${layer}-${n}`)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  function renderRow(row: Row) {
+    return (
+      <li key={row.n}>
+        <button type="button" id={`rg-row-${layer}-${row.n}`} className={`rg-row rg-g-${row.group}`} data-active={row.n === active} onClick={() => pickFromList(row.n)}>
+          <span className="rg-num">{row.n}</span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-medium" style={{ color: "var(--rg-ink)" }}>
+              {row.label || "Без подписи"}
+            </span>
+            <span className="mt-0.5 block text-[13px] leading-snug" style={{ color: "var(--rg-body)" }}>
+              {row.reason}
+            </span>
+            {row.href && (
+              <span className="rg-mono mt-1 block truncate text-xs" style={{ color: "var(--rg-muted)" }}>
+                {shortHref(row.href)}
+              </span>
+            )}
+          </span>
+        </button>
+      </li>
+    );
   }
 
   return (
@@ -140,6 +203,14 @@ function Result({ view }: { view: View }) {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <div className="rg-seg" role="group" aria-label="Слой">
+            <button type="button" aria-pressed={layer === "clicks"} onClick={() => switchLayer("clicks")}>
+              Клики
+            </button>
+            <button type="button" aria-pressed={layer === "issues"} disabled={!hasIssues} title={hasIssues ? undefined : "Есть в проверках с 26 октября 2026 — запустите заново"} onClick={() => switchLayer("issues")}>
+              Ошибки
+            </button>
+          </div>
           <div className="rg-seg" role="group" aria-label="Экран">
             <button type="button" aria-pressed={kind === "desktop"} onClick={() => switchView("desktop")}>
               <Monitor size={15} /> ПК
@@ -152,7 +223,7 @@ function Result({ view }: { view: View }) {
             <button type="button" aria-pressed={!filmOn} onClick={() => setFilm(false)}>
               Все
             </button>
-            <button type="button" aria-pressed={filmOn} disabled={!problems.length} onClick={() => setFilm(true)}>
+            <button type="button" aria-pressed={filmOn} disabled={!rows.length} onClick={() => setFilm(true)}>
               Только проблемы
             </button>
           </div>
@@ -171,74 +242,90 @@ function Result({ view }: { view: View }) {
       <div className="mt-5 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
         <div className="rg-panel overflow-hidden" style={kind === "mobile" ? { maxWidth: 430, marginInline: "auto", width: "100%" } : undefined}>
           <ShotOverlay
-            key={kind}
+            key={`${layer}-${kind}`}
             shot={current.shot}
             width={current.width}
             height={current.height}
-            items={current.items}
+            items={overlay}
             film={filmOn}
             activeN={active}
             idPrefix={prefix}
             onPick={pickFromShot}
-            alt={`Снимок ${view.host} на ${kind === "mobile" ? "телефоне" : "ПК"} с рамками вокруг кнопок`}
+            alt={`Снимок ${view.host} на ${kind === "mobile" ? "телефоне" : "ПК"} с рамками`}
           />
           {current.truncated && (
             <p className="border-t px-4 py-3 text-[13px]" style={{ borderColor: "var(--rg-line)", color: "var(--rg-muted)" }}>
-              Страница длиннее {kind === "mobile" ? "6000" : "8000"} px — ниже снимка элементы не проверяли.
+              Страница длиннее {kind === "mobile" ? "6000" : "8000"} px — ниже снимка не проверяли.
             </p>
           )}
         </div>
 
         <aside className="rg-panel order-first overflow-hidden lg:order-none lg:sticky lg:top-[72px] lg:flex lg:max-h-[calc(100vh-88px)] lg:flex-col">
           <div className="border-b px-4 py-4" style={{ borderColor: "var(--rg-line)" }}>
-            <p className="text-[15px] font-semibold" style={{ color: "var(--rg-ink)" }}>
-              {problems.length ? `Проблем: ${problems.length}` : "Проблем не нашли"}
-              <span className="font-normal" style={{ color: "var(--rg-muted)" }}>
-                {" "}
-                из {current.items.length} элементов
-              </span>
-            </p>
-            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-[13px]" style={{ color: "var(--rg-body)" }}>
-              {GROUPS.map((group) => (
-                <span key={group.id} className={`rg-g-${group.id} inline-flex items-center gap-1.5`} title={group.about}>
-                  <span className="rg-swatch" style={{ width: 12, height: 12 }} />
-                  {group.label} <span className="rg-mono">{counts[group.id]}</span>
-                </span>
-              ))}
-            </div>
-            {current.unprobed > 0 && (
-              <p className="mt-3 text-[13px]" style={{ color: "var(--rg-muted)" }}>
-                Не успели нажать: {current.unprobed} — они в «Не проверяли».
-              </p>
+            {layer === "issues" ? (
+              <>
+                <p className="text-[15px] font-semibold" style={{ color: "var(--rg-ink)" }}>
+                  {issues.length ? `Находок: ${issues.length}` : "Ошибок не нашли"}
+                </p>
+                <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-[13px]" style={{ color: "var(--rg-body)" }}>
+                  {legend.map((entry) => (
+                    <span key={entry.label} className={`rg-g-${entry.group} inline-flex items-center gap-1.5`}>
+                      <span className="rg-swatch" style={{ width: 12, height: 12 }} />
+                      {entry.label} <span className="rg-mono">{entry.count}</span>
+                    </span>
+                  ))}
+                </div>
+                <p className="mt-3 text-[13px] leading-snug" style={{ color: "var(--rg-muted)" }}>
+                  Автоматическая проверка находит примерно треть проблем доступности, остальное — только вручную.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-[15px] font-semibold" style={{ color: "var(--rg-ink)" }}>
+                  {rows.length ? `Проблем: ${rows.length}` : "Проблем не нашли"}
+                  <span className="font-normal" style={{ color: "var(--rg-muted)" }}>
+                    {" "}
+                    из {current.items.length} элементов
+                  </span>
+                </p>
+                <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-[13px]" style={{ color: "var(--rg-body)" }}>
+                  {GROUPS.map((group) => (
+                    <span key={group.id} className={`rg-g-${group.id} inline-flex items-center gap-1.5`} title={group.about}>
+                      <span className="rg-swatch" style={{ width: 12, height: 12 }} />
+                      {group.label} <span className="rg-mono">{counts[group.id]}</span>
+                    </span>
+                  ))}
+                </div>
+                {current.unprobed > 0 && (
+                  <p className="mt-3 text-[13px]" style={{ color: "var(--rg-muted)" }}>
+                    Не успели нажать: {current.unprobed} — они в «Не проверяли».
+                  </p>
+                )}
+              </>
             )}
           </div>
-          {problems.length > 0 ? (
-            <ol className="lg:overflow-y-auto">
-              {problems.map((item) => (
-                <li key={item.n}>
-                  <button type="button" id={`rg-row-${item.n}`} className={`rg-row rg-g-${GROUP_OF[item.kind]}`} data-active={item.n === active} onClick={() => pickFromList(item.n!)}>
-                    <span className="rg-num">{item.n}</span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-medium" style={{ color: "var(--rg-ink)" }}>
-                        {item.label || "Без подписи"}
-                      </span>
-                      <span className="mt-0.5 block text-[13px] leading-snug" style={{ color: "var(--rg-body)" }}>
-                        {item.reason}
-                      </span>
-                      {item.href && (
-                        <span className="rg-mono mt-1 block truncate text-xs" style={{ color: "var(--rg-muted)" }}>
-                          {shortHref(item.href)}
-                        </span>
-                      )}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ol>
-          ) : (
+          {rows.length === 0 ? (
             <p className="px-4 py-5 text-sm leading-relaxed" style={{ color: "var(--rg-body)" }}>
-              Все кнопки и ссылки, которые мы смогли нажать на этом экране, сработали.
+              {layer === "issues" ? "Автоматическая проверка ничего не нашла на этом экране." : "Все кнопки и ссылки, которые мы смогли нажать на этом экране, сработали."}
             </p>
+          ) : layer === "issues" ? (
+            <div className="lg:overflow-y-auto">
+              {ISSUE_RULES.map((rule) => {
+                const ruleRows = issues.filter((issue) => issue.rule === rule.id).map((issue) => rows.find((row) => row.n === issue.n)!);
+                if (!ruleRows.length) return null;
+                return (
+                  <section key={rule.id}>
+                    <div className="flex items-center justify-between border-b px-4 pt-4 pb-2 text-[13px] font-semibold" style={{ borderColor: "var(--rg-line-soft)", color: "var(--rg-muted)" }}>
+                      {rule.label}
+                      <span className="rg-mono">{ruleRows.length}</span>
+                    </div>
+                    <ol>{ruleRows.map(renderRow)}</ol>
+                  </section>
+                );
+              })}
+            </div>
+          ) : (
+            <ol className="lg:overflow-y-auto">{rows.map(renderRow)}</ol>
           )}
         </aside>
       </div>

@@ -20,6 +20,17 @@ export type ClickItem = {
   path: string;
 };
 
+export type IssueRule = "contrast" | "label" | "alt" | "button-name" | "link-name" | "overflow" | "small-text";
+
+export type IssueItem = {
+  n: number;
+  rule: IssueRule;
+  severity: "error" | "warn";
+  label: string;
+  reason: string;
+  box: PxBox;
+};
+
 export type RentgenView = {
   shot: string;
   width: number;
@@ -28,6 +39,8 @@ export type RentgenView = {
   items: ClickItem[];
   /** Сколько подозрительных элементов не успели прощёлкать (ушли в unknown) */
   unprobed: number;
+  /** Слой «Ошибки»; у сканов до D.18a поля нет */
+  issues?: IssueItem[];
 };
 
 export type RentgenResult = {

@@ -1,12 +1,13 @@
-import { GROUP_OF, GROUPS, type Group } from "@/lib/rentgen/groups";
-import type { ClickItem } from "@/lib/rentgen/types";
+import { GROUP_OF, type Group } from "@/lib/rentgen/groups";
+import type { OverlayItem } from "@/components/rentgen/shot-overlay";
 
 type ExportInput = {
   root: HTMLElement;
   shot: string;
   width: number;
   height: number;
-  items: Omit<ClickItem, "path">[];
+  items: OverlayItem[];
+  legend: { label: string; group: Group; count: number }[];
   film: boolean;
   host: string;
   subtitle: string;
@@ -75,16 +76,14 @@ export async function exportShot(input: ExportInput) {
   ctx.font = `400 15px ${body}`;
   ctx.fillText(input.subtitle, PAD, 76);
 
-  const counts: Record<Group, number> = { ok: 0, dead: 0, check: 0, unknown: 0 };
-  for (const item of items) counts[GROUP_OF[item.kind]] += 1;
   let x = PAD;
   ctx.font = `500 14px ${body}`;
-  for (const group of GROUPS) {
-    ctx.strokeStyle = colors[group.id];
+  for (const entry of input.legend) {
+    ctx.strokeStyle = colors[entry.group];
     ctx.lineWidth = 2;
     ctx.strokeRect(x + 1, 88, 12, 12);
     ctx.fillStyle = ink;
-    const text = `${group.label} ${counts[group.id]}`;
+    const text = `${entry.label} ${entry.count}`;
     ctx.fillText(text, x + 20, 99);
     x += 20 + ctx.measureText(text).width + 24;
   }

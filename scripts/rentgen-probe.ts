@@ -51,6 +51,10 @@ async function probe(url: string) {
         `  ${name}: ${view.width}×${view.height}${view.truncated ? " (обрезано)" : ""} · всего ${view.items.length} · ok ${count("ok")} · dead ${count("dead")} · fake ${count("fake")} · small ${count("small")} · unknown ${count("unknown")} · не прощёлкано ${view.unprobed}`,
       );
       for (const item of view.items.filter((i) => i.n)) console.log(`    #${item.n} ${item.kind} «${item.label.slice(0, 40)}» — ${item.reason}${item.status ? ` [${item.status}]` : ""}${item.href ? ` (${item.href.slice(0, 60)})` : ""} @${item.box.x},${item.box.y} ${item.box.w}×${item.box.h} ${item.path.slice(-90)}`);
+      const issues = view.issues ?? [];
+      const byRule = issues.reduce<Record<string, number>>((acc, issue) => ({ ...acc, [issue.rule]: (acc[issue.rule] ?? 0) + 1 }), {});
+      console.log(`    ошибки: ${issues.length} · ${Object.entries(byRule).map(([rule, count]) => `${rule} ${count}`).join(" · ") || "—"}`);
+      for (const issue of issues.slice(0, 6)) console.log(`      !${issue.n} ${issue.severity} «${issue.label.slice(0, 40)}» — ${issue.reason} @${issue.box.x},${issue.box.y} ${issue.box.w}×${issue.box.h}`);
       await annotate(view, join(OUT, `${host}-${name}.jpg`));
     }
   } catch (error) {

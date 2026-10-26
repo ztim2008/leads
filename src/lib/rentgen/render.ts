@@ -1,5 +1,6 @@
 import { CHROME_UA, MOBILE_UA, clearPopups, guard, openPage } from "@/lib/diagnost/render";
 import { COLLECT_CLICKS, FLATTEN_STICKY, PROBE_ARM, PROBE_DISPATCH, PROBE_READ, SCROLL_THROUGH, SCROLL_TO, TOGGLE_FIXED } from "@/lib/rentgen/collect";
+import { collectIssues } from "@/lib/rentgen/issues";
 import { rentgenShotPath } from "@/lib/rentgen/shots";
 import { checkLinks, pickLinks, type LinkCheck } from "@/lib/rentgen/links";
 import type { ClickItem, RawClick, RawView, RentgenResult, RentgenView, ViewKind } from "@/lib/rentgen/types";
@@ -246,6 +247,7 @@ async function renderView(
     userAgent: view === "desktop" ? CHROME_UA : MOBILE_UA,
     locale: "ru-RU",
     reducedMotion: "reduce",
+    bypassCSP: true,
     ...(view === "mobile" ? { deviceScaleFactor: 2, isMobile: true, hasTouch: true } : {}),
   });
   try {
@@ -261,6 +263,11 @@ async function renderView(
     const shot = rentgenShotPath(scanId, view);
     const height = await captureTiles(browser, page, view, Math.min(raw.docHeight, spec.maxHeight), shot);
     raw.items = raw.items.filter((item) => item.box.y < height);
+    // До пробных кликов: они открывают окна и меняют страницу
+    const issues = await collectIssues(page, view, height).catch((error) => {
+      console.error("[rentgen] issues", error instanceof Error ? error.message : error);
+      return undefined;
+    });
 
     const suspects = raw.items.filter(needsProbe).sort((a, b) => a.box.y - b.box.y);
     const bySig = new Map<string, string>();
@@ -272,7 +279,7 @@ async function renderView(
     const items = numberProblems(raw.items.map((item) => classify(item, known.get(item.sig), view, raw.items)));
     const unprobed = suspects.filter((item) => !known.has(item.sig)).length;
     return {
-      view: { shot, width: spec.width, height, truncated: raw.docHeight > spec.maxHeight, items, unprobed },
+      view: { shot, width: spec.width, height, truncated: raw.docHeight > spec.maxHeight, items, unprobed, issues },
       framework: raw.framework,
       finalUrl,
     };
