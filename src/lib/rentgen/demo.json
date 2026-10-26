@@ -1,243 +1,168 @@
 {
  "host": "leads.konversus.ru",
+ "report": "/rentgen/r/e5y24kqwdq3q",
  "width": 1440,
  "height": 1100,
  "shot": "/rentgen/demo.jpg",
  "items": [
   {
-   "label": "Продукты",
+   "label": "",
    "box": {
-    "x": 616,
+    "x": 1238,
     "y": 10,
-    "w": 113,
-    "h": 36
+    "w": 18,
+    "h": 18
    },
    "kind": "ok",
-   "reason": "Срабатывает по нажатию",
-   "n": null
-  },
-  {
-   "label": "Техосмотр",
-   "box": {
-    "x": 733,
-    "y": 10,
-    "w": 101,
-    "h": 36
-   },
-   "kind": "ok",
-   "href": "https://leads.konversus.ru/diagnost",
+   "href": "https://vk.com/",
    "reason": "Ссылка",
    "status": 200,
    "n": null
   },
   {
-   "label": "SEO-продвижение",
+   "label": "",
    "box": {
-    "x": 838,
+    "x": 1258,
     "y": 10,
-    "w": 152,
-    "h": 36
-   },
-   "kind": "ok",
-   "href": "https://leads.konversus.ru/seo",
-   "reason": "Ссылка",
-   "status": 200,
-   "n": null
-  },
-  {
-   "label": "Обо мне",
-   "box": {
-    "x": 993,
-    "y": 10,
-    "w": 99,
-    "h": 36
-   },
-   "kind": "ok",
-   "href": "https://konversus.ru/about",
-   "reason": "Ссылка",
-   "status": 200,
-   "n": null
-  },
-  {
-   "label": "Документация",
-   "box": {
-    "x": 1096,
-    "y": 10,
-    "w": 128,
-    "h": 36
-   },
-   "kind": "ok",
-   "href": "https://leads.konversus.ru/docs",
-   "reason": "Ссылка",
-   "status": 200,
-   "n": null
-  },
-  {
-   "label": "Контакты",
-   "box": {
-    "x": 1228,
-    "y": 10,
-    "w": 108,
-    "h": 36
+    "w": 18,
+    "h": 18
    },
    "kind": "ok",
    "contact": "messenger",
-   "href": "https://t.me/bilarius",
+   "href": "https://t.me/",
    "reason": "Мессенджер",
    "n": null
   },
   {
-   "label": "K Konversus",
+   "label": "",
    "box": {
-    "x": 104,
+    "x": 1278,
+    "y": 10,
+    "w": 18,
+    "h": 18
+   },
+   "kind": "ok",
+   "contact": "messenger",
+   "href": "https://wa.me/",
+   "reason": "Мессенджер",
+   "n": null
+  },
+  {
+   "label": "+7 921 000-00-00",
+   "box": {
+    "x": 445,
     "y": 12,
-    "w": 134,
-    "h": 32
+    "w": 103,
+    "h": 15
+   },
+   "kind": "dead",
+   "contact": "tel",
+   "href": "tel:+7921",
+   "reason": "Неполный номер телефона в ссылке",
+   "n": 1
+  },
+  {
+   "label": "Заказать звонок",
+   "box": {
+    "x": 1143,
+    "y": 55,
+    "w": 153,
+    "h": 40
+   },
+   "kind": "fake",
+   "reason": "Похоже на кнопку, но не нажимается",
+   "n": 2
+  },
+  {
+   "label": "Кедровый пар",
+   "box": {
+    "x": 144,
+    "y": 62,
+    "w": 152,
+    "h": 26
    },
    "kind": "ok",
-   "href": "https://leads.konversus.ru/",
+   "href": "https://leads.konversus.ru/rentgen/demo-site.html",
    "reason": "Ссылка",
    "status": 200,
    "n": null
   },
   {
-   "label": "Техосмотр сайта",
+   "label": "Проекты",
    "box": {
-    "x": 835,
-    "y": 215,
-    "w": 129,
+    "x": 328,
+    "y": 67,
+    "w": 60,
     "h": 17
    },
    "kind": "ok",
-   "href": "https://leads.konversus.ru/diagnost",
-   "reason": "Ссылка",
-   "status": 200,
-   "n": null
-  },
-  {
-   "label": "SEO-продвижение",
-   "box": {
-    "x": 835,
-    "y": 280,
-    "w": 136,
-    "h": 17
-   },
-   "kind": "ok",
-   "href": "https://leads.konversus.ru/seo",
-   "reason": "Ссылка",
-   "status": 200,
-   "n": null
-  },
-  {
-   "label": "Показ",
-   "box": {
-    "x": 835,
-    "y": 345,
-    "w": 42,
-    "h": 17
-   },
-   "kind": "ok",
-   "href": "https://leads.konversus.ru/pokaz",
-   "reason": "Ссылка",
-   "status": 200,
-   "n": null
-  },
-  {
-   "label": "Ловец лидов",
-   "box": {
-    "x": 835,
-    "y": 410,
-    "w": 93,
-    "h": 17
-   },
-   "kind": "ok",
-   "href": "https://leads.konversus.ru/lovec",
-   "reason": "Ссылка",
-   "status": 200,
-   "n": null
-  },
-  {
-   "label": "Telegram-консультант",
-   "box": {
-    "x": 835,
-    "y": 475,
-    "w": 166,
-    "h": 17
-   },
-   "kind": "ok",
-   "href": "https://chat.konversus.ru/",
-   "reason": "Ссылка",
-   "status": 200,
-   "n": null
-  },
-  {
-   "label": "Nordic Builder",
-   "box": {
-    "x": 835,
-    "y": 540,
-    "w": 100,
-    "h": 17
-   },
-   "kind": "ok",
-   "href": "https://nordic-builder.ru/",
-   "reason": "Ссылка",
-   "status": 200,
-   "n": null
-  },
-  {
-   "label": "Архитектор сайта",
-   "box": {
-    "x": 835,
-    "y": 605,
-    "w": 134,
-    "h": 17
-   },
-   "kind": "ok",
-   "href": "https://konversus.ru/architect",
-   "reason": "Ссылка",
-   "status": 200,
-   "n": null
-  },
-  {
-   "label": "Проверить сайт перед рекламой",
-   "box": {
-    "x": 176,
-    "y": 660,
-    "w": 312,
-    "h": 52
-   },
-   "kind": "ok",
-   "href": "https://leads.konversus.ru/diagnost",
-   "reason": "Ссылка",
-   "status": 200,
-   "n": null
-  },
-  {
-   "label": "Все сервисы",
-   "box": {
-    "x": 500,
-    "y": 660,
-    "w": 139,
-    "h": 52
-   },
-   "kind": "ok",
-   "href": "#services",
+   "href": "#projects",
    "reason": "Переход к блоку на странице",
    "n": null
   },
   {
-   "label": "Тайный покупатель",
+   "label": "Цены",
    "box": {
-    "x": 835,
-    "y": 670,
-    "w": 144,
+    "x": 416,
+    "y": 67,
+    "w": 39,
     "h": 17
    },
+   "kind": "dead",
+   "href": "https://leads.konversus.ru/rentgen/demo-prices.html",
+   "reason": "Страница по ссылке отвечает ошибкой 404",
+   "status": 404,
+   "n": 3
+  },
+  {
+   "label": "Отзывы",
+   "box": {
+    "x": 483,
+    "y": 67,
+    "w": 55,
+    "h": 17
+   },
+   "kind": "dead",
+   "href": "#reviews",
+   "reason": "Якорь ведёт на блок, которого нет на странице",
+   "n": 4
+  },
+  {
+   "label": "Доставка",
+   "box": {
+    "x": 566,
+    "y": 67,
+    "w": 64,
+    "h": 17
+   },
+   "kind": "dead",
+   "reason": "Ссылка никуда не ведёт и ничего не делает",
+   "n": 5
+  },
+  {
+   "label": "Рассчитать стоимость",
+   "box": {
+    "x": 144,
+    "y": 421,
+    "w": 235,
+    "h": 52
+   },
    "kind": "ok",
-   "href": "https://konversus.ru/dashboard/secret-shopper",
-   "reason": "Ссылка",
-   "status": 200,
+   "href": "#calc",
+   "reason": "Переход к блоку на странице",
    "n": null
+  },
+  {
+   "label": "Смотреть проекты",
+   "box": {
+    "x": 393,
+    "y": 421,
+    "w": 209,
+    "h": 52
+   },
+   "kind": "fake",
+   "reason": "Похоже на кнопку, но не нажимается",
+   "n": 6
   }
  ]
 }

@@ -54,14 +54,19 @@ export default async function RentgenPage() {
         </div>
 
         <figure className="rg-panel overflow-hidden">
-          <ShotOverlay shot={demo.shot} width={demo.width} height={demo.height} items={items} eager alt={`Снимок первого экрана ${demo.host} с рамками вокруг кнопок`} />
+          <ShotOverlay shot={demo.shot} width={demo.width} height={demo.height} items={items} eager alt="Снимок первого экрана демо-страницы с рамками вокруг кнопок" />
           <figcaption className="flex flex-wrap items-center justify-between gap-2 border-t px-4 py-3 text-[13px]" style={{ borderColor: "var(--rg-line)", color: "var(--rg-muted)" }}>
-            <span className="rg-mono" style={{ color: "var(--rg-ink)" }}>
-              {demo.host}
-            </span>
             <span>
-              Первый экран нашей главной: работают {working} из {items.length}
+              <a href="/rentgen/demo-site.html" target="_blank" rel="noopener noreferrer" className="rg-link">
+                Демо-страница
+              </a>{" "}
+              с заложенными ошибками: работают {working} из {items.length}
             </span>
+            {demo.report && (
+              <Link href={demo.report} className="rg-link">
+                Полный отчёт: клики, ошибки, внимание
+              </Link>
+            )}
           </figcaption>
         </figure>
       </section>

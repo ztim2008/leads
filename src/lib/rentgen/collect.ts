@@ -244,5 +244,7 @@ export const PROBE_READ = String.raw`async () => {
   await new Promise((r) => setTimeout(r, 650));
   state.mo.disconnect();
   window.__rg = null;
-  return { after: state.count, moved: location.href !== state.before || state.side };
+  // Смена одного #фрагмента — не реакция: так «срабатывают» href="#" и якорь на несуществующий блок
+  const page = (href) => href.split("#")[0];
+  return { after: state.count, moved: page(location.href) !== page(state.before) || state.side };
 }`;

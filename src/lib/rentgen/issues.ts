@@ -68,8 +68,9 @@ const COLLECT_ISSUES = String.raw`async (opts) => {
 
   if (opts.mobile) {
     const vw = document.documentElement.clientWidth;
+    // В режиме телефона Chromium растягивает окно раскладки под широкий контент: scrollX остаётся 0, зато innerWidth > clientWidth
     window.scrollTo(100, scrollY);
-    const scrolls = scrollX > 0;
+    const scrolls = scrollX > 0 || innerWidth > vw + 1;
     window.scrollTo(0, scrollY);
     if (scrolls) {
       const wide = Array.from(document.querySelectorAll("body *")).filter((el) => {
