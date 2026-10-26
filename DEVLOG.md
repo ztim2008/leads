@@ -1379,3 +1379,18 @@ Partner buys VPS, downloads zip, fills config.json (Profi login/password + Teleg
 ### Дальше
 - Отправить `/pokaz` на переобход в Яндекс Вебмастере.
 - При обновлении репозитория «Показа»: `npm run pokaz:sync && npm run build && pm2 restart leads-konversus`.
+
+---
+
+## ТЗ «Рентген сайта» · 26 октября 2026
+
+### Сделано
+- Разбор открытых решений для визуальной проверки сайта: Foveacast / MSI-Net (карта внимания, MIT, обучена на UEyes CC BY 4.0), HotGaze (Python), axe-core (ошибки доступности, MPL-2.0), Sa11y / ANDI / OAA (оверлеи-букмарклеты — во фрейм с чужим сайтом не встраиваются).
+- Решение: отдельный бесплатный сервис `/rentgen` на движке Техосмотра (`guard`, `openPage`, `clearPopups`, общая очередь в `leads-diagnost`, без нового PM2-процесса). Первый слой — «Клики»: рабочие, мёртвые, ложные кнопки и мелкие зоны нажатия на full-page снимке. Потом «Ошибки» (axe-core) и «Внимание» (MSI-Net).
+- ТЗ: `docs/RENTGEN.md`. План: D.13–D.18 ⚪.
+
+### Файлы
+- `docs/RENTGEN.md` (новый), `docs/PLAN_2026-08-10.md`, `AGENTS.md`, `DEVLOG.md`. Код не менялся.
+
+### Дальше
+- D.13: модель `RentgenScan`, `COLLECT_CLICKS`, прогон на 5 разных сайтах.

@@ -144,6 +144,7 @@ pm2 save
 | [docs/JOB_RADAR.md](docs/JOB_RADAR.md) | Вакансии HH для админа. Отдельно от заявок партнёров |
 | [docs/STRATEG.md](docs/STRATEG.md) | Стратег: аудит сайта и черновик Директа. Не Job Radar и не заявки |
 | [docs/STRATEG_ROADMAP.md](docs/STRATEG_ROADMAP.md) | Стратег: план развития R.1–R.6. Читать по запросу «развить Стратег» |
+| [docs/RENTGEN.md](docs/RENTGEN.md) | Рентген сайта `/rentgen`: ТЗ, слои «Клики» → «Ошибки» → «Внимание» |
 | [docs/devlog.md](docs/devlog.md) | Архив (июнь–июль 2026), только чтение |
 
 <!-- BEGIN:nextjs-agent-rules -->
