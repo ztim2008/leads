@@ -1356,3 +1356,26 @@ Partner buys VPS, downloads zip, fills config.json (Profi login/password + Teleg
 - Сравнить заявки пилота в день с прежними 7–9; если «бот» тянет лишнее — убрать.
 - Решить, у партнёра «Настя» тот же `telegram_chat_id` 1600729589 — ошибка или так задумано.
 - 4.11.4: логировать причину отказа фильтра на хабе.
+
+---
+
+## «Показ» на хабе · 26 октября 2026
+
+### Сделано
+- Новый сервис «Показ» ([responsive-showcase](https://github.com/ztim2008/responsive-showcase)) — предпросмотр сайта на ноутбуке, планшете и телефоне и PNG-композиция для клиента — включён в хаб по адресу `/pokaz`. Адрес `/seo` не трогали: там страница «SEO-продвижение».
+- Встраивание: статический `index.html` лежит в `public/pokaz/`, `/pokaz` → `/pokaz/index.html` через rewrite в `next.config.ts`. Во фрейм внутри страницы хаба не встраивали: PNG снимается захватом вкладки по координатам окна, шапка хаба сломала бы снимок.
+- `npm run pokaz:sync` (`scripts/pokaz-sync.mjs`) забирает файлы из GitHub и вносит правки: canonical/og:url на leads, путь к favicon, Метрика, ссылка «K Konversus /» в шапке. Если якорь в upstream исчез — падает с ошибкой. Руками `public/pokaz/` не править.
+- `products.ts`: продукт `pokaz` (статус «Новое», иконка MonitorSmartphone, флаг `staticPage` — ссылка обычным `<a>`, без клиентской навигации Next). Автоматически появился в мега-меню, мобильном меню, футере, списке в первом экране и «Все сервисы».
+- Главная: баннер «Показ: сайт на всех экранах за минуту» после SEO, иллюстрация слева (`src/components/pokaz/devices-art.tsx` — один и тот же сайт на трёх устройствах, сетка 3/2/1). «Показ» добавлен в «Директологам и агентствам». `/pokaz` в sitemap.
+
+### Файлы
+- `next.config.ts`, `package.json`, `scripts/pokaz-sync.mjs`, `public/pokaz/index.html`, `public/pokaz/favicon.svg`
+- `src/config/products.ts`, `src/app/page.tsx`, `src/components/pokaz/devices-art.tsx`, `src/app/sitemap.ts`
+- `DEVLOG.md`, `docs/PLAN_2026-08-10.md` (D.12 ✅)
+
+### Production
+- `npm run build` ✅ · перезапущен `leads-konversus` · `/`, `/pokaz`, `/seo`, `/sitemap.xml` → **200** · Profi на хабе **off** · агенты и радар не трогали.
+
+### Дальше
+- Отправить `/pokaz` на переобход в Яндекс Вебмастере.
+- При обновлении репозитория «Показа»: `npm run pokaz:sync && npm run build && pm2 restart leads-konversus`.

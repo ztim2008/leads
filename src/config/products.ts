@@ -1,4 +1,4 @@
-import { Gauge, Globe, LayoutTemplate, MessageCircle, Search, ShieldCheck, ShoppingBag, TrendingUp, Zap, type LucideIcon } from "lucide-react";
+import { Gauge, Globe, LayoutTemplate, MessageCircle, MonitorSmartphone, Search, ShieldCheck, ShoppingBag, TrendingUp, Zap, type LucideIcon } from "lucide-react";
 
 export type ProductStatus = "live" | "new" | "soon";
 
@@ -10,6 +10,8 @@ export type Product = {
   benefits: string[];
   href: string | null;
   external: boolean;
+  /** Статика из public/ (не маршрут Next) — ссылка обычным <a>, без клиентской навигации */
+  staticPage?: boolean;
   status: ProductStatus;
   icon: LucideIcon;
   audience: string;
@@ -48,6 +50,19 @@ export const PRODUCTS: Product[] = [
     status: "new",
     icon: TrendingUp,
     audience: "Владельцам бизнеса",
+  },
+  {
+    id: "pokaz",
+    name: "Показ",
+    tagline: "Сайт на ноутбуке, планшете и телефоне",
+    description: "Вставьте адрес — сайт откроется сразу на трёх экранах. Расставьте устройства, выберите фон и скачайте PNG для презентации клиенту.",
+    benefits: ["Три экрана одновременно", "PNG-композиция для клиента", "Без регистрации и установки"],
+    href: "/pokaz",
+    external: false,
+    staticPage: true,
+    status: "new",
+    icon: MonitorSmartphone,
+    audience: "Директологам и агентствам",
   },
   {
     id: "lovec",

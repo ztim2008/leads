@@ -1,0 +1,452 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#cbd0d2">
+  <meta name="description" content="Проверьте сайт на экранах ноутбука, планшета и телефона. Настройте фон, перетащите устройства и скачайте PNG-композицию.">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="ru_RU">
+  <meta property="og:site_name" content="Показ">
+  <meta property="og:title" content="Показ — предпросмотр сайта на разных устройствах">
+  <meta property="og:description" content="Проверьте адаптивность сайта на экранах ноутбука, планшета и телефона. Создайте композицию и сохраните PNG.">
+  <meta property="og:url" content="https://leads.konversus.ru/pokaz">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="Показ — предпросмотр сайта на разных устройствах">
+  <meta name="twitter:description" content="Проверьте адаптивность сайта на экранах ноутбука, планшета и телефона. Создайте композицию и сохраните PNG.">
+  <link rel="canonical" href="https://leads.konversus.ru/pokaz">
+  <link rel="icon" href="/pokaz/favicon.svg" type="image/svg+xml">
+  <title>Показ — предпросмотр сайта на разных устройствах</title>
+  <style>
+    :root { color-scheme: light; --ink:#181e22; --muted:#59636a; --line:#aeb7bb; --paper:#cbd0d2; --canvas:#b6bec2; --accent:#f15b22; --dark:#20272b; --raised:#e7eaeb; --on-field:#f2f4f4; --on-field-muted:#d8dee1; --shadow:0 2px 0 #f5f6f6 inset,0 -3px 0 #aeb5b8 inset,0 7px 18px #46505724; }
+    * { box-sizing:border-box }
+    body { margin:0; background:#aeb5b8; color:var(--ink); font:14px/1.45 "Arial", ui-sans-serif, system-ui, sans-serif; }
+    button,input { font:inherit }
+    button { cursor:pointer }
+    .topbar { height:66px; display:flex; align-items:center; justify-content:space-between; padding:0 4.5vw; border:1px solid #e7eaeb; border-bottom-color:#9ca6aa; background:linear-gradient(115deg,#d5d9da,#c4cacc); box-shadow:0 3px 10px #313a401c; }
+    .brand { display:flex; align-items:center; gap:10px; font-size:15px; font-weight:700; letter-spacing:-.04em }
+    .brand-mark { width:25px; height:25px; display:grid; place-items:center; border-radius:4px; background:var(--dark); color:var(--accent); font-size:14px }
+    .top-right { display:flex; align-items:center; gap:10px }
+    .saved { color:var(--muted); font-size:12px }
+    .btn { border:1px solid #aeb7bb; background:var(--raised); color:var(--ink); padding:9px 14px; border-radius:4px; font-size:12px; font-weight:600; box-shadow:var(--shadow); transition:transform 140ms,box-shadow 140ms,background 140ms }
+    .btn:hover { transform:translateY(-1px); background:#f2f4f4 }
+    .btn:active { transform:translateY(1px); box-shadow:inset 0 2px 5px #3b464b30 }
+    :focus-visible { outline:3px solid var(--accent)!important; outline-offset:3px }
+    .btn.primary { border-color:var(--dark); background:var(--dark); color:white; box-shadow:0 2px 0 #5e696f inset,0 -2px 0 #101518 inset,0 5px 10px #20272b30 }
+    .btn.primary:hover { background:#383a32 }
+    main { width:min(1480px, 96vw); margin:20px auto; padding:40px 34px 35px; border:1px solid #edf0f0; border-radius:18px; background:linear-gradient(140deg,#d2d7d9,#c4cacc 70%,#bbc2c5); box-shadow:0 3px 0 #f1f3f3 inset,0 -5px 0 #a5adb0 inset,0 22px 50px #333d4328; position:relative }
+    .intro { display:flex; justify-content:space-between; align-items:flex-end; gap:30px; margin-bottom:29px }
+    .eyebrow { font-size:10px; text-transform:uppercase; letter-spacing:.16em; font-weight:700; color:var(--muted); margin-bottom:11px }
+    h1 { font-size:clamp(34px,5vw,62px); letter-spacing:-.055em; line-height:.98; margin:0; font-weight:750 }
+    .sub { color:var(--muted); margin:10px 0 0; font-size:13px }
+    .site-link { display:flex; align-items:center; gap:0; border:1px solid #667279; border-radius:4px; overflow:hidden; width:min(520px,52vw); background:#20272b; box-shadow:inset 0 3px 8px #080b0d70,0 1px 0 #eef0f0; }
+    .site-link input { border:0; outline:0; min-width:0; flex:1; padding:12px 14px; color:#f2f4f4; background:transparent; font-size:12px }
+    .site-link button { align-self:stretch; border:0; border-left:1px solid #49545a; background:#e7eaeb; color:#181e22; padding:0 15px; font-size:12px; font-weight:650 }
+    .site-link button:hover { background:#f4f3ee }
+    .toolbar { display:flex; align-items:center; justify-content:space-between; border:1px solid #a9b1b4; border-radius:6px; padding:9px; margin:28px 0 10px; background:#c1c7c9; box-shadow:inset 0 2px 4px #7d898d30,0 1px #eef0f0; }
+    .tabs { display:flex; gap:4px; align-items:center }
+    .tab { border:0; background:transparent; color:var(--muted); padding:8px 12px; border-radius:6px; font-size:12px; font-weight:600 }
+    .tab.active { background:#20272b; color:#f2f4f4; box-shadow:inset 0 2px 4px #111719 }
+    .view-actions { display:flex; gap:8px; align-items:center }
+    .view-actions .btn { padding:8px 12px }
+    .device-toggles { display:flex; align-items:center; gap:12px; padding:10px 0 13px; color:#64665d; font-size:11px; }
+    .device-toggles strong { color:#42443c; font-size:11px; margin-right:2px }
+    .device-toggles label { display:flex; align-items:center; gap:5px; cursor:pointer }
+    .device-toggles input { accent-color:#35372f }
+    .drag-hint { margin-left:auto; color:#92938b; font-size:10px }
+    .reset-layout { border:0; background:transparent; color:#55574f; font-size:10px; text-decoration:underline; text-underline-offset:3px; padding:2px 0; cursor:pointer }
+    .board { min-height:600px; background:var(--board-bg,var(--canvas)); border:9px solid #323a3e; border-radius:8px; padding:25px 22px; overflow:hidden; position:relative; box-shadow:inset 0 4px 13px #080b0d70,inset 0 0 0 1px #627077,0 2px 0 #eef0f0; transition:background-color 140ms }
+    .board.transparent { background-color:transparent; background-image:linear-gradient(45deg,#d5dadd 25%,transparent 25%),linear-gradient(-45deg,#d5dadd 25%,transparent 25%),linear-gradient(45deg,transparent 75%,#d5dadd 75%),linear-gradient(-45deg,transparent 75%,#d5dadd 75%); background-size:18px 18px; background-position:0 0,0 9px,9px -9px,-9px 0 }
+    .board-head { display:flex; justify-content:space-between; align-items:center; margin:0 4px 22px; color:#d8dee1; font:11px/1.3 ui-monospace,monospace; text-transform:uppercase; letter-spacing:.12em; font-weight:700 }
+    .board-head span:last-child { font-weight:500; letter-spacing:.04em; text-transform:none }
+    .devices { display:flex; justify-content:center; align-items:center; gap:clamp(12px,1.3vw,22px); min-height:490px; position:relative }
+    .device { display:flex; flex-direction:column; align-items:center; min-width:0; position:relative; cursor:grab; touch-action:none; user-select:none; --dx:0px; --dy:0px; transform:translate(var(--dx),var(--dy)); filter:drop-shadow(0 12px 8px #0c111440); transition:filter 140ms }
+    .device:hover { filter:drop-shadow(0 16px 10px #0c111455) }
+    .device:active { cursor:grabbing }
+    .device-label { margin-top:13px; width:100%; display:flex; justify-content:space-between; gap:12px; color:#d8dee1; font:10px ui-monospace,monospace; background:#313a3e; border:1px solid #6b777c; border-radius:4px; padding:7px 9px; cursor:grab }
+    .device-label:before { content:"⠿"; color:var(--accent); font-size:14px; line-height:10px }
+    .device-label strong { color:#f2f4f4; font-weight:650 }
+    .screen { background:white; overflow:hidden; position:relative; border:1px solid #d6d5ce; }
+    .screen iframe { position:absolute; left:0; top:0; border:0; background:white; display:block; transform-origin:top left }
+    .desktop-frame { width:min(52vw,680px); height:auto; aspect-ratio:16 / 10; border:9px solid #30383c; border-bottom-width:16px; border-radius:7px 7px 3px 3px; box-shadow:0 2px 0 #859095 inset,0 -2px 0 #121719 inset,0 0 0 1px #68747a; }
+    .desktop-frame:after { content:""; position:absolute; z-index:2; width:24%; height:8px; bottom:-16px; left:38%; border-radius:0 0 5px 5px; background:#98a1a4; box-shadow:0 1px 0 #e3e7e8 inset; }
+    .tablet-frame { width:245px; height:auto; aspect-ratio:3 / 4; border:9px solid #30383c; border-radius:14px; padding:0; box-shadow:0 2px 0 #859095 inset,0 0 0 1px #68747a; }
+    .tablet-frame:after { content:"";position:absolute;z-index:2;width:5px;height:5px;top:50%;right:-7px;border-radius:50%;background:#9da6a9 }
+    .phone-frame { width:156px; height:auto; aspect-ratio:390 / 844; border:8px solid #30383c; border-radius:22px; box-shadow:0 2px 0 #859095 inset,0 0 0 1px #68747a; }
+    .phone-frame:before { content:""; position:absolute; z-index:1; width:48px; height:12px; top:0; left:calc(50% - 24px); background:#30383c; border-radius:0 0 9px 9px; }
+    .composition-hint { position:absolute; left:50%; bottom:8px; transform:translateX(-50%); color:#d8dee1; font:11px ui-monospace,monospace; white-space:nowrap; background:#20272b; padding:7px 11px; border:1px solid #58646a; border-radius:4px; pointer-events:none }
+    .board.presentation-export { border:0; border-radius:0; padding:30px 24px; box-shadow:none; background-image:radial-gradient(ellipse at 18% 18%,#ffffff3b,transparent 34%),radial-gradient(ellipse at 84% 82%,#f15b2238,transparent 32%),linear-gradient(135deg,var(--board-bg,#b6bec2),#26364b) }
+    .board.presentation-export .board-head,.board.presentation-export .device-label,.board.presentation-export .composition-hint { display:none!important }
+    .board.presentation-export .devices { min-height:520px; gap:clamp(18px,2vw,34px) }
+    .board.presentation-export .device { transform:translate(var(--dx),var(--dy)) scale(1.04); transition:none }
+    .canvas-controls { display:flex; flex-wrap:wrap; align-items:center; gap:9px; margin:0 0 14px; color:#414b52; font:11px ui-monospace,monospace }
+    .canvas-controls input[type=color] { width:34px;height:29px;padding:2px;border:1px solid #8d989c;border-radius:4px;background:#e7eaeb;cursor:pointer }
+    .canvas-controls .btn { padding:7px 10px }
+    .canvas-controls label { display:flex;align-items:center;gap:7px }
+    .export-note { color:#59636a;font:10px ui-monospace,monospace }
+    .export-status { flex-basis:100%; color:#414b52; font:11px/1.4 ui-monospace,monospace; min-height:1.4em }
+    .preview-notice { display:flex;justify-content:space-between;align-items:center;gap:12px;margin:12px 0;padding:10px 12px;border:1px solid #818d92;border-radius:4px;background:#e7eaeb;color:#414b52;font-size:12px }
+    .preview-notice a { color:#181e22;font-weight:700;white-space:nowrap }
+    .preview-notice[hidden] { display:none }
+    .preview-notice .btn { flex:none;white-space:nowrap }
+    .device.hidden { display:none }
+    .empty { position:absolute; inset:0; display:none; flex-direction:column; justify-content:center; align-items:center; text-align:center; padding:24px; background:rgba(240,239,233,.96); color:var(--ink) }
+    .empty.show { display:flex }
+    .empty strong { font-size:15px; margin-bottom:7px }
+    .empty span { color:var(--muted); max-width:330px; font-size:12px }
+    .foot { display:flex; justify-content:space-between; gap:20px; padding:21px 4px 0; color:#85867e; font-size:10px }
+    .foot a { color:#575951; text-decoration:none }
+    .foot a:hover { text-decoration:underline }
+    @media (max-width:850px) and (min-width:561px) { main { width:96vw; padding:30px 24px } .intro { align-items:flex-start; flex-direction:column; gap:18px } .site-link { width:100% } .board { padding:20px 18px; min-height:0 } .devices { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 24px;min-height:0;padding-bottom:40px } .device[data-device="desktop"] { grid-column:1 / -1 } .desktop-frame { width:min(100%,680px) } .tablet-frame { width:min(100%,245px) } .phone-frame { width:min(100%,170px) } .device-label { max-width:100% } .composition-hint {bottom:3px} .preview-notice {align-items:flex-start} }
+    @media (max-width:1100px) { .board.presentation-export .devices { gap:12px } .board.presentation-export .device { transform:translate(var(--dx),var(--dy)) scale(.84) } }
+    @media (max-width:560px) { .topbar { padding:0 4vw } .saved { display:none } main { width:96vw; margin:10px auto;padding:24px 12px;border-radius:12px } h1 { font-size:32px } .toolbar { align-items:flex-start; gap:12px; flex-direction:column } .view-actions { width:100%; justify-content:space-between } .device-toggles { flex-wrap:wrap; gap:8px 12px } .drag-hint { width:100%; margin:0 } .board { padding:16px 10px; min-height:0 } .board-head { margin-bottom:16px;font-size:9px } .devices { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));min-height:0;align-items:start;gap:18px 10px;padding-bottom:0 } .device[data-device="desktop"] { grid-column:1 / -1;order:3 } .device[data-device="tablet"] {order:1} .device[data-device="phone"] {order:2} .desktop-frame { width:100% } .tablet-frame { width:min(100%,190px) } .phone-frame { width:min(100%,150px) } .device-label { margin-top:8px;padding:6px 5px;gap:4px;font-size:8px } .device-label:before {font-size:11px} .composition-hint {position:static;transform:none;grid-column:1 / -1;order:4;margin:0 auto;max-width:100%;white-space:normal;text-align:center;font-size:10px}.preview-notice {align-items:flex-start;flex-direction:column}.export-status {font-size:10px}.foot { flex-direction:column; gap:8px } }
+    @media (prefers-reduced-motion:reduce) { *,*:before,*:after { transition:none!important;scroll-behavior:auto!important } }
+    @media print { body { background:white } .topbar,.intro .site-link,.toolbar,.foot { display:none!important } main { width:100%; padding:0 } .intro { margin:0 0 14px } .intro h1 { font-size:24px } .board { border:0; background:#f0efe9; min-height:0; padding:18px } .devices { min-height:0 } .desktop-frame { width:54vw; height:350px } .device.hidden { display:flex!important } }
+  </style>
+<style>
+    .kv-hub { display:flex; align-items:center; gap:8px; color:var(--muted); text-decoration:none; letter-spacing:-.02em }
+    .kv-hub:hover { color:var(--ink) }
+    .kv-mark { width:25px; height:25px; display:grid; place-items:center; border-radius:4px; background:linear-gradient(135deg,#22c55e,#3b82f6); color:#fff; font-size:13px; font-weight:800 }
+    .kv-sep { color:var(--line); font-weight:400 }
+    @media (max-width:560px) { .kv-name { display:none } }
+  </style>
+  <script>(function(m,e,t,r,i,k,a){m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};m[i].l=1*new Date();for(var j=0;j<document.scripts.length;j++){if(document.scripts[j].src===r)return}k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)})(window,document,"script","https://mc.yandex.ru/metrika/tag.js?id=113690601","ym");ym(113690601,"init",{webvisor:true,clickmap:true,trackLinks:true,accurateTrackBounce:true});</script>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><a class="kv-hub" href="/" title="Konversus — все сервисы"><span class="kv-mark">K</span><span class="kv-name">Konversus</span></a><span class="kv-sep">/</span><span class="brand-mark">P</span> показ</div>
+    <div class="top-right"><span class="saved" id="saved">Ссылка сохраняется в браузере</span><button class="btn" id="restart" type="button">↻ Перезапустить демо</button><button class="btn" id="print">Скачать PDF</button></div>
+  </header>
+  <main>
+    <section class="intro">
+      <div><div class="eyebrow">Презентация сайта · 2026</div><h1 id="projectTitle">Ваш новый сайт</h1><p class="sub">Один адрес — на всех экранах.</p></div>
+      <form class="site-link" id="urlForm"><input id="urlInput" type="url" value="" aria-label="Адрес сайта" placeholder="https://example.com"><button type="submit">Показать сайт ↗</button></form>
+    </section>
+    <section class="toolbar">
+      <div class="tabs" aria-label="Вид"><button class="tab active" data-view="all">Все устройства</button><button class="tab" data-view="desktop">Десктоп</button><button class="tab" data-view="tablet">Планшет</button><button class="tab" data-view="phone">Телефон</button></div>
+      <div class="view-actions"><button class="btn" id="openSite">Открыть сайт ↗</button><button class="btn primary" id="refresh">Обновить просмотр</button></div>
+    </section>
+    <div class="device-toggles"><strong>Показать:</strong><label><input type="checkbox" data-toggle="desktop" checked> Ноутбук</label><label><input type="checkbox" data-toggle="tablet" checked> Планшет</label><label><input type="checkbox" data-toggle="phone" checked> Телефон</label><span class="drag-hint">Перетаскивайте устройства за подпись</span><button class="reset-layout" id="resetLayout">Сбросить композицию</button></div>
+    <div class="canvas-controls" aria-label="Настройки фона и экспорта"><label for="backgroundColor">Фон холста <input id="backgroundColor" type="color" value="#b6bec2"></label><button class="btn" id="transparentBg" type="button" aria-pressed="false">Прозрачный фон</button><button class="btn primary" id="downloadPng" type="button">PNG для презентации ↓</button><span class="export-note">Разрешите захват этой вкладки — экраны устройств будут сняты в полном размере.</span><span class="export-status" id="exportStatus" role="status" aria-live="polite"></span></div>
+    <section class="board">
+      <div class="board-head"><span>Предпросмотр адаптивности</span><span id="domain">Тёплая форма</span></div>
+      <div class="devices">
+        <div class="device" data-device="desktop"><div class="screen desktop-frame"><iframe title="Предпросмотр сайта на десктопе"></iframe></div><div class="device-label"><strong>Ноутбук</strong><span>1440 × 900</span></div></div>
+        <div class="device" data-device="tablet"><div class="screen tablet-frame"><iframe title="Предпросмотр сайта на планшете"></iframe></div><div class="device-label"><strong>Планшет</strong><span>768 × 1024</span></div></div>
+        <div class="device" data-device="phone"><div class="screen phone-frame"><iframe title="Предпросмотр сайта на телефоне"></iframe></div><div class="device-label"><strong>Телефон</strong><span>390 × 844</span></div></div>
+        <div class="composition-hint">⠿ Перетащите устройства, чтобы собрать композицию</div>
+      </div>
+    </section>
+    <aside class="preview-notice" id="previewNotice"><span id="previewMessage">Встроенный демонстрационный сайт — можно сразу посмотреть композицию или ввести адрес своего сайта.</span><button class="btn" id="showDemo" type="button">Показать демо-сайт</button><a id="openBlockedSite" href="#" target="_blank" rel="noopener" hidden>Открыть сайт ↗</a></aside>
+    <footer class="foot"><span>Подготовлено для обсуждения дизайна и адаптивности</span><span>Если сайт блокирует просмотр, нажмите «Открыть сайт». Предпросмотр может отличаться от настоящего устройства.</span></footer>
+  </main>
+  <script>
+    const urlInput = document.querySelector('#urlInput');
+    const frames = [...document.querySelectorAll('iframe')];
+    const viewports = { desktop: [1440, 900], tablet: [768, 1024], phone: [390, 844] };
+    const demoDocument = `<!doctype html><html lang="ru"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>*{box-sizing:border-box}body{margin:0;background:#f6f4ee;color:#192326;font:15px/1.5 Arial,sans-serif}.nav{height:66px;padding:0 7%;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #d9ddd6}.brand{font-size:12px;font-weight:800;letter-spacing:.12em}.brand b{color:#d66a42}.links{display:flex;gap:22px;font-size:11px;color:#64706b}.nav button,.cta{border:0;border-radius:3px;background:#1e2928;color:white;padding:11px 16px;font-size:11px;font-weight:700}.hero{min-height:480px;padding:9% 8%;display:grid;grid-template-columns:1.1fr .9fr;align-items:center;gap:5%;background:radial-gradient(ellipse at 80% 42%,#dce5dc,transparent 42%),#f6f4ee}.eyebrow{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#c26342;font-weight:700}.hero h1{font:500 clamp(34px,5vw,68px)/.98 Georgia,serif;letter-spacing:-.05em;margin:20px 0;max-width:600px}.hero p{max-width:380px;color:#67716a;font-size:14px}.cta{display:inline-block;margin-top:12px;text-decoration:none;background:#d66a42}.art{height:310px;position:relative;border-radius:48% 48% 8px 8px;background:linear-gradient(145deg,#c5d2c6,#e8d8c4 58%,#d39168);overflow:hidden}.sun{position:absolute;width:110px;height:110px;border-radius:50%;background:#f7e9c8;right:18%;top:16%;box-shadow:0 0 60px #fff8}.hill{position:absolute;left:-5%;right:-5%;bottom:-18%;height:60%;border-radius:50% 50% 0 0;background:#61746b;transform:rotate(-8deg)}.hill:after{content:'';position:absolute;width:120%;height:70%;top:34%;left:20%;border-radius:50% 50% 0 0;background:#344b48;transform:rotate(12deg)}.note{position:absolute;bottom:16px;left:16px;background:#f6f4ee;padding:9px 12px;font-size:10px;letter-spacing:.08em}.section{padding:44px 8%;background:#fff}.section small{color:#c26342;letter-spacing:.14em;text-transform:uppercase}.section h2{font:500 30px Georgia,serif;margin:10px 0 24px}.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.card{padding:16px;background:#f1f2ec;min-height:100px}.card b{display:block;font:18px Georgia,serif;margin-bottom:7px}.card span{font-size:11px;color:#67716a}@media(max-width:620px){.nav{height:54px;padding:0 6%}.links{display:none}.nav button{padding:9px;font-size:9px}.hero{grid-template-columns:1fr;gap:24px;padding:13% 8%;min-height:0}.hero h1{font-size:42px}.hero p{font-size:13px}.art{height:210px}.section{padding:30px 8%}.section h2{font-size:25px}.cards{grid-template-columns:1fr}.card{min-height:75px}}</style><body><header class="nav"><div class="brand"><b>●</b> ТЁПЛАЯ ФОРМА</div><div class="links"><span>Проекты</span><span>Подход</span><span>Контакты</span></div><button>Обсудить проект</button></header><main><section class="hero"><div><div class="eyebrow">Архитектурная мастерская</div><h1>Тихая архитектура для жизни</h1><p>Проектируем дома и интерьеры, в которых свет, материалы и повседневные детали складываются в единое целое.</p><a class="cta" href="#about">Обсудить проект ↗</a></div><div class="art"><div class="sun"></div><div class="hill"></div><div class="note">ДОМ «СЕВЕРНЫЙ САД» · 2026</div></div></section><section class="section" id="about"><small>Избранные проекты</small><h2>Пространства с характером</h2><div class="cards"><div class="card"><b>01 — Дома</b><span>Частные дома с вниманием к свету и ландшафту.</span></div><div class="card"><b>02 — Интерьеры</b><span>Цельные пространства от планировки до деталей.</span></div><div class="card"><b>03 — Сопровождение</b><span>Помогаем проекту пройти путь от эскиза до реализации.</span></div></div></section></main></body></html>`;
+    function fitFrames() {
+      frames.forEach(frame => {
+        const box = frame.parentElement;
+        const [width, height] = viewports[box.parentElement.dataset.device];
+        frame.style.width = width + 'px'; frame.style.height = height + 'px';
+        const scale = Math.min(box.clientWidth / width, box.clientHeight / height);
+        frame.style.transform = `scale(${scale})`;
+      });
+    }
+    const cleanUrl = value => { let u; try { u = new URL(value); } catch { u = new URL('https://' + value); } if (!['http:','https:'].includes(u.protocol)) throw new Error('URL'); return u; };
+    function loadSite(value, updateAddress = true) {
+      try {
+        const url = cleanUrl(value);
+        const normalized = url.href;
+        if (updateAddress) urlInput.value = normalized;
+        document.querySelector('#domain').textContent = url.hostname;
+        document.querySelector('#openBlockedSite').href = normalized;
+        document.querySelector('#projectTitle').textContent = url.hostname.replace(/^www\./,'');
+        document.title = url.hostname + ' — презентация сайта';
+        frames.forEach(frame => { frame.dataset.current = normalized; frame.removeAttribute('srcdoc'); frame.src = normalized; });
+        document.querySelector('#previewMessage').textContent = `Если ${url.hostname} не отображается, сайт может запрещать показ внутри iframe. Откройте его отдельно или переключитесь на нейтральный макет.`;
+        document.querySelector('#previewNotice').hidden = false;
+        document.querySelector('#openBlockedSite').href = normalized;
+        document.querySelector('#openBlockedSite').hidden = false;
+        requestAnimationFrame(fitFrames);
+        history.replaceState({}, '', '?url=' + encodeURIComponent(normalized));
+        localStorage.setItem('showcaseUrl', normalized);
+        return normalized;
+      } catch { urlInput.focus(); urlInput.setCustomValidity('Введите корректную ссылку на сайт'); urlInput.reportValidity(); return null; }
+    }
+    function showDemo() {
+      urlInput.value = '';
+      localStorage.removeItem('showcaseUrl');
+      history.replaceState({}, '', location.pathname);
+      frames.forEach(frame => { frame.removeAttribute('src'); frame.srcdoc = demoDocument; });
+      document.querySelector('#domain').textContent = 'Демо-сайт · Тёплая форма';
+      document.querySelector('#projectTitle').textContent = 'Тёплая форма';
+      document.title = 'Демо-сайт «Тёплая форма» — Показ';
+      document.querySelector('#previewMessage').textContent = 'Демонстрационный сайт студии архитектуры. Вставьте адрес своего сайта, чтобы посмотреть его на разных устройствах.';
+      document.querySelector('#openBlockedSite').hidden = true;
+      document.querySelector('#previewNotice').hidden = true;
+      requestAnimationFrame(fitFrames);
+    }
+    document.querySelector('#showDemo').addEventListener('click', showDemo);
+    document.querySelector('#urlForm').addEventListener('submit', e => { e.preventDefault(); urlInput.setCustomValidity(''); loadSite(urlInput.value); });
+    document.querySelector('#refresh').addEventListener('click', () => loadSite(urlInput.value));
+    document.querySelector('#openSite').addEventListener('click', () => { if (!urlInput.value.trim()) return; const u = cleanUrl(urlInput.value); window.open(u.href, '_blank', 'noopener'); });
+    document.querySelector('#print').addEventListener('click', () => window.print());
+    let activeView = 'all';
+    const enabled = { desktop: true, tablet: true, phone: true };
+    function applyVisibility() {
+      document.querySelectorAll('.device').forEach(device => {
+        const key = device.dataset.device;
+        device.classList.toggle('hidden', !enabled[key] || (activeView !== 'all' && activeView !== key));
+      });
+    }
+    document.querySelectorAll('.tab').forEach(tab => tab.addEventListener('click', () => {
+      activeView = tab.dataset.view;
+      document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t === tab));
+      applyVisibility();
+    }));
+    document.querySelectorAll('[data-toggle]').forEach(input => input.addEventListener('change', () => {
+      enabled[input.dataset.toggle] = input.checked;
+      applyVisibility();
+    }));
+    document.querySelector('#resetLayout').addEventListener('click', () => {
+      document.querySelectorAll('.device').forEach(device => {
+        device.style.setProperty('--dx', '0px'); device.style.setProperty('--dy', '0px'); device.style.zIndex = '';
+      });
+    });
+    document.querySelector('#restart').addEventListener('click', () => {
+      activeView = 'all';
+      document.querySelectorAll('.tab').forEach(tab => tab.classList.toggle('active', tab.dataset.view === 'all'));
+      Object.keys(enabled).forEach(key => { enabled[key] = true; document.querySelector(`[data-toggle="${key}"]`).checked = true; });
+      document.querySelectorAll('.device').forEach(device => { device.style.setProperty('--dx', '0px'); device.style.setProperty('--dy', '0px'); device.style.zIndex = ''; });
+      setBoardBackground('#b6bec2', false);
+      showDemo();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+    const board = document.querySelector('.board');
+    const bgPicker = document.querySelector('#backgroundColor');
+    const transparentButton = document.querySelector('#transparentBg');
+    function setBoardBackground(color, transparent = false) {
+      board.classList.toggle('transparent', transparent);
+      board.style.setProperty('--board-bg', color);
+      bgPicker.value = color;
+      transparentButton.setAttribute('aria-pressed', String(transparent));
+      localStorage.setItem('showcaseBg', color);
+      localStorage.setItem('showcaseBgTransparent', String(transparent));
+    }
+    bgPicker.addEventListener('input', () => setBoardBackground(bgPicker.value, false));
+    transparentButton.addEventListener('click', () => setBoardBackground(bgPicker.value, !board.classList.contains('transparent')));
+    setBoardBackground(localStorage.getItem('showcaseBg') || '#b6bec2', localStorage.getItem('showcaseBgTransparent') === 'true');
+    function waitForPaint(video) {
+      return new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(() => {
+        if (video.requestVideoFrameCallback) video.requestVideoFrameCallback(() => resolve());
+        else setTimeout(resolve, 100);
+      })));
+    }
+    async function captureIframeViewport(video, frame, width, height) {
+      const scaleX = video.videoWidth / window.innerWidth;
+      const scaleY = video.videoHeight / window.innerHeight;
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(width * scaleX));
+      canvas.height = Math.max(1, Math.round(height * scaleY));
+      const context = canvas.getContext('2d');
+      for (let y = 0; y < height; y += window.innerHeight) {
+        for (let x = 0; x < width; x += window.innerWidth) {
+          frame.style.left = `${-x}px`;
+          frame.style.top = `${-y}px`;
+          await waitForPaint(video);
+          const cssWidth = Math.min(window.innerWidth, width - x);
+          const cssHeight = Math.min(window.innerHeight, height - y);
+          const pixelWidth = Math.min(video.videoWidth, Math.round(cssWidth * scaleX));
+          const pixelHeight = Math.min(video.videoHeight, Math.round(cssHeight * scaleY));
+          context.drawImage(video, 0, 0, pixelWidth, pixelHeight,
+            Math.round(x * scaleX), Math.round(y * scaleY), pixelWidth, pixelHeight);
+        }
+      }
+      return canvas;
+    }
+    function downloadSvgAsPng(svg, width, height, status, filename = 'showcase-presentation.png') {
+      return new Promise((resolve, reject) => {
+        const svgUrl = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }));
+        const image = new Image();
+        image.onerror = () => { URL.revokeObjectURL(svgUrl); reject(new Error('Не удалось собрать PNG')); };
+        image.onload = () => {
+          URL.revokeObjectURL(svgUrl);
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const context = canvas.getContext('2d');
+          context.drawImage(image, 0, 0);
+          canvas.toBlob(blob => {
+            if (!blob) { reject(new Error('Браузер не смог создать PNG')); return; }
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+            setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+            status.textContent = `PNG-презентация готова: ${width} × ${height} px.`;
+            resolve();
+          }, 'image/png');
+        };
+        image.src = svgUrl;
+      });
+    }
+    function makePresentationSvg(records, canvasWidth, canvasHeight, background, transparent) {
+      const defs = `<defs><linearGradient id="scene" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${background}"/><stop offset="1" stop-color="#26364b"/></linearGradient><radialGradient id="glow"><stop offset="0" stop-color="#ffffff" stop-opacity=".24"/><stop offset="1" stop-color="#ffffff" stop-opacity="0"/></radialGradient><filter id="shadow" x="-30%" y="-30%" width="160%" height="175%"><feGaussianBlur in="SourceAlpha" stdDeviation="12"/><feOffset dy="14"/><feComponentTransfer><feFuncA type="linear" slope=".42"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>${records.map((item, i) => `<clipPath id="screen-${i}" clipPathUnits="userSpaceOnUse"><rect x="${item.left}" y="${item.top}" width="${item.width}" height="${item.height}" rx="${item.corner}"/></clipPath>`).join('')}</defs>`;
+      let shapes = '';
+      records.forEach((item, i) => {
+        const x = item.left, y = item.top, w = item.width, h = item.height;
+        const pad = item.pad, bottom = item.bottom, r = item.radius;
+        const baseY = y + h + pad + bottom;
+        shapes += `<g filter="url(#shadow)"><rect x="${x - pad}" y="${y - pad}" width="${w + pad * 2}" height="${h + pad * 2 + bottom}" rx="${r}" fill="#30383c" stroke="#879196" stroke-width="2"/><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${item.corner}" fill="#f2f4f4"/><image x="${x}" y="${y}" width="${w}" height="${h}" href="${item.image}" preserveAspectRatio="none" clip-path="url(#screen-${i})"/>`;
+        if (item.key === 'phone') shapes += `<rect x="${x + w / 2 - item.notchWidth / 2}" y="${y - 1}" width="${item.notchWidth}" height="${item.notchHeight}" rx="${item.notchHeight / 2}" fill="#30383c"/>`;
+        if (item.key === 'desktop') shapes += `<rect x="${x + w * .38}" y="${baseY}" width="${w * .24}" height="${item.standHeight}" rx="${item.standHeight / 2}" fill="#98a1a4"/>`;
+        shapes += `</g>`;
+      });
+      const backgroundLayer = transparent ? '' : `<rect width="${canvasWidth}" height="${canvasHeight}" fill="url(#scene)"/><ellipse cx="${canvasWidth * .18}" cy="${canvasHeight * .18}" rx="${canvasWidth * .3}" ry="${canvasHeight * .36}" fill="url(#glow)"/><circle cx="${canvasWidth * .84}" cy="${canvasHeight * .82}" r="${Math.min(canvasWidth, canvasHeight) * .38}" fill="#f15b22" opacity=".08"/>`;
+      return `<svg xmlns="http://www.w3.org/2000/svg" width="${canvasWidth}" height="${canvasHeight}" viewBox="0 0 ${canvasWidth} ${canvasHeight}">${defs}${backgroundLayer}<g>${shapes}</g></svg>`;
+    }
+    function makeVectorFallbackSvg(status) {
+      const rect = board.getBoundingClientRect();
+      const scale = 3, width = Math.round(rect.width), height = Math.round(rect.height);
+      const background = bgPicker.value;
+      const defs = `<defs><linearGradient id="scene" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${background}"/><stop offset="1" stop-color="#26364b"/></linearGradient><radialGradient id="glow"><stop offset="0" stop-color="#ffffff" stop-opacity=".24"/><stop offset="1" stop-color="#ffffff" stop-opacity="0"/></radialGradient><filter id="shadow" x="-30%" y="-30%" width="160%" height="170%"><feGaussianBlur in="SourceAlpha" stdDeviation="12"/><feOffset dy="14"/><feComponentTransfer><feFuncA type="linear" slope=".42"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`;
+      let shapes = board.classList.contains('transparent') ? '' : `<rect width="100%" height="100%" fill="url(#scene)"/><ellipse cx="${width * .18}" cy="${height * .18}" rx="${width * .3}" ry="${height * .36}" fill="url(#glow)"/><circle cx="${width * .84}" cy="${height * .82}" r="${Math.min(width, height) * .38}" fill="#f15b22" opacity=".08"/>`;
+      document.querySelectorAll('.device:not(.hidden)').forEach(device => {
+        const screen = device.querySelector('.screen').getBoundingClientRect();
+        const x = screen.left - rect.left, y = screen.top - rect.top, w = screen.width, h = screen.height;
+        const r = device.dataset.device === 'phone' ? 22 : device.dataset.device === 'tablet' ? 14 : 6;
+        shapes += `<g filter="url(#shadow)"><rect x="${x - 8}" y="${y - 8}" width="${w + 16}" height="${h + 16}" rx="${r}" fill="#30383c" stroke="#879196" stroke-width="2"/><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${Math.max(1, r - 7)}" fill="#f2f4f4"/>`;
+        if (device.dataset.device === 'phone') shapes += `<rect x="${x + w / 2 - 24}" y="${y - 7}" width="48" height="12" rx="6" fill="#30383c"/>`;
+        if (device.dataset.device === 'desktop') shapes += `<rect x="${x + w * .38}" y="${y + h + 8}" width="${w * .24}" height="8" rx="3" fill="#98a1a4"/>`;
+        shapes += `</g>`;
+      });
+      return { svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${width * scale}" height="${height * scale}" viewBox="0 0 ${width} ${height}">${defs}<g>${shapes}</g></svg>`, width: width * scale, height: height * scale };
+    }
+    document.querySelector('#downloadPng').addEventListener('click', async () => {
+      const status = document.querySelector('#exportStatus');
+      const activeDevices = [...document.querySelectorAll('.device:not(.hidden)')];
+      if (!activeDevices.length) { status.textContent = 'Сначала выберите хотя бы одно устройство.'; return; }
+      board.classList.add('presentation-export');
+      status.textContent = 'Выберите эту вкладку в окне захвата — затем сниму экраны в полном размере…';
+      let shareRequest = null;
+      if (navigator.mediaDevices?.getDisplayMedia) {
+        try { shareRequest = navigator.mediaDevices.getDisplayMedia({ video: { displaySurface: 'browser' }, audio: false, preferCurrentTab: true }); } catch { shareRequest = null; }
+      }
+      let stream = null, video = null, restored = false;
+      const originalMainVisibility = document.querySelector('main').style.visibility;
+      const originalTopbarVisibility = document.querySelector('.topbar').style.visibility;
+      const originalHtmlOverflow = document.documentElement.style.overflow;
+      const originalBodyOverflow = document.body.style.overflow;
+      const originalBoardOverflow = board.style.overflow;
+      const boardRect = board.getBoundingClientRect();
+      const records = activeDevices.map(device => {
+        const screenRect = device.querySelector('.screen').getBoundingClientRect();
+        const deviceStyle = getComputedStyle(device);
+        return { key: device.dataset.device, device, screenElement: device.querySelector('.screen'), label: device.querySelector('.device-label'), frame: device.querySelector('iframe'), deviceStyle: device.getAttribute('style'), screenStyle: device.querySelector('.screen').getAttribute('style'), labelStyle: device.querySelector('.device-label').getAttribute('style'), frameStyle: device.querySelector('iframe').getAttribute('style'), screen: { left: screenRect.left, top: screenRect.top, width: screenRect.width, height: screenRect.height }, z: Number.parseInt(deviceStyle.zIndex, 10) || 0 };
+      }).sort((a, b) => a.z - b.z);
+      const restore = () => {
+        if (restored) return;
+        restored = true;
+        records.forEach(item => {
+          if (item.deviceStyle === null) item.device.removeAttribute('style'); else item.device.setAttribute('style', item.deviceStyle);
+          if (item.screenStyle === null) item.screenElement.removeAttribute('style'); else item.screenElement.setAttribute('style', item.screenStyle);
+          if (item.labelStyle === null) item.label.removeAttribute('style'); else item.label.setAttribute('style', item.labelStyle);
+          if (item.frameStyle === null) item.frame.removeAttribute('style'); else item.frame.setAttribute('style', item.frameStyle);
+        });
+        document.querySelector('main').style.visibility = originalMainVisibility;
+        document.querySelector('.topbar').style.visibility = originalTopbarVisibility;
+        document.documentElement.style.overflow = originalHtmlOverflow;
+        document.body.style.overflow = originalBodyOverflow;
+        board.style.overflow = originalBoardOverflow;
+        board.classList.remove('presentation-export');
+        if (video) { video.pause(); video.srcObject = null; video.remove(); }
+        stream?.getTracks().forEach(track => track.stop());
+      };
+      try {
+        if (!shareRequest) throw new Error('Захват вкладки недоступен');
+        stream = await shareRequest;
+        video = document.createElement('video');
+        video.muted = true; video.playsInline = true; video.srcObject = stream;
+        video.style.cssText = 'position:fixed;left:-10000px;top:0;width:1px;height:1px;opacity:0;pointer-events:none;';
+        document.body.appendChild(video);
+        await video.play();
+        if (!video.videoWidth) await new Promise(resolve => video.addEventListener('loadedmetadata', resolve, { once: true }));
+        await waitForPaint(video);
+        document.querySelector('main').style.visibility = 'hidden';
+        document.querySelector('.topbar').style.visibility = 'hidden';
+        document.documentElement.style.overflow = 'hidden';
+        document.body.style.overflow = 'hidden';
+        board.style.overflow = 'visible';
+        const captures = [];
+        for (let i = 0; i < records.length; i++) {
+          const item = records[i], [viewportWidth, viewportHeight] = viewports[item.key];
+          status.textContent = `Снимаю экран ${i + 1} из ${records.length} в полном размере…`;
+          item.device.style.cssText = 'position:fixed;left:0;top:0;z-index:2147483647;display:block;transform:none;filter:none;visibility:visible;';
+          item.screenElement.style.cssText = `position:relative;width:${viewportWidth}px;height:${viewportHeight}px;overflow:hidden;border:0;padding:0;box-shadow:none;background:#fff;visibility:visible;`;
+          item.label.style.display = 'none';
+          item.frame.style.cssText = `position:absolute;left:0;top:0;width:${viewportWidth}px;height:${viewportHeight}px;max-width:none;max-height:none;border:0;display:block;transform:none;transform-origin:top left;background:white;`;
+          const image = await captureIframeViewport(video, item.frame, viewportWidth, viewportHeight);
+          item.device.style.visibility = 'hidden';
+          captures.push({ ...item, image, captureWidth: image.width, captureHeight: image.height });
+        }
+        restore();
+        const desktopCapture = captures.find(item => item.key === 'desktop') || captures[0];
+        const layoutScale = desktopCapture.captureWidth / desktopCapture.screen.width;
+        const padding = Math.round(38 * layoutScale);
+        captures.forEach(item => {
+          const centerX = (item.screen.left - boardRect.left + item.screen.width / 2) * layoutScale;
+          const centerY = (item.screen.top - boardRect.top + item.screen.height / 2) * layoutScale;
+          item.width = item.captureWidth; item.height = item.captureHeight;
+          item.left = centerX - item.width / 2; item.top = centerY - item.height / 2;
+          item.pad = Math.max(8, Math.round((item.key === 'desktop' ? 9 : 8) * layoutScale));
+          item.bottom = item.key === 'desktop' ? Math.round(16 * layoutScale) : 0;
+          item.radius = Math.round((item.key === 'phone' ? 22 : item.key === 'tablet' ? 14 : 6) * layoutScale);
+          item.corner = Math.round((item.key === 'phone' ? 14 : item.key === 'tablet' ? 7 : 2) * layoutScale);
+          item.notchWidth = Math.round(48 * layoutScale); item.notchHeight = Math.round(12 * layoutScale); item.standHeight = Math.max(5, Math.round(6 * layoutScale));
+          item.image = item.image.toDataURL('image/png');
+        });
+        const minX = Math.min(0, ...captures.map(item => item.left - item.pad));
+        const minY = Math.min(0, ...captures.map(item => item.top - item.pad));
+        const maxX = Math.max(boardRect.width * layoutScale, ...captures.map(item => item.left + item.width + item.pad));
+        const maxY = Math.max(boardRect.height * layoutScale, ...captures.map(item => item.top + item.height + item.pad + item.bottom));
+        const shiftX = padding - minX, shiftY = padding - minY;
+        captures.forEach(item => { item.left += shiftX; item.top += shiftY; });
+        const canvasWidth = Math.ceil(maxX - minX + padding * 2), canvasHeight = Math.ceil(maxY - minY + padding * 2);
+        const svg = makePresentationSvg(captures, canvasWidth, canvasHeight, bgPicker.value, board.classList.contains('transparent'));
+        await downloadSvgAsPng(svg, canvasWidth, canvasHeight, status);
+      } catch (error) {
+        restore();
+        const fallback = makeVectorFallbackSvg(status);
+        await downloadSvgAsPng(fallback.svg, fallback.width, fallback.height, status);
+        status.textContent = 'Не удалось снять содержимое сайтов. Скачана презентация с векторными рамками.';
+      }
+    });
+    document.querySelectorAll('.device').forEach(device => {
+      let drag = null;
+      device.addEventListener('pointerdown', event => {
+        if (event.target.closest('iframe')) return;
+        drag = { x:event.clientX, y:event.clientY, dx:parseFloat(device.style.getPropertyValue('--dx')) || 0, dy:parseFloat(device.style.getPropertyValue('--dy')) || 0 };
+        device.setPointerCapture(event.pointerId);
+        device.style.zIndex = String(Date.now());
+      });
+      device.addEventListener('pointermove', event => {
+        if (!drag) return;
+        device.style.setProperty('--dx', (drag.dx + event.clientX - drag.x) + 'px');
+        device.style.setProperty('--dy', (drag.dy + event.clientY - drag.y) + 'px');
+      });
+      const stop = () => { drag = null; };
+      device.addEventListener('pointerup', stop);
+      device.addEventListener('pointercancel', stop);
+    });
+    window.addEventListener('resize', fitFrames);
+    const initial = new URLSearchParams(location.search).get('url') || '';
+    const isDemoHost = value => { try { const host = new URL(value).hostname.replace(/^www\./,''); return host === 'fireship.dev' || host === 'dkbani.ru' || host.endsWith('.dkbani.ru'); } catch { return false; } };
+    if (initial && !isDemoHost(initial)) loadSite(initial);
+    else { localStorage.removeItem('showcaseUrl'); showDemo(); }
+  </script>
+</body>
+</html>
+
+

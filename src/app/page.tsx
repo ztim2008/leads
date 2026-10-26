@@ -5,6 +5,7 @@ import KonversusNav from "@/components/konversus-nav";
 import KonversusFooter from "@/components/konversus-footer";
 import Gauge from "@/components/diagnost/gauge";
 import SeoMiniChart from "@/components/seo/mini-chart";
+import PokazDevicesArt from "@/components/pokaz/devices-art";
 import { CONTACT_TELEGRAM, PRODUCTS, STATUS_LABELS, type Product, type ProductStatus } from "@/config/products";
 import "./diagnost/diagnost.css";
 
@@ -25,7 +26,7 @@ const AUDIENCES = [
     icon: Briefcase,
     title: "Директологам и агентствам",
     text: "Проверить сайт клиента до запуска рекламы, показать причины и план исправлений, найти новых клиентов.",
-    products: ["diagnost", "secret-shopper", "architect"],
+    products: ["diagnost", "pokaz", "secret-shopper", "architect"],
   },
   {
     icon: Building2,
@@ -44,6 +45,7 @@ const AUDIENCES = [
 const byId = (id: string) => PRODUCTS.find((product) => product.id === id)!;
 const featured = byId("diagnost");
 const seoPromo = byId("seo-promo");
+const pokaz = byId("pokaz");
 const liveCount = PRODUCTS.filter((product) => product.status !== "soon").length;
 
 function StatusBadge({ status }: { status: ProductStatus }) {
@@ -60,6 +62,13 @@ function ProductLink({ product, children, className, style }: { product: Product
   if (product.external) {
     return (
       <a href={product.href} target="_blank" rel="noopener" className={className} style={style}>
+        {children}
+      </a>
+    );
+  }
+  if (product.staticPage) {
+    return (
+      <a href={product.href} className={className} style={style}>
         {children}
       </a>
     );
@@ -225,6 +234,36 @@ export default function HubHome() {
           </div>
           <div className="mx-auto">
             <SeoMiniChart />
+          </div>
+        </section>
+
+        <section className="dg-panel mt-6 grid items-center gap-10 p-8 md:grid-cols-[auto_1fr] md:p-10">
+          <div className="mx-auto">
+            <PokazDevicesArt />
+          </div>
+          <div>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="dg-eyebrow">Бесплатный инструмент</span>
+              <StatusBadge status={pokaz.status} />
+            </div>
+            <h2 className="mt-3 text-3xl font-bold sm:text-4xl">{pokaz.name}: сайт на всех экранах за минуту</h2>
+            <p className="mt-4 max-w-2xl leading-relaxed">{pokaz.description}</p>
+            <ul className="mt-5 grid gap-2 text-sm sm:grid-cols-3">
+              {pokaz.benefits.map((benefit) => (
+                <li key={benefit} className="dg-tile px-4 py-3" style={{ color: "var(--dg-ink)" }}>
+                  {benefit}
+                </li>
+              ))}
+            </ul>
+            <div className="mt-7 flex flex-wrap items-center gap-4">
+              <a href="/pokaz" className="dg-btn dg-btn-primary">
+                Открыть Показ
+                <ArrowRight size={16} />
+              </a>
+              <span className="text-sm" style={{ color: "var(--dg-muted)" }}>
+                Работает в браузере, без регистрации
+              </span>
+            </div>
           </div>
         </section>
 

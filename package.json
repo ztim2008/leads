@@ -13,6 +13,7 @@
     "operator:parse": "tsx scripts/operator/cli.ts parse",
     "operator:onboard": "tsx scripts/operator/cli.ts onboard",
     "operator:verify": "tsx scripts/operator/cli.ts verify",
+    "pokaz:sync": "node scripts/pokaz-sync.mjs",
     "snapshot": "bash scripts/backup-snapshot.sh day-close",
     "client-bridge:deploy": "bash scripts/client-bridge/deploy-to-vps.sh",
     "client-bridge:rsync": "bash scripts/client-bridge/rsync-shared.sh"
