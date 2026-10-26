@@ -11,12 +11,15 @@ export const GROUPS: { id: Group; label: string; about: string }[] = [
   { id: "unknown", label: "Не проверяли", about: "Элемент перекрыт или чужой сайт не дал себя проверить" },
 ];
 
-export const ISSUE_RULES: { id: IssueRule; label: string }[] = [
+/** minor — мешает экранным дикторам и SEO, но не посетителю: по умолчанию скрыто */
+export const ISSUE_RULES: { id: IssueRule; label: string; minor?: boolean }[] = [
   { id: "overflow", label: "Шире экрана" },
   { id: "label", label: "Поля без подписи" },
   { id: "contrast", label: "Плохо читается" },
   { id: "small-text", label: "Мелкий текст" },
-  { id: "alt", label: "Картинки без описания" },
-  { id: "link-name", label: "Ссылки без текста" },
-  { id: "button-name", label: "Кнопки без названия" },
+  { id: "alt", label: "Картинки без описания", minor: true },
+  { id: "link-name", label: "Ссылки без текста", minor: true },
+  { id: "button-name", label: "Кнопки без названия", minor: true },
 ];
+
+export const MINOR_RULES = new Set<IssueRule>(ISSUE_RULES.filter((rule) => rule.minor).map((rule) => rule.id));

@@ -8,7 +8,7 @@ import ShotOverlay, { type OverlayGroup, type OverlayItem } from "@/components/r
 import { reachGoal } from "@/lib/metrika";
 import StartForm from "@/components/rentgen/start-form";
 import type { PublicView, ScanView as View } from "@/lib/rentgen/data";
-import { GROUP_OF, GROUPS, ISSUE_RULES, type Group } from "@/lib/rentgen/groups";
+import { GROUP_OF, GROUPS, ISSUE_RULES, MINOR_RULES, type Group } from "@/lib/rentgen/groups";
 import type { ViewKind } from "@/lib/rentgen/types";
 
 const STEPS: { label: string; from: number }[] = [
@@ -94,7 +94,14 @@ function Result({ view }: { view: View }) {
   const [layer, setLayer] = useState<Layer>("clicks");
   const current = (kind === "mobile" ? result.views.mobile : null) ?? result.views.desktop;
   const hasIssues = Array.isArray(current.issues);
-  const issues = useMemo(() => current.issues ?? [], [current]);
+  const [showMinor, setShowMinor] = useState(false);
+  const allIssues = useMemo(() => current.issues ?? [], [current]);
+  const minorCount = allIssues.filter((issue) => MINOR_RULES.has(issue.rule)).length;
+  const issues = useMemo(
+    () => (showMinor ? allIssues : allIssues.filter((issue) => !MINOR_RULES.has(issue.rule)).map((issue, index) => ({ ...issue, n: index + 1 }))),
+    [allIssues, showMinor],
+  );
+  const deadLinks = current.items.filter((item) => item.kind === "dead").length;
   const attention = current.attention;
   const heatOn = layer === "attention" && !!attention;
 
@@ -328,7 +335,7 @@ function Result({ view }: { view: View }) {
             ) : layer === "issues" ? (
               <>
                 <p className="text-[15px] font-semibold" style={{ color: "var(--rg-ink)" }}>
-                  {issues.length ? `Находок: ${issues.length}` : "Ошибок не нашли"}
+                  {issues.length ? `Находок: ${issues.length}` : minorCount ? "Серьёзных ошибок не нашли" : "Ошибок не нашли"}
                 </p>
                 <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-[13px]" style={{ color: "var(--rg-body)" }}>
                   {legend.map((entry) => (
@@ -338,9 +345,22 @@ function Result({ view }: { view: View }) {
                     </span>
                   ))}
                 </div>
-                <p className="mt-3 text-[13px] leading-snug" style={{ color: "var(--rg-muted)" }}>
-                  Автоматическая проверка находит примерно треть проблем доступности, остальное — только вручную.
-                </p>
+                {deadLinks > 0 && (
+                  <p className="mt-3 text-[13px] leading-snug" style={{ color: "var(--rg-body)" }}>
+                    Битых ссылок: <span className="rg-mono">{deadLinks}</span> —{" "}
+                    <button type="button" className="rg-link underline underline-offset-[3px]" style={{ color: "var(--rg-ink)" }} onClick={() => switchLayer("clicks")}>
+                      смотрите слой «Клики»
+                    </button>
+                  </p>
+                )}
+                {minorCount > 0 && (
+                  <p className="mt-3 text-[13px] leading-snug" style={{ color: "var(--rg-muted)" }}>
+                    Мелочи для SEO и доступности: <span className="rg-mono">{minorCount}</span> — иконки и картинки без названия. Посетителю не мешают.{" "}
+                    <button type="button" className="underline underline-offset-[3px]" style={{ color: "var(--rg-ink)" }} aria-pressed={showMinor} onClick={() => { setShowMinor((value) => !value); setActive(null); }}>
+                      {showMinor ? "Скрыть" : "Показать"}
+                    </button>
+                  </p>
+                )}
               </>
             ) : (
               <>
@@ -372,7 +392,7 @@ function Result({ view }: { view: View }) {
               {layer === "attention"
                 ? "В первую секунду кнопки и ссылки почти не получают внимания — взгляд уходит на заголовок и картинки."
                 : layer === "issues"
-                  ? "Автоматическая проверка ничего не нашла на этом экране."
+                  ? "Ничего, что мешает прочитать страницу или заполнить форму, не нашли."
                   : "Все кнопки и ссылки, которые мы смогли нажать на этом экране, сработали."}
             </p>
           ) : layer === "issues" ? (
