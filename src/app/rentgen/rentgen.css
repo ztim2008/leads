@@ -1,0 +1,155 @@
+/* Рентген сайта — нейтральная тёмная оболочка на токенах проекта (.dark из globals.css).
+   Цвет живёт только в рамках на снимке: интерфейс не должен спорить с результатом. */
+
+.rg {
+  --rg-bg: var(--bg-root);
+  --rg-panel: var(--bg-surface);
+  --rg-layer: var(--bg-layer);
+  --rg-line: var(--border);
+  --rg-line-soft: var(--border-light);
+  --rg-ink: var(--ink-heading);
+  --rg-body: var(--ink-body);
+  --rg-muted: var(--ink-muted);
+  --rg-ok: var(--green);
+  --rg-dead: var(--red);
+  --rg-check: var(--amber);
+  --rg-unknown: var(--ink-muted);
+  --rg-control-h: 36px;
+  --rg-control-h-hero: 56px;
+  --rg-radius: 12px;
+
+  min-height: 100vh;
+  background: var(--rg-bg);
+  color: var(--rg-body);
+  font-family: var(--font-sans);
+}
+
+.rg h1,
+.rg h2,
+.rg h3 {
+  font-family: var(--font-montserrat), var(--font-sans);
+  color: var(--rg-ink);
+  letter-spacing: -0.025em;
+}
+
+.rg-mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+.rg-panel {
+  background: var(--rg-panel);
+  border: 1px solid var(--rg-line);
+  border-radius: var(--rg-radius);
+}
+
+.rg-g-ok { --g: var(--rg-ok); }
+.rg-g-dead { --g: var(--rg-dead); }
+.rg-g-check { --g: var(--rg-check); }
+.rg-g-unknown { --g: var(--rg-unknown); }
+.rg-swatch { width: 14px; height: 14px; border: 2px solid var(--g); border-radius: 3px; background: color-mix(in oklab, var(--g) 18%, transparent); flex: none; }
+
+/* Кнопки и поле */
+.rg-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: var(--rg-control-h);
+  padding: 0 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s, transform 0.15s;
+}
+.rg-btn:disabled { opacity: 0.55; cursor: default; }
+.rg-btn-primary { background: var(--rg-ink); color: var(--rg-bg); }
+.rg-btn-primary:hover:not(:disabled) { background: color-mix(in oklab, var(--rg-ink) 86%, var(--rg-bg)); transform: translateX(2px); }
+
+.rg-field { display: flex; align-items: center; gap: 6px; padding: 6px 6px 6px 18px; border-radius: 14px; }
+.rg-field:focus-within { border-color: color-mix(in oklab, var(--rg-ink) 45%, transparent); }
+.rg-input {
+  height: var(--rg-control-h-hero);
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  outline: none;
+  color: var(--rg-ink);
+  font-family: var(--font-mono);
+  font-size: 15px;
+}
+.rg-input::placeholder { color: var(--ink-placeholder); }
+
+/* Переключатели ПК / Телефон, Все / Проблемы */
+.rg-seg { display: inline-flex; padding: 3px; gap: 2px; border: 1px solid var(--rg-line); border-radius: 10px; background: var(--rg-layer); }
+.rg-seg > button {
+  height: calc(var(--rg-control-h) - 8px);
+  padding: 0 12px;
+  border-radius: 7px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--rg-muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+.rg-seg > button:hover { color: var(--rg-ink); }
+.rg-seg > button[aria-pressed="true"] { background: var(--bg-hover); color: var(--rg-ink); }
+.rg-seg > button:disabled { opacity: 0.4; cursor: default; }
+
+/* Снимок с рамками */
+.rg-shot { position: relative; width: 100%; line-height: 0; background: var(--rg-layer); }
+.rg-shot > img { width: 100%; height: auto; display: block; transition: filter 0.35s; }
+.rg-shot[data-film="true"] > img { filter: grayscale(1) brightness(0.38) contrast(1.15); }
+
+.rg-frame {
+  position: absolute;
+  border: 1.5px solid var(--g);
+  border-radius: 3px;
+  background: color-mix(in oklab, var(--g) 12%, transparent);
+  padding: 0;
+  transition: box-shadow 0.2s, opacity 0.2s;
+}
+.rg-frame[data-kind="ok"] { border-width: 1px; background: color-mix(in oklab, var(--g) 7%, transparent); }
+button.rg-frame { cursor: pointer; }
+button.rg-frame:hover, .rg-frame[data-active="true"] { box-shadow: 0 0 0 3px color-mix(in oklab, var(--g) 45%, transparent); z-index: 2; }
+.rg-shot[data-film="true"] .rg-frame:not([data-problem="true"]) { opacity: 0; pointer-events: none; }
+/* «Плёнка»: проблемные места остаются цветными окнами — фон рамки показывает тот же снимок без фильтра */
+.rg-shot[data-film="true"] .rg-frame[data-problem="true"] { background-image: var(--src); background-repeat: no-repeat; background-size: var(--bs); background-position: var(--bp); }
+
+.rg-tag {
+  position: absolute;
+  left: -1.5px;
+  bottom: 100%;
+  margin-bottom: 2px;
+  min-width: 20px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 4px;
+  background: var(--g);
+  color: var(--rg-bg);
+  font: 700 11px/18px var(--font-sans);
+  text-align: center;
+}
+
+/* Список проблем */
+.rg-row { display: flex; gap: 12px; width: 100%; padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--rg-line-soft); cursor: pointer; transition: background-color 0.15s; }
+.rg-row:last-child { border-bottom: 0; }
+.rg-row:hover { background: color-mix(in oklab, var(--bg-hover) 60%, transparent); }
+.rg-row[data-active="true"] { background: var(--bg-hover); }
+.rg-num { flex: none; min-width: 24px; height: 20px; padding: 0 5px; border-radius: 4px; background: var(--g); color: var(--rg-bg); font: 700 11.5px/20px var(--font-sans); text-align: center; }
+
+.rg-bar { height: 3px; border-radius: 999px; background: var(--rg-line); overflow: hidden; }
+.rg-bar > span { display: block; height: 100%; background: var(--rg-ink); transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1); }
+
+.rg-spin { animation: rg-spin 0.9s linear infinite; }
+@keyframes rg-spin { to { transform: rotate(360deg); } }
+
+.rg a.rg-link { color: var(--rg-ink); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--rg-line); }
+.rg a.rg-link:hover { text-decoration-color: currentColor; }
+
+@media (prefers-reduced-motion: reduce) {
+  .rg-spin, .rg-bar > span, .rg-shot > img, .rg-frame, .rg-btn { animation: none !important; transition: none !important; }
+}

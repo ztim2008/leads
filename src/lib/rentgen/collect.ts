@@ -24,16 +24,16 @@ export const FLATTEN_STICKY = String.raw`() => {
 export const TOGGLE_FIXED = String.raw`(hide) => {
   if (hide) {
     for (const el of Array.from(document.querySelectorAll("body *"))) {
-      if (getComputedStyle(el).position === "fixed" && getComputedStyle(el).visibility !== "hidden") {
-        el.setAttribute("data-rg-fixed", "1");
-        el.style.setProperty("visibility", "hidden", "important");
-      }
+      if (getComputedStyle(el).position === "fixed" && getComputedStyle(el).visibility !== "hidden") el.setAttribute("data-rg-fixed", "1");
     }
+    // transition на visibility откладывает скрытие до конца анимации — и у самого блока, и у детей
+    const style = document.createElement("style");
+    style.id = "rg-fixed-style";
+    style.textContent = "[data-rg-fixed],[data-rg-fixed] *{transition:none!important;animation:none!important;visibility:hidden!important}";
+    document.head.appendChild(style);
   } else {
-    for (const el of Array.from(document.querySelectorAll("[data-rg-fixed]"))) {
-      el.style.removeProperty("visibility");
-      el.removeAttribute("data-rg-fixed");
-    }
+    document.getElementById("rg-fixed-style")?.remove();
+    for (const el of Array.from(document.querySelectorAll("[data-rg-fixed]"))) el.removeAttribute("data-rg-fixed");
   }
 }`;
 

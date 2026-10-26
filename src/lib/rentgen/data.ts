@@ -95,3 +95,21 @@ export async function scanIdBySlug(slug: string): Promise<string | null> {
   const scan = await db.rentgenScan.findUnique({ where: { slug }, select: { id: true, status: true } });
   return scan?.status === "done" ? scan.id : null;
 }
+
+export type HistoryRow = { slug: string; host: string; status: ScanView["status"]; createdAt: string; problems: number | null };
+
+export async function listOwnerScans(owner: string, take = 20): Promise<HistoryRow[]> {
+  const rows = await db.rentgenScan.findMany({
+    where: { ownerToken: owner },
+    orderBy: { createdAt: "desc" },
+    take,
+    select: { slug: true, host: true, status: true, createdAt: true, result: true },
+  });
+  return rows.map((row) => {
+    const result = row.result as RentgenResult | null;
+    const problems = result
+      ? [result.views.desktop, result.views.mobile].reduce((sum, view) => sum + (view ? view.items.filter((item) => item.n !== null).length : 0), 0)
+      : null;
+    return { slug: row.slug, host: row.host, status: row.status as ScanView["status"], createdAt: row.createdAt.toISOString(), problems };
+  });
+}

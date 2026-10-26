@@ -1485,3 +1485,20 @@ Partner buys VPS, downloads zip, fills config.json (Profi login/password + Teleg
 **Production:** `npm run build`, `pm2 restart leads-konversus leads-diagnost`, главная 200. Profi на хабе выключен. Старая ошибка `diagnost_audits does not exist` в логе воркера — запись времени аварии (06:53 UTC), сейчас таблица на месте.
 
 **Дальше:** D.16 — интерфейс `/rentgen` и `/rentgen/r/[slug]` (сначала аудит design-anti-slop и согласование).
+
+## Рентген D.16 — интерфейс · 26 октября 2026
+
+**Сделано:**
+- Аудит design-anti-slop основы (тема Техосмотра) и согласование: нейтральная оболочка, режим «плёнка», пример на нашей главной.
+- `/rentgen` — форма, пример со снимком нашей главной, легенда из 4 цветов, «Мои проверки», методика и ограничения, ссылка на Техосмотр.
+- `/rentgen/r/[slug]` — экран ожидания и результат: ПК/Телефон, Все/Только проблемы («плёнка»: снимок серый, проблемы — цветные окна), сводка, список проблем ↔ рамки, на телефоне список над снимком.
+- Исправлена съёмка кусками: закреплённая шапка с `transition: all` повторялась на склейке (скрытие через visibility ждало конца анимации). Теперь на время съёмки стиль отключает переходы у закреплённых элементов и их детей.
+- `listOwnerScans` в `data.ts`, группы в `groups.ts`, скрипт примера `scripts/rentgen-demo.ts`.
+
+**Проверено:** скан dkbani.ru через интерфейс: этапы → результат за ~30 с, ПК — 1 проблема из 40 (ложная кнопка-плашка), телефон — 1 из 22 (не реагирует «закрыть видео»). Переключатели, клик по пункту, «плёнка» — работают. Ширина 375 px — без горизонтальной прокрутки. `/rentgen/r/nope` → 404.
+
+**Файлы:** `src/app/rentgen/{layout,page,rentgen.css}`, `src/app/rentgen/r/[slug]/page.tsx`, `src/components/rentgen/{shot-overlay,start-form,scan-view}.tsx`, `src/lib/rentgen/{data,groups,collect,demo.json}`, `public/rentgen/demo.jpg`, `scripts/rentgen-demo.ts`, `docs/RENTGEN.md`, план.
+
+**Production:** build, `pm2 restart leads-konversus leads-diagnost`, главная 200, `/rentgen` 200. Profi на хабе выключен. Страница пока не в меню и не в sitemap (D.17).
+
+**Дальше:** PNG для клиента и переход в Техосмотр с адресом (остаток D.16), затем D.17 — меню, sitemap/robots, цели Метрики.

@@ -1,0 +1,243 @@
+{
+ "host": "leads.konversus.ru",
+ "width": 1440,
+ "height": 1100,
+ "shot": "/rentgen/demo.jpg",
+ "items": [
+  {
+   "label": "Продукты",
+   "box": {
+    "x": 616,
+    "y": 10,
+    "w": 113,
+    "h": 36
+   },
+   "kind": "ok",
+   "reason": "Срабатывает по нажатию",
+   "n": null
+  },
+  {
+   "label": "Техосмотр",
+   "box": {
+    "x": 733,
+    "y": 10,
+    "w": 101,
+    "h": 36
+   },
+   "kind": "ok",
+   "href": "https://leads.konversus.ru/diagnost",
+   "reason": "Ссылка",
+   "status": 200,
+   "n": null
+  },
+  {
+   "label": "SEO-продвижение",
+   "box": {
+    "x": 838,
+    "y": 10,
+    "w": 152,
+    "h": 36
+   },
+   "kind": "ok",
+   "href": "https://leads.konversus.ru/seo",
+   "reason": "Ссылка",
+   "status": 200,
+   "n": null
+  },
+  {
+   "label": "Обо мне",
+   "box": {
+    "x": 993,
+    "y": 10,
+    "w": 99,
+    "h": 36
+   },
+   "kind": "ok",
+   "href": "https://konversus.ru/about",
+   "reason": "Ссылка",
+   "status": 200,
+   "n": null
+  },
+  {
+   "label": "Документация",
+   "box": {
+    "x": 1096,
+    "y": 10,
+    "w": 128,
+    "h": 36
+   },
+   "kind": "ok",
+   "href": "https://leads.konversus.ru/docs",
+   "reason": "Ссылка",
+   "status": 200,
+   "n": null
+  },
+  {
+   "label": "Контакты",
+   "box": {
+    "x": 1228,
+    "y": 10,
+    "w": 108,
+    "h": 36
+   },
+   "kind": "ok",
+   "contact": "messenger",
+   "href": "https://t.me/bilarius",
+   "reason": "Мессенджер",
+   "n": null
+  },
+  {
+   "label": "K Konversus",
+   "box": {
+    "x": 104,
+    "y": 12,
+    "w": 134,
+    "h": 32
+   },
+   "kind": "ok",
+   "href": "https://leads.konversus.ru/",
+   "reason": "Ссылка",
+   "status": 200,
+   "n": null
+  },
+  {
+   "label": "Техосмотр сайта",
+   "box": {
+    "x": 835,
+    "y": 215,
+    "w": 129,
+    "h": 17
+   },
+   "kind": "ok",
+   "href": "https://leads.konversus.ru/diagnost",
+   "reason": "Ссылка",
+   "status": 200,
+   "n": null
+  },
+  {
+   "label": "SEO-продвижение",
+   "box": {
+    "x": 835,
+    "y": 280,
+    "w": 136,
+    "h": 17
+   },
+   "kind": "ok",
+   "href": "https://leads.konversus.ru/seo",
+   "reason": "Ссылка",
+   "status": 200,
+   "n": null
+  },
+  {
+   "label": "Показ",
+   "box": {
+    "x": 835,
+    "y": 345,
+    "w": 42,
+    "h": 17
+   },
+   "kind": "ok",
+   "href": "https://leads.konversus.ru/pokaz",
+   "reason": "Ссылка",
+   "status": 200,
+   "n": null
+  },
+  {
+   "label": "Ловец лидов",
+   "box": {
+    "x": 835,
+    "y": 410,
+    "w": 93,
+    "h": 17
+   },
+   "kind": "ok",
+   "href": "https://leads.konversus.ru/lovec",
+   "reason": "Ссылка",
+   "status": 200,
+   "n": null
+  },
+  {
+   "label": "Telegram-консультант",
+   "box": {
+    "x": 835,
+    "y": 475,
+    "w": 166,
+    "h": 17
+   },
+   "kind": "ok",
+   "href": "https://chat.konversus.ru/",
+   "reason": "Ссылка",
+   "status": 200,
+   "n": null
+  },
+  {
+   "label": "Nordic Builder",
+   "box": {
+    "x": 835,
+    "y": 540,
+    "w": 100,
+    "h": 17
+   },
+   "kind": "ok",
+   "href": "https://nordic-builder.ru/",
+   "reason": "Ссылка",
+   "status": 200,
+   "n": null
+  },
+  {
+   "label": "Архитектор сайта",
+   "box": {
+    "x": 835,
+    "y": 605,
+    "w": 134,
+    "h": 17
+   },
+   "kind": "ok",
+   "href": "https://konversus.ru/architect",
+   "reason": "Ссылка",
+   "status": 200,
+   "n": null
+  },
+  {
+   "label": "Проверить сайт перед рекламой",
+   "box": {
+    "x": 176,
+    "y": 660,
+    "w": 312,
+    "h": 52
+   },
+   "kind": "ok",
+   "href": "https://leads.konversus.ru/diagnost",
+   "reason": "Ссылка",
+   "status": 200,
+   "n": null
+  },
+  {
+   "label": "Все сервисы",
+   "box": {
+    "x": 500,
+    "y": 660,
+    "w": 139,
+    "h": 52
+   },
+   "kind": "ok",
+   "href": "#services",
+   "reason": "Переход к блоку на странице",
+   "n": null
+  },
+  {
+   "label": "Тайный покупатель",
+   "box": {
+    "x": 835,
+    "y": 670,
+    "w": 144,
+    "h": 17
+   },
+   "kind": "ok",
+   "href": "https://konversus.ru/dashboard/secret-shopper",
+   "reason": "Ссылка",
+   "status": 200,
+   "n": null
+  }
+ ]
+}
