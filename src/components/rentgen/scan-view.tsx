@@ -2,8 +2,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, Circle, Loader2, Monitor, Smartphone, XCircle } from "lucide-react";
+import { ArrowRight, CheckCircle2, Circle, Download, Loader2, Monitor, Smartphone } from "lucide-react";
+import { exportShot } from "@/components/rentgen/export-shot";
 import ShotOverlay from "@/components/rentgen/shot-overlay";
+import { reachGoal } from "@/lib/metrika";
 import StartForm from "@/components/rentgen/start-form";
 import type { PublicView, ScanView as View } from "@/lib/rentgen/data";
 import { GROUP_OF, GROUPS, type Group } from "@/lib/rentgen/groups";
@@ -81,6 +83,34 @@ function Result({ view }: { view: View }) {
   const filmOn = film && problems.length > 0;
   const counts = countGroups(current);
   const prefix = `rg-f-${kind}`;
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const dateLabel = new Date(view.createdAt).toLocaleString("ru-RU", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Moscow" });
+
+  async function download() {
+    const root = document.querySelector<HTMLElement>(".rg");
+    if (!root || saving) return;
+    setSaving(true);
+    setSaveError(null);
+    reachGoal("rentgen_png", { view: kind });
+    try {
+      await exportShot({
+        root,
+        shot: current.shot,
+        width: current.width,
+        height: current.height,
+        items: current.items,
+        film: filmOn,
+        host: view.host,
+        subtitle: `${kind === "mobile" ? "Телефон" : "ПК"} · ${dateLabel} · проблем: ${problems.length}`,
+        fileName: `rentgen-${view.host}-${kind === "mobile" ? "phone" : "pc"}.jpg`,
+      });
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Не удалось собрать картинку");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   function switchView(next: ViewKind) {
     setKind(next);
@@ -103,7 +133,7 @@ function Result({ view }: { view: View }) {
         <div className="min-w-0">
           <h1 className="truncate text-[28px] font-bold md:text-[32px]">{view.host}</h1>
           <p className="mt-1 text-[13px]" style={{ color: "var(--rg-muted)" }}>
-            {new Date(view.createdAt).toLocaleString("ru-RU", { day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Europe/Moscow" })} · ссылок проверено: {result.linksChecked} ·{" "}
+            {dateLabel} · ссылок проверено: {result.linksChecked} ·{" "}
             <a href={result.finalUrl} target="_blank" rel="noopener noreferrer" className="rg-link">
               открыть сайт
             </a>
@@ -126,8 +156,17 @@ function Result({ view }: { view: View }) {
               Только проблемы
             </button>
           </div>
+          <button type="button" className="rg-btn rg-btn-ghost" onClick={download} disabled={saving} title="Картинка с рамками и сводкой — для клиента или подрядчика">
+            {saving ? <Loader2 size={15} className="rg-spin" /> : <Download size={15} />}
+            Скачать картинку
+          </button>
         </div>
       </div>
+      {saveError && (
+        <p className="mt-2 text-right text-sm" style={{ color: "var(--rg-dead)" }} role="alert">
+          {saveError}
+        </p>
+      )}
 
       <div className="mt-5 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
         <div className="rg-panel overflow-hidden" style={kind === "mobile" ? { maxWidth: 430, marginInline: "auto", width: "100%" } : undefined}>
@@ -204,16 +243,27 @@ function Result({ view }: { view: View }) {
         </aside>
       </div>
 
-      <section className="mt-14 max-w-[600px]">
-        <h2 className="text-[22px] font-bold">Проверить другой сайт</h2>
-        <div className="mt-4">
-          <StartForm hint={false} />
-        </div>
-        <p className="mt-4 text-sm" style={{ color: "var(--rg-muted)" }}>
-          <Link href="/rentgen#history" className="rg-link">
-            Все мои проверки
+      <section className="mt-14 grid gap-10 lg:grid-cols-2">
+        <div className="rg-panel p-6">
+          <h2 className="text-[22px] font-bold">Кнопки — только часть картины</h2>
+          <p className="mt-2 text-[15px] leading-relaxed" style={{ color: "var(--rg-body)" }}>
+            Техосмотр проверит сайт перед рекламой целиком: оффер, первый экран, скорость, доверие и аналитику — с оценкой готовности и планом правок.
+          </p>
+          <Link href={`/diagnost?url=${encodeURIComponent(view.url)}`} className="rg-btn rg-btn-ghost mt-5" onClick={() => reachGoal("rentgen_to_diagnost")}>
+            Полный разбор в Техосмотре <ArrowRight size={16} />
           </Link>
-        </p>
+        </div>
+        <div>
+          <h2 className="text-[22px] font-bold">Проверить другой сайт</h2>
+          <div className="mt-4">
+            <StartForm hint={false} />
+          </div>
+          <p className="mt-4 text-sm" style={{ color: "var(--rg-muted)" }}>
+            <Link href="/rentgen#history" className="rg-link">
+              Все мои проверки
+            </Link>
+          </p>
+        </div>
       </section>
     </main>
   );
@@ -236,6 +286,16 @@ export default function ScanView({ initial }: { initial: View }) {
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
+  }, [view]);
+
+  // Цель — только когда скан завершился на глазах, а не при повторном открытии готовой ссылки
+  const waited = useRef(initial.status !== "done");
+  useEffect(() => {
+    if (!waited.current || view.status !== "done" || !view.result) return;
+    waited.current = false;
+    const { desktop, mobile } = view.result.views;
+    const problems = [desktop, mobile].reduce((sum, item) => sum + (item ? item.items.filter((row) => row.n !== null).length : 0), 0);
+    reachGoal("rentgen_done", { problems });
   }, [view]);
 
   if (view.status === "done" && view.result) return <Result view={view} />;

@@ -1502,3 +1502,19 @@ Partner buys VPS, downloads zip, fills config.json (Profi login/password + Teleg
 **Production:** build, `pm2 restart leads-konversus leads-diagnost`, главная 200, `/rentgen` 200. Profi на хабе выключен. Страница пока не в меню и не в sitemap (D.17).
 
 **Дальше:** PNG для клиента и переход в Техосмотр с адресом (остаток D.16), затем D.17 — меню, sitemap/robots, цели Метрики.
+
+## Рентген: остаток D.16 и D.17 — картинка, Техосмотр, хаб · 26 октября 2026
+
+**Сделано:**
+- «Скачать картинку» на результате: canvas в браузере — адрес, дата, сводка по цветам, снимок с рамками (с «плёнкой»), подпись сервиса. JPEG 1200 px, на dkbani.ru 1200×6471, 618 КБ.
+- Блок «Кнопки — только часть картины» → `/diagnost?url=…`; Техосмотр теперь принимает `?url=` и подставляет адрес в форму.
+- Хаб: продукт `rentgen` в `products.ts` (мега-меню, футер, список на главной, «Все сервисы», «Директологам и агентствам»), `/rentgen` в sitemap, `/rentgen/r/` в robots.
+- Цели Метрики: `rentgen_start`, `rentgen_done` (число проблем), `rentgen_png`, `rentgen_to_diagnost`.
+
+**Проверено:** выгрузка картинки в браузере (перехват скачивания, файл просмотрен), `/diagnost?url=dkbani.ru` — адрес в поле, sitemap и robots, главная — 4 ссылки на `/rentgen`, мега-меню. Ошибок tsc нет, кроме давних в `wordstat.test.ts`.
+
+**Файлы:** `src/components/rentgen/{export-shot.ts,scan-view.tsx,start-form.tsx}`, `src/app/rentgen/rentgen.css`, `src/app/diagnost/(app)/page.tsx`, `src/config/products.ts`, `src/app/{page,robots,sitemap}.ts(x)`, `docs/RENTGEN.md`, план.
+
+**Production:** build, `pm2 restart leads-konversus`, главная, `/rentgen`, `/diagnost`, `/pokaz` — 200. Profi на хабе выключен. Пробный скан dkbani.ru оставлен как пример.
+
+**Дальше:** завести 4 цели в интерфейсе Метрики; D.18 — слои «Ошибки» и «Внимание»; по желанию — баннер Рентгена на главной и пример с находками вместо полностью зелёной нашей главной.

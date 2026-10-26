@@ -64,6 +64,8 @@
 .rg-btn:disabled { opacity: 0.55; cursor: default; }
 .rg-btn-primary { background: var(--rg-ink); color: var(--rg-bg); }
 .rg-btn-primary:hover:not(:disabled) { background: color-mix(in oklab, var(--rg-ink) 86%, var(--rg-bg)); transform: translateX(2px); }
+.rg-btn-ghost { border: 1px solid var(--rg-line); color: var(--rg-ink); background: transparent; }
+.rg-btn-ghost:hover:not(:disabled) { background: var(--bg-hover); }
 
 .rg-field { display: flex; align-items: center; gap: 6px; padding: 6px 6px 6px 18px; border-radius: 14px; }
 .rg-field:focus-within { border-color: color-mix(in oklab, var(--rg-ink) 45%, transparent); }

@@ -33,7 +33,9 @@ const SCALE: [string, string, number][] = [
   ["90–100", "Отлично", 95],
 ];
 
-export default async function DiagnostPage() {
+export default async function DiagnostPage({ searchParams }: { searchParams: Promise<{ url?: string | string[] }> }) {
+  const { url } = await searchParams;
+  const initialUrl = typeof url === "string" ? url.slice(0, 300) : "";
   const owner = (await cookies()).get(OWNER_COOKIE)?.value;
   const history = owner ? await listOwnerAudits(owner) : [];
 
@@ -54,7 +56,7 @@ export default async function DiagnostPage() {
             Вводите адрес — сервис открывает сайт в браузере, проверяет оффер, CTA, мобильную версию, скорость, доверие и аналитику. На выходе: процент готовности, причины каждого балла и план исправлений с PDF для клиента.
           </p>
           <div className="mt-9 max-w-[620px]">
-            <StartForm />
+            <StartForm initialUrl={initialUrl} />
           </div>
         </div>
 

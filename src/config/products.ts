@@ -1,4 +1,4 @@
-import { Gauge, Globe, LayoutTemplate, MessageCircle, MonitorSmartphone, Search, ShieldCheck, ShoppingBag, TrendingUp, Zap, type LucideIcon } from "lucide-react";
+import { Gauge, Globe, LayoutTemplate, MessageCircle, MonitorSmartphone, ScanLine, Search, ShieldCheck, ShoppingBag, TrendingUp, Zap, type LucideIcon } from "lucide-react";
 
 export type ProductStatus = "live" | "new" | "soon";
 
@@ -37,6 +37,18 @@ export const PRODUCTS: Product[] = [
     external: false,
     status: "new",
     icon: Gauge,
+    audience: "Директологам и агентствам",
+  },
+  {
+    id: "rentgen",
+    name: "Рентген сайта",
+    tagline: "Какие кнопки и ссылки не работают",
+    description: "Вставьте адрес — откроем страницу на ПК и телефоне, нажмём каждую кнопку и ссылку и покажем на снимке, что работает, а что ведёт в пустоту.",
+    benefits: ["Рамки прямо на снимке сайта", "ПК и телефон за одну проверку", "Бесплатно, картинка для клиента"],
+    href: "/rentgen",
+    external: false,
+    status: "new",
+    icon: ScanLine,
     audience: "Директологам и агентствам",
   },
   {

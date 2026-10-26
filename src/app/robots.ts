@@ -5,7 +5,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/dashboard", "/api/", "/auth", "/diagnost/r/"],
+      disallow: ["/dashboard", "/api/", "/auth", "/diagnost/r/", "/rentgen/r/"],
     },
     sitemap: "https://leads.konversus.ru/sitemap.xml",
     host: "https://leads.konversus.ru",

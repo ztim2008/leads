@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Loader2 } from "lucide-react";
+import { reachGoal } from "@/lib/metrika";
 
 export default function StartForm({ initialUrl = "", hint = true }: { initialUrl?: string; hint?: boolean }) {
   const router = useRouter();
@@ -23,6 +24,7 @@ export default function StartForm({ initialUrl = "", hint = true }: { initialUrl
       });
       const data = (await response.json()) as { slug?: string; error?: string };
       if (!response.ok || !data.slug) throw new Error(data.error || "Не удалось начать проверку");
+      reachGoal("rentgen_start");
       router.push(`/rentgen/r/${data.slug}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Не удалось начать проверку");

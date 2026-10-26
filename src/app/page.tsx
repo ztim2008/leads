@@ -26,7 +26,7 @@ const AUDIENCES = [
     icon: Briefcase,
     title: "Директологам и агентствам",
     text: "Проверить сайт клиента до запуска рекламы, показать причины и план исправлений, найти новых клиентов.",
-    products: ["diagnost", "pokaz", "secret-shopper", "architect"],
+    products: ["diagnost", "rentgen", "pokaz", "secret-shopper", "architect"],
   },
   {
     icon: Building2,
