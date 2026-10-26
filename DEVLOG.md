@@ -1612,7 +1612,7 @@ Partner buys VPS, downloads zip, fills config.json (Profi login/password + Teleg
 **Завтра:**
 - Метрика: завести цели `rentgen_start`, `rentgen_done`, `rentgen_png`, `rentgen_to_diagnost` (делает владелец).
 - Яндекс Вебмастер: переобход `/rentgen` и главной.
-- Не удалять скан `e5y24kqwdq3q` (на него ссылаются `/rentgen` и главная).
+- Не удалять скан `pwmakwcjeh5g` (на него ссылаются `/rentgen` и главная; заменил `e5y24kqwdq3q`).
 - На новом сервере: `npm run rentgen:model` (веса не в git).
 - Пилот RysyevIV / 4.11.4 — по плану.
 
@@ -1633,3 +1633,16 @@ Partner buys VPS, downloads zip, fills config.json (Profi login/password + Teleg
 - Демо пересканировано (подсказка «Бани из кедра под ключ за 30 дней»): пример отчёта теперь `/rentgen/r/pwmakwcjeh5g`, старый `e5y24kqwdq3q` удалён. Подсказки — только в новых сканах.
 
 Файлы: `src/lib/rentgen/{issues,types}.ts`, `src/components/rentgen/scan-view.tsx`, `src/lib/rentgen/demo.json`. Production: build, `pm2 restart leads-konversus leads-diagnost`, 200.
+
+## Дополнение к итогам дня · 26 октября 2026
+
+После первого закрытия, по отзыву с теста:
+- «Ошибки»: иконки, кнопки и картинки без названия скрыты в «Мелочи для SEO и доступности» (по запросу), подсказка «Битых ссылок: N — смотрите слой „Клики“».
+- Подсказки alt без ИИ — из title, подписи, текста ссылки, заголовка блока, имени файла.
+- Пример отчёта пересканирован: `/rentgen/r/pwmakwcjeh5g`.
+- Вопрос о токенах: Рентген не обращается к платным ИИ-API — Playwright, axe-core и локальная модель внимания на CPU. Подсказки alt через модель с распознаванием картинок — отложены («пока не надо»).
+
+**Production:** build ✓, главная 200; PM2 как утром (`leads-kwork` stopped, не трогали). Profi на хабе выключен.
+
+**Завтра:** цели Рентгена в Метрике и переобход `/rentgen` в Вебмастере (владелец); пилот RysyevIV / 4.11.4.
+
