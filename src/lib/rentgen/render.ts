@@ -1,7 +1,8 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { CHROME_UA, MOBILE_UA, clearPopups, guard, openPage } from "@/lib/diagnost/render";
-import { COLLECT_CLICKS, FLATTEN_STICKY, PROBE_CLICK, SCROLL_THROUGH, SCROLL_TO, TOGGLE_FIXED } from "@/lib/rentgen/collect";
+import { COLLECT_CLICKS, FLATTEN_STICKY, PROBE_ARM, PROBE_DISPATCH, PROBE_READ, SCROLL_THROUGH, SCROLL_TO, TOGGLE_FIXED } from "@/lib/rentgen/collect";
+import { checkLinks, pickLinks, type LinkCheck } from "@/lib/rentgen/links";
 import type { ClickItem, RawClick, RawView, RentgenResult, RentgenView, ViewKind } from "@/lib/rentgen/types";
 
 type Browser = import("playwright").Browser;
@@ -27,8 +28,8 @@ export function rentgenShotPath(scanId: string, view: ViewKind): string {
 const emptyHref = (href: string | null) => !href || href === "#" || /^javascript:/i.test(href);
 
 function needsProbe(raw: RawClick): boolean {
-  if (raw.onclick || raw.submenu) return false;
-  if (raw.tag === "a") return emptyHref(raw.hrefRaw?.trim() ?? null);
+  if (raw.onclick || raw.submenu || raw.active) return false;
+  if (raw.tag === "a") return emptyHref(raw.hrefRaw?.trim() ?? null) || raw.anchorExists === false;
   if (!raw.interactive) return true;
   return !((raw.inForm || raw.formAttr) && raw.submit);
 }
@@ -48,7 +49,7 @@ function cramped(raw: RawClick, all: RawClick[]): boolean {
   });
 }
 
-function classify(raw: RawClick, probed: boolean | undefined, view: ViewKind, all: RawClick[]): Omit<ClickItem, "n"> {
+function classify(raw: RawClick, probed: boolean | null | undefined, view: ViewKind, all: RawClick[]): Omit<ClickItem, "n"> {
   const base = { label: raw.label, box: raw.box, path: raw.path };
   const href = raw.hrefRaw?.trim() ?? null;
   let item: Omit<ClickItem, "n">;
@@ -58,7 +59,13 @@ function classify(raw: RawClick, probed: boolean | undefined, view: ViewKind, al
     const abs = raw.hrefAbs ?? link;
     if (link.startsWith("#")) {
       if (/^#[!/]/.test(link)) item = { ...base, kind: "ok", href: link, reason: "Переход внутри приложения" };
-      else if (raw.anchorExists === false) item = { ...base, kind: "dead", href: link, reason: "Якорь ведёт на блок, которого нет на странице" };
+      else if (raw.anchorExists === false)
+        item =
+          probed === true
+            ? { ...base, kind: "ok", href: link, reason: "Открывает окно или блок" }
+            : probed === false
+              ? { ...base, kind: "dead", href: link, reason: "Якорь ведёт на блок, которого нет на странице" }
+              : { ...base, kind: "unknown", href: link, reason: probed === null ? "Элемент перекрыт другим блоком — нажатие не проверить" : "Нажатие не проверяли" };
       else item = { ...base, kind: "ok", href: link, reason: "Переход к блоку на странице" };
     } else if (/^tel:/i.test(link)) {
       const digits = link.replace(/\D/g, "").length;
@@ -86,13 +93,22 @@ function classify(raw: RawClick, probed: boolean | undefined, view: ViewKind, al
       item = { ...base, kind: "unknown", href: link, reason: "Нестандартная ссылка" };
     }
   } else if (!needsProbe(raw)) {
-    item = { ...base, kind: "ok", reason: raw.submenu ? "Открывает подменю" : raw.onclick ? "Кнопка со скриптом" : "Кнопка отправки формы" };
+    item = {
+      ...base,
+      kind: "ok",
+      reason: raw.submenu ? "Открывает подменю" : raw.active ? "Уже выбрано" : raw.onclick ? "Кнопка со скриптом" : "Кнопка отправки формы",
+    };
   } else if (probed === true) {
     item = { ...base, kind: "ok", reason: "Срабатывает по нажатию" };
   } else if (probed === false) {
-    item = raw.interactive
-      ? { ...base, kind: "dead", reason: raw.tag === "a" ? "Ссылка никуда не ведёт и ничего не делает" : "Кнопка не реагирует на нажатие" }
-      : { ...base, kind: "fake", reason: "Похоже на кнопку, но не нажимается" };
+    item =
+      raw.tag === "a"
+        ? { ...base, kind: "dead", reason: "Ссылка никуда не ведёт и ничего не делает" }
+        : raw.interactive
+          ? { ...base, kind: "fake", reason: "Кнопка не реагирует на нажатие — проверьте, возможно, уже выбрана" }
+          : { ...base, kind: "fake", reason: "Похоже на кнопку, но не нажимается" };
+  } else if (probed === null) {
+    item = { ...base, kind: "unknown", reason: "Элемент перекрыт другим блоком — нажатие не проверить" };
   } else {
     item = { ...base, kind: "unknown", reason: "Нажатие не проверяли" };
   }
@@ -103,15 +119,27 @@ function classify(raw: RawClick, probed: boolean | undefined, view: ViewKind, al
   return item;
 }
 
+function applyCheck(item: Omit<ClickItem, "n">, check: LinkCheck, siteHost: string): Omit<ClickItem, "n"> {
+  const internal = new URL(item.href!).hostname.replace(/^www\./, "") === siteHost;
+  if (check.status !== null) {
+    if (check.status === 404 || check.status === 410 || check.status >= 500 || (internal && check.status >= 400))
+      return { ...item, kind: "dead", status: check.status, reason: `Страница по ссылке отвечает ошибкой ${check.status}` };
+    if (check.status >= 400) return { ...item, kind: "unknown", status: check.status, reason: "Сайт по ссылке не дал себя проверить" };
+    return { ...item, status: check.status };
+  }
+  if (check.error === "dns") return { ...item, kind: "dead", status: null, reason: "Сайта по ссылке не существует" };
+  return { ...item, kind: "unknown", status: null, reason: internal ? "Страница не ответила за 5 секунд" : "Сайт по ссылке не ответил" };
+}
+
 function numberProblems(items: Omit<ClickItem, "n">[]): ClickItem[] {
   const sorted = [...items].sort((a, b) => a.box.y - b.box.y || a.box.x - b.box.x);
   let n = 0;
   return sorted.map((item) => ({ ...item, n: item.kind === "dead" || item.kind === "fake" || item.kind === "small" ? ++n : null }));
 }
 
-async function probeAll(page: Page, context: BrowserContext, url: string, paths: string[], budgetMs: number): Promise<Map<string, boolean>> {
+async function probeAll(page: Page, context: BrowserContext, url: string, paths: string[], budgetMs: number): Promise<Map<string, boolean | null>> {
   const deadline = Date.now() + budgetMs;
-  const results = new Map<string, boolean>();
+  const results = new Map<string, boolean | null>();
   let requests = 0;
   let popup = false;
   let dialog = false;
@@ -139,9 +167,19 @@ async function probeAll(page: Page, context: BrowserContext, url: string, paths:
     dialog = false;
     let reacted = false;
     let reload = false;
+    let trusted = true;
     try {
-      const res = (await page.evaluate(`(${PROBE_CLICK})(${JSON.stringify(path)})`)) as { missing: boolean; base: number; after: number; moved: boolean };
-      if (res.missing) continue;
+      const armed = (await page.evaluate(`(${PROBE_ARM})(${JSON.stringify(path)})`)) as { missing: boolean; base: number };
+      if (armed.missing) continue;
+      requests = 0;
+      try {
+        await page.locator(path).first().click({ timeout: 1500, noWaitAfter: true });
+      } catch {
+        trusted = false;
+        await page.evaluate(`(${PROBE_DISPATCH})(${JSON.stringify(path)})`);
+      }
+      const read = (await page.evaluate(`(${PROBE_READ})()`)) as { after: number; moved: boolean };
+      const res = { base: armed.base, ...read };
       await page.waitForTimeout(150);
       const now = new URL(page.url());
       const leftPage = now.origin + now.pathname + now.search !== home.origin + home.pathname + home.search;
@@ -152,7 +190,7 @@ async function probeAll(page: Page, context: BrowserContext, url: string, paths:
       reacted = true;
       reload = true;
     }
-    results.set(path, reacted);
+    results.set(path, reacted ? true : trusted ? false : null);
     if (reload) {
       await page.goto(url, { waitUntil: "load", timeout: 30_000 }).catch(() => undefined);
       await page.waitForTimeout(1200);
@@ -207,7 +245,7 @@ async function renderView(
   url: string,
   scanId: string,
   view: ViewKind,
-  known: Map<string, boolean>,
+  known: Map<string, boolean | null>,
 ): Promise<{ view: RentgenView; framework: RawView["framework"]; finalUrl: string }> {
   const spec = VIEWS[view];
   const context = await browser.newContext({
@@ -232,12 +270,14 @@ async function renderView(
     raw.items = raw.items.filter((item) => item.box.y < height);
 
     const suspects = raw.items.filter(needsProbe).sort((a, b) => a.box.y - b.box.y);
-    const toProbe = suspects.filter((item) => !known.has(item.path)).slice(0, spec.probes).map((item) => item.path);
+    const bySig = new Map<string, string>();
+    for (const item of suspects) if (!known.has(item.sig) && !bySig.has(item.sig)) bySig.set(item.sig, item.path);
+    const toProbe = [...bySig.values()].slice(0, spec.probes);
     const probed = await probeAll(page, context, finalUrl, toProbe, spec.probeMs);
-    for (const [path, value] of probed) known.set(path, value);
+    for (const [sig, path] of bySig) if (probed.has(path)) known.set(sig, probed.get(path)!);
 
-    const items = numberProblems(raw.items.map((item) => classify(item, known.get(item.path), view, raw.items)));
-    const unprobed = suspects.filter((item) => !known.has(item.path)).length;
+    const items = numberProblems(raw.items.map((item) => classify(item, known.get(item.sig), view, raw.items)));
+    const unprobed = suspects.filter((item) => !known.has(item.sig)).length;
     return {
       view: { shot, width: spec.width, height, truncated: raw.docHeight > spec.maxHeight, items, unprobed },
       framework: raw.framework,
@@ -254,7 +294,7 @@ export async function renderRentgen(url: string, scanId: string): Promise<Rentge
   try {
     const { chromium } = await import("playwright");
     browser = await chromium.launch({ headless: true, args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"] });
-    const known = new Map<string, boolean>();
+    const known = new Map<string, boolean | null>();
     const desktop = await renderView(browser, url, scanId, "desktop", known);
     let mobile: RentgenView | null = null;
     try {
@@ -262,7 +302,20 @@ export async function renderRentgen(url: string, scanId: string): Promise<Rentge
     } catch (error) {
       console.error("[rentgen] mobile", error instanceof Error ? error.message : error);
     }
-    return { finalUrl: desktop.finalUrl, framework: desktop.framework, views: { desktop: desktop.view, mobile }, linksChecked: 0, ms: Date.now() - started };
+    const views = [desktop.view, mobile].filter((view): view is RentgenView => view !== null);
+    const linkItems = views.flatMap((view) => view.items).filter((item) => (item.kind === "ok" || item.kind === "small") && !item.contact && item.href && /^https?:/i.test(item.href));
+    const urls = pickLinks(linkItems.map((item) => item.href!), desktop.finalUrl);
+    const checks = await checkLinks(urls);
+    const siteHost = new URL(desktop.finalUrl).hostname.replace(/^www\./, "");
+    for (const view of views) {
+      view.items = numberProblems(
+        view.items.map(({ n: _n, ...item }) => {
+          const check = item.href && (item.kind === "ok" || item.kind === "small") && !item.contact ? checks.get(item.href.split("#")[0]) : undefined;
+          return check ? applyCheck(item, check, siteHost) : item;
+        }),
+      );
+    }
+    return { finalUrl: desktop.finalUrl, framework: desktop.framework, views: { desktop: desktop.view, mobile }, linksChecked: checks.size, ms: Date.now() - started };
   } finally {
     await browser?.close().catch(() => undefined);
   }

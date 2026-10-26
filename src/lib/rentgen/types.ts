@@ -41,6 +41,8 @@ export type RentgenResult = {
 /** Сырые данные элемента из страницы — до классификации */
 export type RawClick = {
   path: string;
+  /** тег|класс|подпись — одинаковые элементы прощёлкиваем один раз */
+  sig: string;
   tag: string;
   role: string | null;
   label: string;
@@ -56,6 +58,8 @@ export type RawClick = {
   inlineText: boolean;
   onclick: boolean;
   submenu: boolean;
+  /** Уже выбранная вкладка / фильтр — повторное нажатие ничего не меняет */
+  active: boolean;
   anchorExists: boolean | null;
 };
 

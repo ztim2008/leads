@@ -40,7 +40,7 @@ async function probe(url: string) {
   const host = new URL(url).hostname.replace(/^www\./, "");
   try {
     const result = await renderRentgen(url, `probe-${host.replace(/\./g, "-")}`);
-    console.log(`\n=== ${host} · ${result.ms} мс · framework=${result.framework ?? "—"}`);
+    console.log(`\n=== ${host} · ${result.ms} мс · framework=${result.framework ?? "—"} · ссылок проверено ${result.linksChecked}`);
     for (const [name, view] of Object.entries(result.views)) {
       if (!view) {
         console.log(`  ${name}: нет`);
@@ -50,7 +50,7 @@ async function probe(url: string) {
       console.log(
         `  ${name}: ${view.width}×${view.height}${view.truncated ? " (обрезано)" : ""} · всего ${view.items.length} · ok ${count("ok")} · dead ${count("dead")} · fake ${count("fake")} · small ${count("small")} · unknown ${count("unknown")} · не прощёлкано ${view.unprobed}`,
       );
-      for (const item of view.items.filter((i) => i.n)) console.log(`    #${item.n} ${item.kind} «${item.label.slice(0, 40)}» — ${item.reason}${item.href ? ` (${item.href.slice(0, 60)})` : ""}`);
+      for (const item of view.items.filter((i) => i.n)) console.log(`    #${item.n} ${item.kind} «${item.label.slice(0, 40)}» — ${item.reason}${item.status ? ` [${item.status}]` : ""}${item.href ? ` (${item.href.slice(0, 60)})` : ""} @${item.box.x},${item.box.y} ${item.box.w}×${item.box.h} ${item.path.slice(-90)}`);
       await annotate(view, join(OUT, `${host}-${name}.jpg`));
     }
   } catch (error) {

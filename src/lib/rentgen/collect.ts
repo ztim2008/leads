@@ -49,7 +49,7 @@ export const COLLECT_CLICKS = String.raw`(maxHeight) => {
   const vw = document.documentElement.clientWidth;
   const docHeight = Math.max(document.documentElement.scrollHeight, document.body ? document.body.scrollHeight : 0);
   const limitY = Math.min(docHeight, maxHeight);
-  const textOf = (el) => (el.innerText || el.textContent || "").replace(/\s+/g, " ").trim();
+  const textOf = (el) => (el.innerText || "").replace(/\s+/g, " ").trim();
   const labelOf = (el) => {
     const img = el.querySelector && el.querySelector("img[alt]");
     return (textOf(el) || el.getAttribute("aria-label") || el.getAttribute("title") || el.getAttribute("value") || el.getAttribute("alt") || (img ? img.getAttribute("alt") : "") || "").trim().slice(0, 80);
@@ -142,8 +142,10 @@ export const COLLECT_CLICKS = String.raw`(maxHeight) => {
       anchorExists = Boolean(document.getElementById(id) || document.getElementsByName(id).length);
     }
     const type = (el.getAttribute("type") || "").toLowerCase();
+    const cls = typeof el.className === "string" ? el.className.trim().replace(/\s+/g, " ").slice(0, 80) : "";
     items.push({
       path,
+      sig: el.tagName + "|" + cls + "|" + labelOf(el).slice(0, 40),
       tag: el.tagName.toLowerCase(),
       role: el.getAttribute("role"),
       label: labelOf(el),
@@ -159,6 +161,7 @@ export const COLLECT_CLICKS = String.raw`(maxHeight) => {
       inlineText: inlineText(el),
       onclick: el.hasAttribute("onclick"),
       submenu: hasSubmenu(el),
+      active: el.getAttribute("aria-selected") === "true" || el.getAttribute("aria-pressed") === "true" || el.hasAttribute("aria-current") || /(^|[\s_-])(active|selected|current|is-active)([\s_-]|$)/i.test(cls),
       anchorExists,
     });
   };
@@ -195,20 +198,51 @@ export const COLLECT_CLICKS = String.raw`(maxHeight) => {
   return { items, docHeight, framework };
 }`;
 
-/** Пробный клик: есть ли реакция (изменения DOM сверх фонового шума, смена адреса). */
-export const PROBE_CLICK = String.raw`async (path) => {
+/** Пробный клик, шаг 1: наблюдатель DOM, фоновый шум за 300 мс, перехват буфера обмена и window.open. */
+export const PROBE_ARM = String.raw`async (path) => {
   const el = document.querySelector(path);
-  if (!el) return { missing: true, base: 0, after: 0, moved: false };
-  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-  let count = 0;
-  const mo = new MutationObserver((list) => { count += list.length; });
-  mo.observe(document.documentElement, { subtree: true, childList: true, attributes: true, characterData: true });
-  await wait(300);
-  const base = count;
-  count = 0;
-  const before = location.href;
-  try { el.click(); } catch (e) {}
-  await wait(650);
-  mo.disconnect();
-  return { missing: false, base, after: count, moved: location.href !== before };
+  if (!el) return { missing: true, base: 0 };
+  const state = { count: 0, side: false, before: location.href, mo: null };
+  state.mo = new MutationObserver((list) => { state.count += list.length; });
+  state.mo.observe(document.documentElement, { subtree: true, childList: true, attributes: true, characterData: true });
+  if (!window.__rgPatched) {
+    window.__rgPatched = true;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      const write = navigator.clipboard.writeText.bind(navigator.clipboard);
+      navigator.clipboard.writeText = (t) => { if (window.__rg) window.__rg.side = true; return write(t).catch(() => undefined); };
+    }
+    const exec = document.execCommand.bind(document);
+    document.execCommand = (...args) => { if (window.__rg) window.__rg.side = true; return exec(...args); };
+    window.open = () => { if (window.__rg) window.__rg.side = true; return null; };
+  }
+  window.__rg = state;
+  await new Promise((r) => setTimeout(r, 300));
+  const base = state.count;
+  state.count = 0;
+  return { missing: false, base };
+}`;
+
+/** Запасной клик событиями — если настоящий клик Playwright не прошёл (элемент перекрыт). */
+export const PROBE_DISPATCH = String.raw`(path) => {
+  const el = document.querySelector(path);
+  if (!el) return;
+  const r = el.getBoundingClientRect();
+  const at = { bubbles: true, cancelable: true, view: window, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2 };
+  try {
+    el.dispatchEvent(new PointerEvent("pointerdown", at));
+    el.dispatchEvent(new MouseEvent("mousedown", at));
+    el.dispatchEvent(new PointerEvent("pointerup", at));
+    el.dispatchEvent(new MouseEvent("mouseup", at));
+    el.click();
+  } catch (e) {}
+}`;
+
+/** Пробный клик, шаг 3: реакция за 650 мс. */
+export const PROBE_READ = String.raw`async () => {
+  const state = window.__rg;
+  if (!state) return { after: 0, moved: true };
+  await new Promise((r) => setTimeout(r, 650));
+  state.mo.disconnect();
+  window.__rg = null;
+  return { after: state.count, moved: location.href !== state.before || state.side };
 }`;
