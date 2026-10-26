@@ -4,9 +4,9 @@ import { isPrivateIp } from "@/lib/briefs/fetch-site";
 import { shotPath } from "@/lib/diagnost/shots";
 import type { FoldMark, PerfSignals, RenderSignals, ViewPopup, ViewSignals } from "@/lib/diagnost/types";
 
-const CHROME_UA =
+export const CHROME_UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36 KonversusDiagnost/1.0";
-const MOBILE_UA =
+export const MOBILE_UA =
   "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1 KonversusDiagnost/1.0";
 
 const STRONG_CTA_SOURCE =
@@ -34,7 +34,7 @@ async function hostAllowed(hostname: string): Promise<boolean> {
   return ok;
 }
 
-async function guard(context: BrowserContext) {
+export async function guard(context: BrowserContext) {
   await context.route("**/*", async (route) => {
     try {
       const url = new URL(route.request().url());
@@ -332,7 +332,7 @@ const PERF_SCRIPT = String.raw`(() => {
   };
 })()`;
 
-async function openPage(context: BrowserContext, url: string) {
+export async function openPage(context: BrowserContext, url: string) {
   const page = await context.newPage();
   try {
     await page.goto(url, { waitUntil: "load", timeout: 30_000 });
@@ -343,7 +343,7 @@ async function openPage(context: BrowserContext, url: string) {
   return page;
 }
 
-async function clearPopups(page: Page): Promise<ViewPopup[]> {
+export async function clearPopups(page: Page): Promise<ViewPopup[]> {
   const url = page.url();
   const found: ViewPopup[] = [];
   const merge = (items: ViewPopup[]) => {

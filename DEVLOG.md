@@ -1417,3 +1417,28 @@ Partner buys VPS, downloads zip, fills config.json (Profi login/password + Teleg
 
 ### Файлы
 - `AGENTS.md`, `docs/ROLLBACK.md`, `DEVLOG.md`
+
+---
+
+## Рентген D.13 — сбор «Кликов» · 26 октября 2026
+
+### Сделано
+- `src/lib/rentgen/`: сбор ссылок, кнопок и «похожих на кнопку» элементов с координатами (ПК 1440, телефон 390), классы ok / dead / fake / small / unknown, номера у проблем.
+- Снимок страницы кусками по высоте окна и склейка: `fullPage` даёт `captureBeyondViewport` → сайт ловит resize и перестраивает вёрстку (divan.ru — рамки съезжали). sticky → relative, fixed видны только на первом куске.
+- Вместо поиска обработчиков — пробный клик (изменения DOM сверх фона, смена адреса, запросы, новое окно, диалог), лимит по времени: ПК 25 с, телефон 12 с. Пункты меню с подменю — ok без клика.
+- Мелкие зоны — по WCAG 2.2 (2.5.8): < 24 px и тесно к соседям. Ссылки внутри Яндекс-/Google-карт не учитываем.
+- Модель `RentgenScan` → таблица `rentgen_scans`. Миграция проверена на временной копии базы (`rentgen_check`, удалена), к рабочей — только `prisma migrate deploy`. Перед этим слепок `daily/leads-2026-10-26_07-02`.
+- Очередь: `leads-diagnost` в паузах между аудитами берёт сканы Рентгена. Тестовый скан через базу — 28,7 с, запись удалена.
+- Прогон на 5 сайтах (`scripts/rentgen-probe.ts`): krovla-siding.ru, dkbani.ru (Тильда), divan.ru (React), proektmap.ru (Next), baishalex.ru (WP) — 30–35 с, divan 107 с.
+- Общие функции Техосмотра (`guard`, `openPage`, `clearPopups`, UA) экспортированы из `src/lib/diagnost/render.ts` без изменения поведения.
+- Попутно: схема и база расходятся по значениям по умолчанию в `job_radar_profile` / `job_vacancies` — давнее, не трогали.
+
+### Файлы
+- `prisma/schema.prisma`, `prisma/migrations/20261026090000_rentgen/`, `src/lib/rentgen/{types,collect,render,run}.ts`, `src/collectors/diagnost-worker.ts`, `src/lib/diagnost/render.ts`, `scripts/rentgen-probe.ts`, `docs/PLAN_2026-08-10.md`, `DEVLOG.md`
+
+### Production
+- `npm run build` ✅ · перезапущены `leads-diagnost`, `leads-konversus` · `/`, `/pokaz`, `/diagnost` → **200** · `pm2 save` · Profi на хабе **off** · агент пилота не трогали.
+
+### Дальше (D.14)
+- Тильда `#popup:...` → ok; «Закрыть» у скрытых виджетов; подпись из `<style>`; на больших SPA часть пробных кликов не успевает.
+- Проверка статусов ссылок (до 60, guard).

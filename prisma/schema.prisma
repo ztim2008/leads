@@ -582,3 +582,27 @@ model DiagnostAudit {
   @@index([host, createdAt])
   @@map("diagnost_audits")
 }
+
+/// Рентген сайта (/rentgen) — снимок со слоем «Клики». ТЗ: docs/RENTGEN.md
+model RentgenScan {
+  id         String    @id @default(uuid())
+  slug       String    @unique
+  /// Кука браузера владельца — без регистрации
+  ownerToken String    @map("owner_token")
+  ipHash     String?   @map("ip_hash")
+  url        String
+  host       String
+  /// queued | running | done | failed
+  status     String    @default("queued")
+  progress   Int       @default(0)
+  result     Json?
+  error      String?   @db.Text
+  startedAt  DateTime? @map("started_at")
+  finishedAt DateTime? @map("finished_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  @@index([status, createdAt])
+  @@index([ipHash, createdAt])
+  @@index([host, createdAt])
+  @@map("rentgen_scans")
+}
