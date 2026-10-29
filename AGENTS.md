@@ -148,6 +148,7 @@ pm2 save
 | [docs/CLIENT_HOSTING_BRIDGE.md](docs/CLIENT_HOSTING_BRIDGE.md) | Мост: свой VPS → домен/хостинг клиента (Timeweb/Beget) |
 | [docs/CLIENT_PROJECT_LAUNCH.md](docs/CLIENT_PROJECT_LAUNCH.md) | Поэтапный запуск: Beget → домен → среда → Cursor-агент |
 | [docs/JOB_RADAR.md](docs/JOB_RADAR.md) | Вакансии HH для админа. Отдельно от заявок партнёров |
+| [docs/YOUDO.md](docs/YOUDO.md) | YouDo: анонимный сбор на VPS партнёра (`leads-agent-youdo`). Не входить в аккаунт YouDo, без автооткликов |
 | [docs/STRATEG.md](docs/STRATEG.md) | Стратег: аудит сайта и черновик Директа. Не Job Radar и не заявки |
 | [docs/STRATEG_ROADMAP.md](docs/STRATEG_ROADMAP.md) | Стратег: план развития R.1–R.6. Читать по запросу «развить Стратег» |
 | [docs/RENTGEN.md](docs/RENTGEN.md) | Рентген сайта `/rentgen`: ТЗ, слои «Клики» → «Ошибки» → «Внимание» |

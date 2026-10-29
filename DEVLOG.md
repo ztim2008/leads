@@ -1646,3 +1646,20 @@ Partner buys VPS, downloads zip, fills config.json (Profi login/password + Teleg
 
 **Завтра:** цели Рентгена в Метрике и переобход `/rentgen` в Вебмастере (владелец); пилот RysyevIV / 4.11.4.
 
+
+## YouDo: второй поток заявок для пилота · 29 октября 2026
+
+Исследование и запуск сбора заданий YouDo для Pilot RysyevIV рядом с Profi. Канон: [docs/YOUDO.md](docs/YOUDO.md).
+
+- Исследование: лента YouDo за ServicePipe (простой HTTP получает капчу), вход только по SMS, соглашение п. 13.8/13.9/13.11 запрещает автосбор. Письма «Подписки на задания» отвергнуты — опаздывают. Анонимный headless-браузер проходит защиту, лента без задержки (задание «создано 35 с назад», 0 откликов), карточка с описанием видна без входа.
+- Сборщик `src/agent-core/youdo-collector.ts`: без входа в аккаунт, `POST /api/tasks/tasks/` из контекста страницы раз в 60–120 с, описание из `__NEXT_DATA__`, первый запуск без спама, одна повторная попытка, затем circuit breaker. Агент `src/agent-core/youdo-agent.ts` → `public/agent/v2/youdo.bundle.mjs` (`build:agent-youdo`), установка `public/agent/v2/install-youdo.sh`.
+- Хаб: `config` отдаёт блок `youdo`; `saveAndNotify` берёт `responses`/`remote` из лида; Telegram — `🟠 YouDo` в заголовке, «Открыть на YouDo», «вставьте на YouDo». Profi-карточки не изменились (тест).
+- Пилот: источник `f1a03397-3fbe-4db7-9ec9-a51d626515ea` (web-разработка, только удалённо, слова/минус-слова с Profi, бюджет любой, 08–22 МСК). На `93.188.186.13` запущен `leads-agent-youdo`; `leads-agent-v2` (Profi) не перезапускался.
+
+Файлы: `src/agent-core/youdo-{collector,agent,collector.test}.ts`, `src/app/api/v2/agent/config/route.ts`, `src/collectors/shared.ts`, `src/lib/telegram/notifications.ts`, `public/agent/v2/{install-youdo.sh,youdo.bundle.mjs}`, `package.json`, `docs/YOUDO.md`, `docs/PLAN_2026-08-10.md`, `AGENTS.md`.
+
+**Production:** build ✓, `pm2 restart leads-konversus`, главная 200. Profi на хабе выключен. На VPS пилота: `leads-agent-v2` online (5 дней, 0 рестартов), `leads-agent-youdo` online. Один разовый сбой ленты на втором опросе (исключение fetch) — агент восстановился сам, добавлен повтор с переоткрытием.
+
+**Замечено:** бот `TELEGRAM_BOT_TOKEN` получает «chat not found» для `TELEGRAM_ADMIN_CHAT_ID` — админские алерты агентов, вероятно, не доходят. Не чинили.
+
+**Дальше:** понаблюдать первые заявки YouDo у пилота; фильтры YouDo в кабинете партнёра (Y.5); офлайн YouDo-агента в мониторинге (Y.6).

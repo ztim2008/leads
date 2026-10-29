@@ -36,8 +36,9 @@ export function formatLeadTelegram(lead: LeadNotification): string {
     /только что|^[1-5] мин/i.test(lead.ageLabel || "");
   const emoji = hot ? "🔥" : lead.responsePrice ? "⚡" : "📌";
   const title = escapeHtml((lead.title || "Новый заказ").trim().slice(0, 120));
+  const badge = platformBadge(lead.platform);
 
-  const lines = [`${emoji} <b>${title}</b>`];
+  const lines = [`${badge ? `${badge} · ` : ""}${emoji} <b>${title}</b>`];
   if (lead.budget && lead.budget !== "не указан") lines.push(`💰 ${escapeHtml(lead.budget)}`);
   else lines.push("💰 бюджет не указан");
   if (lead.city) lines.push(`📍 ${escapeHtml(lead.city)}${lead.remote ? " · дистант" : ""}`);
@@ -73,7 +74,7 @@ export function formatLeadTelegram(lead: LeadNotification): string {
   if (replies.length) {
     lines.push("");
     lines.push("✍️ <b>Текст отклика</b>");
-    lines.push("<i>Скопируйте и вставьте на Profi сами. Авто-отправки нет.</i>");
+    lines.push(`<i>Скопируйте и вставьте на ${platformName(lead.platform)} сами. Авто-отправки нет.</i>`);
     for (const r of replies) {
       lines.push("");
       lines.push(`<b>${escapeHtml(r.name)}</b>`);
@@ -138,7 +139,11 @@ type TgButton = {
 };
 
 function buildKeyboard(lead: LeadNotification): TgButton[][] {
-  const openLabel = lead.platform && !/profi/i.test(lead.platform) ? "Открыть заказ" : "Открыть на Profi";
+  const openLabel = /youdo/i.test(lead.platform)
+    ? "Открыть на YouDo"
+    : lead.platform && !/profi/i.test(lead.platform)
+      ? "Открыть заказ"
+      : "Открыть на Profi";
   const rows: TgButton[][] = [[{ text: openLabel, url: lead.url }]];
 
   const copyRow: TgButton[] = [];
@@ -160,6 +165,17 @@ function resolveReplyTexts(lead: LeadNotification): Array<{ name: string; text: 
     return [{ name: "Отклик", text: lead.responseText.trim() }];
   }
   return [];
+}
+
+function platformBadge(platform: string): string {
+  if (/youdo/i.test(platform)) return "🟠 <b>YouDo</b>";
+  return "";
+}
+
+function platformName(platform: string): string {
+  if (/youdo/i.test(platform)) return "YouDo";
+  if (/kwork/i.test(platform)) return "Kwork";
+  return "Profi";
 }
 
 function escapeHtml(text: string): string {

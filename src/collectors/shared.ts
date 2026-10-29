@@ -63,8 +63,8 @@ export async function saveAndNotify(lead: any, source: any, s: any, responseText
       url: lead.url, createdAt: new Date(lead.createdAt || Date.now()),
       metadata: {
         feed: {
-          responses: parsed.responses ?? null,
-          remote: parsed.remote ?? false,
+          responses: lead.responses ?? parsed.responses ?? null,
+          remote: lead.remote ?? parsed.remote ?? false,
           ageLabel: parsed.ageLabel ?? null,
           responsePrice: lead.responsePrice || parsed.responsePrice || null,
           clientHint: parsed.clientHint ?? null,
@@ -107,8 +107,8 @@ export async function saveAndNotify(lead: any, source: any, s: any, responseText
         budget: budgetStr,
         url: lead.url || "",
         city: city || undefined,
-        remote: parsed.remote,
-        responses: parsed.responses,
+        remote: lead.remote ?? parsed.remote,
+        responses: lead.responses ?? parsed.responses,
         responsePrice,
         ageLabel: parsed.ageLabel,
         matchedKeyword: matchedKeyword(

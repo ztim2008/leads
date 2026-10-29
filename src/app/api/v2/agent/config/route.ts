@@ -54,6 +54,16 @@ export async function GET(req: NextRequest) {
     telegramToken: s?.telegramToken || null,
     telegramAlerts: s?.telegramAlerts !== false,
     collectionPaused,
+    ...(source.platform === "youdo"
+      ? {
+          youdo: {
+            categories: Array.isArray(cfg.categories) ? cfg.categories : ["webdevelopment"],
+            onlyVirtual: cfg.onlyVirtual !== false,
+            pollMinSec: Number(cfg.pollMinSec) || 60,
+            pollMaxSec: Number(cfg.pollMaxSec) || 120,
+          },
+        }
+      : {}),
     quota: { used: quota.used, limit: quota.limit, reason: quota.reason },
     apiUrl: process.env.NEXT_PUBLIC_URL || "https://leads.konversus.ru",
   });
