@@ -227,7 +227,7 @@ function sleep(ms) {
 
 // src/agent-core/youdo-collector.ts
 var ORIGIN = "https://youdo.com";
-var BLOCKED_HOSTS = /mc\.yandex|yandex\.ru\/adfox|adfox|sentry\.youdo|traces\.youdo|googletagmanager|google-analytics|vk\.com\/rtrg|top-fwz1|facebook/i;
+var BLOCKED_HOSTS = /api-maps\.yandex|maps\.yandex|front-maps|core-renderer-tiles|mc\.yandex|yandex\.ru\/adfox|adfox|sentry\.youdo|traces\.youdo|googletagmanager|google-analytics|vk\.com\/rtrg|top-fwz1|facebook/i;
 var SEEN_MAX = 3e3;
 var PAGE_REFRESH_MS = 45 * 6e4;
 var MIN_POLL_SEC = 45;
@@ -441,10 +441,11 @@ var YouDoCollector = class {
   async ensurePage() {
     if (this.page && Date.now() - this.pageOpenedAt < PAGE_REFRESH_MS) return this.page;
     await this.closeBrowser();
-    this.browser = await chromium.launch({
+    const launchOpts = {
       headless: this.config.headless !== false,
-      args: ["--disable-blink-features=AutomationControlled", "--disable-dev-shm-usage"]
-    });
+      args: ["--disable-blink-features=AutomationControlled", "--disable-dev-shm-usage", "--disable-gpu"]
+    };
+    this.browser = await chromium.launch({ ...launchOpts, channel: "chromium" }).catch(() => chromium.launch(launchOpts));
     this.context = await this.browser.newContext({
       viewport: { width: 1366, height: 800 },
       locale: "ru-RU",
@@ -459,13 +460,20 @@ var YouDoCollector = class {
       }
       return route.continue();
     });
-    this.browser.on("disconnected", () => {
-      if (this.page) this.callbacks?.onStatus?.("\u0434\u0438\u0430\u0433\u043D\u043E\u0441\u0442\u0438\u043A\u0430: \u0431\u0440\u0430\u0443\u0437\u0435\u0440 \u043E\u0442\u043A\u043B\u044E\u0447\u0438\u043B\u0441\u044F \u0441\u0430\u043C");
+    const browser = this.browser;
+    browser.on("disconnected", () => {
+      if (this.browser !== browser || !this.page) return;
+      this.callbacks?.onStatus?.("\u0431\u0440\u0430\u0443\u0437\u0435\u0440 \u0443\u043F\u0430\u043B, \u043E\u0442\u043A\u0440\u043E\u0435\u0442\u0441\u044F \u0437\u0430\u043D\u043E\u0432\u043E \u043D\u0430 \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u0439 \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0435");
+      this.page = null;
+      this.context = null;
+      this.browser = null;
     });
     const page = await this.context.newPage();
     page.on("crash", () => this.callbacks?.onStatus?.("\u0434\u0438\u0430\u0433\u043D\u043E\u0441\u0442\u0438\u043A\u0430: \u0441\u0442\u0440\u0430\u043D\u0438\u0446\u0430 \u0443\u043F\u0430\u043B\u0430 (crash)"));
     page.on("close", () => {
-      if (this.page === page) this.callbacks?.onStatus?.(`\u0434\u0438\u0430\u0433\u043D\u043E\u0441\u0442\u0438\u043A\u0430: \u0441\u0442\u0440\u0430\u043D\u0438\u0446\u0430 \u0437\u0430\u043A\u0440\u044B\u0442\u0430 \u0438\u0437\u0432\u043D\u0435 (${page.url().slice(0, 80)})`);
+      if (this.page !== page) return;
+      this.callbacks?.onStatus?.(`\u0441\u0442\u0440\u0430\u043D\u0438\u0446\u0430 \u0437\u0430\u043A\u0440\u044B\u0442\u0430 \u0438\u0437\u0432\u043D\u0435 (${page.url().slice(0, 80)})`);
+      this.page = null;
     });
     const category = this.config.categories?.[0] || "all";
     await page.goto(`${ORIGIN}/tasks-all-opened-${category}`, { waitUntil: "domcontentloaded", timeout: 45e3 });

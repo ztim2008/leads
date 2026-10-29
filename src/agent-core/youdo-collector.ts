@@ -17,7 +17,7 @@ import { defaultAgentHome, readJsonFile, writeJsonFile } from "./paths";
 import type { CircuitBreakerSnapshot, CollectorCallbacks, NormalizedLead } from "./types";
 
 const ORIGIN = "https://youdo.com";
-const BLOCKED_HOSTS = /mc\.yandex|yandex\.ru\/adfox|adfox|sentry\.youdo|traces\.youdo|googletagmanager|google-analytics|vk\.com\/rtrg|top-fwz1|facebook/i;
+const BLOCKED_HOSTS = /api-maps\.yandex|maps\.yandex|front-maps|core-renderer-tiles|mc\.yandex|yandex\.ru\/adfox|adfox|sentry\.youdo|traces\.youdo|googletagmanager|google-analytics|vk\.com\/rtrg|top-fwz1|facebook/i;
 const SEEN_MAX = 3000;
 const PAGE_REFRESH_MS = 45 * 60_000;
 const MIN_POLL_SEC = 45;
@@ -307,10 +307,14 @@ export class YouDoCollector {
     if (this.page && Date.now() - this.pageOpenedAt < PAGE_REFRESH_MS) return this.page;
     await this.closeBrowser();
 
-    this.browser = await chromium.launch({
+    const launchOpts = {
       headless: this.config.headless !== false,
-      args: ["--disable-blink-features=AutomationControlled", "--disable-dev-shm-usage"],
-    });
+      args: ["--disable-blink-features=AutomationControlled", "--disable-dev-shm-usage", "--disable-gpu"],
+    };
+    // chrome-headless-shell на VPS пилота падает (trap int3) — полный Chromium в new headless стабильнее
+    this.browser = await chromium
+      .launch({ ...launchOpts, channel: "chromium" })
+      .catch(() => chromium.launch(launchOpts));
     this.context = await this.browser.newContext({
       viewport: { width: 1366, height: 800 },
       locale: "ru-RU",
@@ -327,13 +331,20 @@ export class YouDoCollector {
       return route.continue();
     });
 
-    this.browser.on("disconnected", () => {
-      if (this.page) this.callbacks?.onStatus?.("диагностика: браузер отключился сам");
+    const browser = this.browser;
+    browser.on("disconnected", () => {
+      if (this.browser !== browser || !this.page) return;
+      this.callbacks?.onStatus?.("браузер упал, откроется заново на следующей проверке");
+      this.page = null;
+      this.context = null;
+      this.browser = null;
     });
     const page = await this.context.newPage();
     page.on("crash", () => this.callbacks?.onStatus?.("диагностика: страница упала (crash)"));
     page.on("close", () => {
-      if (this.page === page) this.callbacks?.onStatus?.(`диагностика: страница закрыта извне (${page.url().slice(0, 80)})`);
+      if (this.page !== page) return;
+      this.callbacks?.onStatus?.(`страница закрыта извне (${page.url().slice(0, 80)})`);
+      this.page = null;
     });
     const category = this.config.categories?.[0] || "all";
     await page.goto(`${ORIGIN}/tasks-all-opened-${category}`, { waitUntil: "domcontentloaded", timeout: 45_000 });
