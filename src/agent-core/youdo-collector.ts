@@ -291,7 +291,7 @@ export class YouDoCollector {
 
     this.browser = await chromium.launch({
       headless: this.config.headless !== false,
-      args: ["--disable-blink-features=AutomationControlled"],
+      args: ["--disable-blink-features=AutomationControlled", "--disable-dev-shm-usage"],
     });
     this.context = await this.browser.newContext({
       viewport: { width: 1366, height: 800 },
@@ -309,7 +309,14 @@ export class YouDoCollector {
       return route.continue();
     });
 
+    this.browser.on("disconnected", () => {
+      if (this.page) this.callbacks?.onStatus?.("диагностика: браузер отключился сам");
+    });
     const page = await this.context.newPage();
+    page.on("crash", () => this.callbacks?.onStatus?.("диагностика: страница упала (crash)"));
+    page.on("close", () => {
+      if (this.page === page) this.callbacks?.onStatus?.(`диагностика: страница закрыта извне (${page.url().slice(0, 80)})`);
+    });
     const category = this.config.categories?.[0] || "all";
     await page.goto(`${ORIGIN}/tasks-all-opened-${category}`, { waitUntil: "domcontentloaded", timeout: 45_000 });
     await page.waitForTimeout(8_000 + Math.random() * 4_000);

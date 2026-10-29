@@ -1658,7 +1658,7 @@ Partner buys VPS, downloads zip, fills config.json (Profi login/password + Teleg
 
 Файлы: `src/agent-core/youdo-{collector,agent,collector.test}.ts`, `src/app/api/v2/agent/config/route.ts`, `src/collectors/shared.ts`, `src/lib/telegram/notifications.ts`, `public/agent/v2/{install-youdo.sh,youdo.bundle.mjs}`, `package.json`, `docs/YOUDO.md`, `docs/PLAN_2026-08-10.md`, `AGENTS.md`.
 
-**Production:** build ✓, `pm2 restart leads-konversus`, главная 200. Profi на хабе выключен. На VPS пилота: `leads-agent-v2` online (5 дней, 0 рестартов), `leads-agent-youdo` online. Один разовый сбой ленты на втором опросе (исключение fetch) — агент восстановился сам, добавлен повтор с переоткрытием.
+**Production:** build ✓, `pm2 restart leads-konversus`, главная 200. Profi на хабе выключен. На VPS пилота: `leads-agent-v2` online (5 дней, 0 рестартов), `leads-agent-youdo` online. На VPS браузер закрывался между опросами («Target page… closed») — добавлены повтор с переоткрытием, флаг `--disable-dev-shm-usage` и диагностика закрытия страницы; после этого опросы идут на одной странице. Первая заявка пилоту: «Создать лендинг».
 
 **Замечено:** бот `TELEGRAM_BOT_TOKEN` получает «chat not found» для `TELEGRAM_ADMIN_CHAT_ID` — админские алерты агентов, вероятно, не доходят. Не чинили.
 
