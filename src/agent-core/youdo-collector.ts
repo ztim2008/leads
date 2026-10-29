@@ -21,6 +21,8 @@ const BLOCKED_HOSTS = /mc\.yandex|yandex\.ru\/adfox|adfox|sentry\.youdo|traces\.
 const SEEN_MAX = 3000;
 const PAGE_REFRESH_MS = 45 * 60_000;
 const MIN_POLL_SEC = 45;
+const DEFAULT_POLL_STEPS_SEC = [60, 180, 360];
+const POLL_JITTER = 0.2;
 
 export interface YouDoCollectorConfig {
   sourceId: string;
@@ -28,8 +30,8 @@ export interface YouDoCollectorConfig {
   onlyVirtual?: boolean;
   workHoursStart?: string;
   workHoursEnd?: string;
-  pollMinSec?: number;
-  pollMaxSec?: number;
+  /** Ступени паузы между опросами, выбирается случайно, ±20%. По умолчанию 1/3/6 мин. */
+  pollStepsSec?: number[];
   agentHome?: string;
   headless?: boolean;
 }
@@ -69,6 +71,14 @@ export function parseYouDoBudget(desc?: string, amount?: number): number | undef
   return Number.isFinite(v) && v > 0 ? v : undefined;
 }
 
+export function pickPollDelayMs(stepsSec?: number[], rnd: () => number = Math.random): number {
+  const steps = (stepsSec || []).filter((n) => Number.isFinite(n) && n > 0);
+  const pool = steps.length ? steps : DEFAULT_POLL_STEPS_SEC;
+  const base = pool[Math.floor(rnd() * pool.length)] ?? pool[0];
+  const jittered = base * (1 - POLL_JITTER + rnd() * 2 * POLL_JITTER);
+  return Math.round(Math.max(MIN_POLL_SEC, jittered) * 1000);
+}
+
 function mskHour(now = Date.now()): number {
   return new Date(now + 3 * 3600_000).getUTCHours();
 }
@@ -91,6 +101,7 @@ export class YouDoCollector {
   private running = false;
   private seen: SeenState;
   private callbacks: CollectorCallbacks | null = null;
+  private lastFeedOkAt: number | null = null;
 
   constructor(config: YouDoCollectorConfig) {
     this.config = config;
@@ -114,6 +125,10 @@ export class YouDoCollector {
 
   getBreakerState(): CircuitBreakerSnapshot {
     return this.breaker.getState();
+  }
+
+  getLastFeedOkAt(): string | null {
+    return this.lastFeedOkAt ? new Date(this.lastFeedOkAt).toISOString() : null;
   }
 
   async start(callbacks: CollectorCallbacks): Promise<void> {
@@ -146,7 +161,9 @@ export class YouDoCollector {
       } catch (err) {
         callbacks.onError?.(err instanceof Error ? err.message : String(err));
       }
-      this.timer = setTimeout(loop, this.nextDelayMs());
+      const delay = this.nextDelayMs();
+      callbacks.onStatus?.(`следующая проверка через ${Math.round(delay / 1000)} с`);
+      this.timer = setTimeout(loop, delay);
     };
 
     await loop();
@@ -174,6 +191,7 @@ export class YouDoCollector {
       return;
     }
     this.breaker.recordSuccess();
+    this.lastFeedOkAt = Date.now();
 
     const known = new Set(this.seen.ids);
     const fresh = feed.items.filter((it) => it && typeof it.Id === "number" && !known.has(it.Id));
@@ -358,8 +376,6 @@ export class YouDoCollector {
   }
 
   private nextDelayMs(): number {
-    const min = Math.max(MIN_POLL_SEC, this.config.pollMinSec ?? 60);
-    const max = Math.max(min, this.config.pollMaxSec ?? 120);
-    return Math.round((min + Math.random() * (max - min)) * 1000);
+    return pickPollDelayMs(this.config.pollStepsSec);
   }
 }

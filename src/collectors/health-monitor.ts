@@ -10,6 +10,8 @@ import { patchSourceAgentMeta } from "@/lib/agent/source-config";
 import { isActiveAgentError } from "@/lib/agent/stale-error";
 import { diagnose, healSafe } from "@/lib/admin/doctor";
 import { loadHubEnv, resolveServiceBotToken } from "@/lib/telegram/bot-token";
+import { resolveAdminChannel } from "@/lib/telegram/admin-channel";
+import { youdoWatchVerdict } from "@/lib/agent/youdo-watch";
 import {
   TELEGRAM_ATTEMPT_ACTIVITY,
   TELEGRAM_DELIVERY_ACTIVITY,
@@ -90,6 +92,8 @@ async function leadsInfo() {
 }
 
 async function adminChannel() {
+  const admin = await resolveAdminChannel();
+  if (admin.token) return admin;
   const { token } = await resolveServiceBotToken();
   return { token, chat: ADMIN_CHAT };
 }
@@ -230,6 +234,53 @@ async function alertOfflineAgents(admin: { token: string; chat: string }) {
   }
 }
 
+function mdSafe(s: string): string {
+  return s.replace(/[_*`[\]]/g, " ");
+}
+
+async function watchYouDoAgents(admin: { token: string; chat: string }) {
+  const sources = await db.source.findMany({
+    where: { platform: "youdo", enabled: true, workspace: { user: { role: "user" } } },
+    include: { workspace: { select: { name: true } } },
+  });
+  for (const s of sources) {
+    const cfg = (s.config as Record<string, unknown>) || {};
+    const v = youdoWatchVerdict(cfg);
+    if (v.kind === "unknown") continue;
+    const who = mdSafe(s.workspace.name);
+    const prev = cfg._watchAlert ? String(cfg._watchAlert) : null;
+    const prevAt = cfg._watchAlertAt ? new Date(String(cfg._watchAlertAt)).getTime() : 0;
+
+    if (v.kind === "ok") {
+      if (!prev) continue;
+      const ok = await tg(admin.token, admin.chat, `✅ *YouDo-агент снова работает*\nПартнёр: ${who}`);
+      if (!ok) notificationFailures++;
+      await patchSourceAgentMeta(s.id, { _watchAlert: null, _watchAlertAt: null });
+      continue;
+    }
+
+    if (prev === v.kind && Date.now() - prevAt < 2 * 3600_000) continue;
+
+    const lines =
+      v.kind === "offline"
+        ? [
+            `🔴 *YouDo-агент молчит ${v.minutes} мин*`,
+            `Партнёр: ${who}`,
+            `Нет heartbeat: VPS выключен или процесс leads-agent-youdo упал.`,
+            `Проверка: ssh root@${mdSafe(String(cfg._vpsIp || "IP"))} → pm2 logs leads-agent-youdo`,
+          ]
+        : [
+            `🟠 *YouDo: лента не читается ${v.minutes} мин*`,
+            `Партнёр: ${who}`,
+            `CB: ${v.cb}${v.lastError ? ` · ${mdSafe(v.lastError.slice(0, 120))}` : ""}`,
+            `Вероятно, капча или блок IP. Агент сам на паузе — не рестартить в цикле.`,
+          ];
+    const ok = await tg(admin.token, admin.chat, lines.join("\n"));
+    if (!ok) notificationFailures++;
+    await patchSourceAgentMeta(s.id, { _watchAlert: v.kind, _watchAlertAt: new Date().toISOString() });
+  }
+}
+
 async function eveningDigest(admin: { token: string; chat: string }) {
   if (mskHour() !== 21) return;
   if (!cooldown("evening_digest", 20 * 3600 * 1000)) return;
@@ -316,6 +367,9 @@ async function check() {
   }
 
   await alertOfflineAgents(admin);
+  await watchYouDoAgents(admin).catch((e) =>
+    console.error("[health] youdo watch", e instanceof Error ? e.message : e),
+  );
 
   try {
     const report = await diagnose();

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { parseYouDoBudget } from "./youdo-collector";
+import { parseYouDoBudget, pickPollDelayMs } from "./youdo-collector";
 import { formatLeadTelegram } from "@/lib/telegram/notifications";
 
 describe("parseYouDoBudget", () => {
@@ -30,5 +30,24 @@ describe("YouDo telegram card", () => {
   it("leaves Profi header unchanged", () => {
     const text = formatLeadTelegram({ ...base, platform: "profi" });
     assert.match(text.split("\n")[0], /^📌 <b>Создание лендинга<\/b>$/);
+  });
+});
+
+describe("pickPollDelayMs", () => {
+  it("picks one of 1/3/6 min with ±20% jitter", () => {
+    const seq = (a: number, b: number) => { let i = 0; return () => (i++ % 2 ? b : a); };
+    assert.equal(pickPollDelayMs(undefined, seq(0, 0.5)), 60_000);
+    assert.equal(pickPollDelayMs(undefined, seq(0.5, 0.5)), 180_000);
+    assert.equal(pickPollDelayMs(undefined, seq(0.99, 0.5)), 360_000);
+    assert.equal(pickPollDelayMs(undefined, seq(0.99, 0.999)), Math.round(360 * 1.1996 * 1000));
+  });
+
+  it("never below 45 s, custom steps respected", () => {
+    for (let i = 0; i < 200; i++) {
+      const ms = pickPollDelayMs();
+      assert.ok(ms >= 48_000 && ms <= 432_000, String(ms));
+    }
+    assert.equal(pickPollDelayMs([10], () => 0), 45_000);
+    assert.equal(pickPollDelayMs([120], () => 0.5), 120_000);
   });
 });

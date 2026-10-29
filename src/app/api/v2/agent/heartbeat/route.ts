@@ -51,6 +51,7 @@ export async function POST(req: NextRequest) {
         _circuitBreaker: status.circuitBreaker || null,
         _agentVersion: 2,
         ...(lastLoginAt ? { _lastLoginAt: lastLoginAt } : {}),
+        ...(status.lastFeedOkAt ? { _lastFeedOkAt: status.lastFeedOkAt } : {}),
         ...(errorActive
           ? { _lastError: lastError, _lastErrorTime: lastErrorTime || new Date().toISOString() }
           : { _lastError: null, _lastErrorArchived: lastError || null, _lastErrorTime: lastErrorTime || null }),

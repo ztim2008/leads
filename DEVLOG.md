@@ -1663,3 +1663,14 @@ Partner buys VPS, downloads zip, fills config.json (Profi login/password + Teleg
 **Замечено:** бот `TELEGRAM_BOT_TOKEN` получает «chat not found» для `TELEGRAM_ADMIN_CHAT_ID` — админские алерты агентов, вероятно, не доходят. Не чинили.
 
 **Дальше:** понаблюдать первые заявки YouDo у пилота; фильтры YouDo в кабинете партнёра (Y.5); офлайн YouDo-агента в мониторинге (Y.6).
+
+## YouDo: случайный интервал и сторож · 29 октября 2026
+
+- Интервал опроса YouDo — случайная ступень 1/3/6 мин ±20% (`pollStepsSec`, `pickPollDelayMs`), пол 45 с. Пилоту записано `[60, 180, 360]`.
+- Сторож в `leads-health` (`watchYouDoAgents` + `src/lib/agent/youdo-watch.ts`): «молчит» (нет heartbeat 15+ мин), «лента не читается» (в рабочие часы 20+ мин без успешного чтения или CB OPEN/BLOCKED), «снова работает». Только сообщает. Агент шлёт `lastFeedOkAt` в heartbeat.
+- **Починен канал алертов админа.** `TELEGRAM_BOT_TOKEN` из `.env` — бот, которому админ не писал: монитор копил `tg5`, алерты агентов Profi (CB, login_failed) терялись. Новый `resolveAdminChannel()` — бот и чат из настроек кабинета админа (как у Job Radar); используют `health-monitor` и `/api/v2/agent/alert`. Проверено: сообщение доставлено.
+- Инцидент: `npm run build` упал (временно не скачался шрифт Google Fonts), а `pm2 restart leads-konversus` стоял в той же команде без `&&` — хаб ~2 мин отдавал 502. Повторная сборка прошла, 200. Впредь рестарт только после успешной сборки.
+
+Файлы: `src/agent-core/youdo-{collector,agent,collector.test}.ts`, `src/lib/agent/youdo-watch{,.test}.ts`, `src/lib/telegram/admin-channel.ts`, `src/collectors/health-monitor.ts`, `src/app/api/v2/agent/{alert,config,heartbeat}/route.ts`, `package.json`, `docs/YOUDO.md`, `docs/PLAN_2026-08-10.md`.
+
+**Production:** build ✓, `pm2 restart leads-konversus leads-health`, главная 200. VPS пилота: `leads-agent-youdo` обновлён, `leads-agent-v2` (Profi) не трогали. Тесты 97/97.

@@ -231,12 +231,21 @@ var BLOCKED_HOSTS = /mc\.yandex|yandex\.ru\/adfox|adfox|sentry\.youdo|traces\.yo
 var SEEN_MAX = 3e3;
 var PAGE_REFRESH_MS = 45 * 6e4;
 var MIN_POLL_SEC = 45;
+var DEFAULT_POLL_STEPS_SEC = [60, 180, 360];
+var POLL_JITTER = 0.2;
 function parseYouDoBudget(desc, amount) {
   if (amount && amount > 0) return amount;
   const m = String(desc || "").replace(/\u00a0/g, " ").match(/(\d[\d\s]*)/);
   if (!m) return void 0;
   const v = parseInt(m[1].replace(/\s/g, ""), 10);
   return Number.isFinite(v) && v > 0 ? v : void 0;
+}
+function pickPollDelayMs(stepsSec, rnd = Math.random) {
+  const steps = (stepsSec || []).filter((n) => Number.isFinite(n) && n > 0);
+  const pool = steps.length ? steps : DEFAULT_POLL_STEPS_SEC;
+  const base = pool[Math.floor(rnd() * pool.length)] ?? pool[0];
+  const jittered = base * (1 - POLL_JITTER + rnd() * 2 * POLL_JITTER);
+  return Math.round(Math.max(MIN_POLL_SEC, jittered) * 1e3);
 }
 function mskHour(now = Date.now()) {
   return new Date(now + 3 * 36e5).getUTCHours();
@@ -254,6 +263,7 @@ var YouDoCollector = class {
     this.timer = null;
     this.running = false;
     this.callbacks = null;
+    this.lastFeedOkAt = null;
     this.config = config;
     const home = path2.join(defaultAgentHome(config.agentHome), "youdo", config.sourceId);
     this.statePath = path2.join(home, "seen.json");
@@ -273,6 +283,9 @@ var YouDoCollector = class {
   }
   getBreakerState() {
     return this.breaker.getState();
+  }
+  getLastFeedOkAt() {
+    return this.lastFeedOkAt ? new Date(this.lastFeedOkAt).toISOString() : null;
   }
   async start(callbacks) {
     if (this.running) return;
@@ -299,7 +312,9 @@ var YouDoCollector = class {
       } catch (err) {
         callbacks.onError?.(err instanceof Error ? err.message : String(err));
       }
-      this.timer = setTimeout(loop, this.nextDelayMs());
+      const delay = this.nextDelayMs();
+      callbacks.onStatus?.(`\u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0430\u044F \u043F\u0440\u043E\u0432\u0435\u0440\u043A\u0430 \u0447\u0435\u0440\u0435\u0437 ${Math.round(delay / 1e3)} \u0441`);
+      this.timer = setTimeout(loop, delay);
     };
     await loop();
   }
@@ -324,6 +339,7 @@ var YouDoCollector = class {
       return;
     }
     this.breaker.recordSuccess();
+    this.lastFeedOkAt = Date.now();
     const known = new Set(this.seen.ids);
     const fresh = feed.items.filter((it) => it && typeof it.Id === "number" && !known.has(it.Id));
     if (!this.seen.seededAt) {
@@ -487,9 +503,7 @@ var YouDoCollector = class {
     return h < hourOf(this.config.workHoursStart, 8) || h >= hourOf(this.config.workHoursEnd, 22);
   }
   nextDelayMs() {
-    const min = Math.max(MIN_POLL_SEC, this.config.pollMinSec ?? 60);
-    const max = Math.max(min, this.config.pollMaxSec ?? 120);
-    return Math.round((min + Math.random() * (max - min)) * 1e3);
+    return pickPollDelayMs(this.config.pollStepsSec);
   }
 };
 
@@ -529,7 +543,7 @@ async function loadConfig() {
   if (cfg.platform !== "youdo") throw new Error(`source platform is ${cfg.platform}, expected youdo`);
   return cfg;
 }
-async function heartbeat(cb) {
+async function heartbeat(cb, lastFeedOkAt) {
   await apiPost("heartbeat", {
     status: {
       leads: totalLeadsSent,
@@ -539,7 +553,8 @@ async function heartbeat(cb) {
       lastError,
       lastErrorTime,
       agentState,
-      circuitBreaker: cb || null
+      circuitBreaker: cb || null,
+      lastFeedOkAt: lastFeedOkAt || null
     }
   });
 }
@@ -547,8 +562,7 @@ function runtimeFrom(cfg) {
   return {
     categories: cfg.youdo?.categories,
     onlyVirtual: cfg.youdo?.onlyVirtual,
-    pollMinSec: cfg.youdo?.pollMinSec,
-    pollMaxSec: cfg.youdo?.pollMaxSec,
+    pollStepsSec: cfg.youdo?.pollStepsSec,
     workHoursStart: cfg.workHoursStart,
     workHoursEnd: cfg.workHoursEnd
   };
@@ -569,12 +583,12 @@ async function main() {
     loadConfig().then((cfg) => collector.updateRuntime(runtimeFrom(cfg))).catch((e) => console.error("[youdo-agent] config refresh:", e instanceof Error ? e.message : e));
   }, 2 * 6e4);
   setInterval(() => {
-    heartbeat(collector.getBreakerState()).catch(
+    heartbeat(collector.getBreakerState(), collector.getLastFeedOkAt()).catch(
       (e) => console.error("[youdo-agent] heartbeat:", e instanceof Error ? e.message : e)
     );
   }, 5 * 6e4);
   agentState = "running";
-  await heartbeat(collector.getBreakerState());
+  await heartbeat(collector.getBreakerState(), collector.getLastFeedOkAt());
   await collector.start({
     onLead: async (lead) => {
       const res = await apiPost("leads", { leads: [lead] });
@@ -607,7 +621,7 @@ async function main() {
         }).catch(() => {
         });
       }
-      await heartbeat(snap).catch(() => {
+      await heartbeat(snap, collector.getLastFeedOkAt()).catch(() => {
       });
     }
   });

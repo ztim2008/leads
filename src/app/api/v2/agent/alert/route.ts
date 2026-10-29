@@ -1,10 +1,8 @@
 import { db } from "@/lib/db";
 import { agentUnauthorized, verifyAgentSecret } from "@/lib/agent/auth";
 import { patchSourceAgentMeta } from "@/lib/agent/source-config";
+import { resolveAdminChannel } from "@/lib/telegram/admin-channel";
 import { NextRequest, NextResponse } from "next/server";
-
-const ADMIN_CHAT = process.env.TELEGRAM_ADMIN_CHAT_ID || "778784292";
-const ADMIN_BOT = process.env.TELEGRAM_BOT_TOKEN || "";
 
 export async function POST(req: NextRequest) {
   try {
@@ -13,9 +11,15 @@ export async function POST(req: NextRequest) {
 
     if (!verifyAgentSecret(secret)) return agentUnauthorized();
 
-    const source = await db.source.findUnique({ where: { id: sourceId } });
+    const source = await db.source.findUnique({
+      where: { id: sourceId },
+      include: { workspace: { select: { name: true } } },
+    });
     const cfg = (source?.config as Record<string, unknown>) || {};
-    const login = cfg.login || sourceId?.slice(0, 8);
+    const login =
+      source?.platform === "youdo"
+        ? `YouDo · ${source.workspace.name}`
+        : cfg.login || sourceId?.slice(0, 8);
 
     const dedupMs = type === "login_failed" ? 4 * 60 * 60 * 1000 : 15 * 60 * 1000;
     const lastAt = cfg._lastAlert ? new Date(String(cfg._lastAlert)).getTime() : 0;
@@ -46,11 +50,12 @@ export async function POST(req: NextRequest) {
       .filter(Boolean)
       .join("\n");
 
-    if (ADMIN_BOT && ADMIN_CHAT) {
-      await fetch(`https://api.telegram.org/bot${ADMIN_BOT}/sendMessage`, {
+    const admin = await resolveAdminChannel();
+    if (admin.token && admin.chat) {
+      await fetch(`https://api.telegram.org/bot${admin.token}/sendMessage`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chat_id: ADMIN_CHAT, text }),
+        body: JSON.stringify({ chat_id: admin.chat, text }),
       }).catch(() => {});
     }
 

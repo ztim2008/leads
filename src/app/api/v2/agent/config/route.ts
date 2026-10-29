@@ -59,8 +59,7 @@ export async function GET(req: NextRequest) {
           youdo: {
             categories: Array.isArray(cfg.categories) ? cfg.categories : ["webdevelopment"],
             onlyVirtual: cfg.onlyVirtual !== false,
-            pollMinSec: Number(cfg.pollMinSec) || 60,
-            pollMaxSec: Number(cfg.pollMaxSec) || 120,
+            pollStepsSec: Array.isArray(cfg.pollStepsSec) ? cfg.pollStepsSec : [60, 180, 360],
           },
         }
       : {}),

@@ -31,8 +31,7 @@ interface HubConfig {
   youdo?: {
     categories?: string[];
     onlyVirtual?: boolean;
-    pollMinSec?: number;
-    pollMaxSec?: number;
+    pollStepsSec?: number[];
   };
 }
 
@@ -60,7 +59,7 @@ async function loadConfig(): Promise<HubConfig> {
   return cfg;
 }
 
-async function heartbeat(cb?: CircuitBreakerSnapshot): Promise<void> {
+async function heartbeat(cb?: CircuitBreakerSnapshot, lastFeedOkAt?: string | null): Promise<void> {
   await apiPost("heartbeat", {
     status: {
       leads: totalLeadsSent,
@@ -71,6 +70,7 @@ async function heartbeat(cb?: CircuitBreakerSnapshot): Promise<void> {
       lastErrorTime,
       agentState,
       circuitBreaker: cb || null,
+      lastFeedOkAt: lastFeedOkAt || null,
     },
   });
 }
@@ -79,8 +79,7 @@ function runtimeFrom(cfg: HubConfig) {
   return {
     categories: cfg.youdo?.categories,
     onlyVirtual: cfg.youdo?.onlyVirtual,
-    pollMinSec: cfg.youdo?.pollMinSec,
-    pollMaxSec: cfg.youdo?.pollMaxSec,
+    pollStepsSec: cfg.youdo?.pollStepsSec,
     workHoursStart: cfg.workHoursStart,
     workHoursEnd: cfg.workHoursEnd,
   };
@@ -107,13 +106,13 @@ async function main(): Promise<void> {
   }, 2 * 60_000);
 
   setInterval(() => {
-    heartbeat(collector.getBreakerState()).catch((e) =>
+    heartbeat(collector.getBreakerState(), collector.getLastFeedOkAt()).catch((e) =>
       console.error("[youdo-agent] heartbeat:", e instanceof Error ? e.message : e),
     );
   }, 5 * 60_000);
 
   agentState = "running";
-  await heartbeat(collector.getBreakerState());
+  await heartbeat(collector.getBreakerState(), collector.getLastFeedOkAt());
 
   await collector.start({
     onLead: async (lead) => {
@@ -146,7 +145,7 @@ async function main(): Promise<void> {
           circuitBreaker: snap,
         }).catch(() => {});
       }
-      await heartbeat(snap).catch(() => {});
+      await heartbeat(snap, collector.getLastFeedOkAt()).catch(() => {});
     },
   });
 }
