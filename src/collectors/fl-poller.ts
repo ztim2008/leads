@@ -17,7 +17,17 @@ import { patchSourceAgentMeta } from "@/lib/agent/source-config";
 import { CircuitBreaker } from "@/agent-core/circuit-breaker";
 import { readJsonFile, writeJsonFile } from "@/agent-core/paths";
 import { pickPollDelayMs } from "@/agent-core/poll-steps";
-import { FL_ORIGIN, isFlOrder, parseFlDescription, parseFlList, type FlCard } from "@/lib/connectors/fl";
+import {
+  FL_ORIGIN,
+  flCategoryPasses,
+  isFlOrder,
+  parseFlCategory,
+  parseFlDescription,
+  parseFlList,
+  type FlCard,
+} from "@/lib/connectors/fl";
+
+type FlCategory = ReturnType<typeof parseFlCategory>;
 
 loadHubEnv();
 
@@ -99,10 +109,11 @@ async function loadSources() {
 
 type FlSource = Awaited<ReturnType<typeof loadSources>>[number];
 
-async function fanOut(card: FlCard, description: string, sources: FlSource[]): Promise<number> {
+async function fanOut(card: FlCard, description: string, category: FlCategory, sources: FlSource[]): Promise<number> {
   let saved = 0;
   for (const src of sources) {
     const cfg = (src.config as Record<string, unknown>) || {};
+    if (!flCategoryPasses(category, cfg)) continue;
     const lead = {
       externalId: `fl-${card.id}-${src.id.slice(0, 8)}`,
       title: card.title,
@@ -160,11 +171,15 @@ async function cycle(sources: FlSource[]) {
     if (isFlOrder(card)) {
       await sleep(1500 + Math.random() * 2500);
       let description = card.snippet;
+      let category: FlCategory = null;
       try {
         const page = await get(card.url, `${FL_ORIGIN}/projects/`);
-        if (page.status === 200) description = parseFlDescription(page.html, card.id) || card.snippet;
+        if (page.status === 200) {
+          description = parseFlDescription(page.html, card.id) || card.snippet;
+          category = parseFlCategory(page.html);
+        }
       } catch {}
-      saved += await fanOut(card, description, sources);
+      saved += await fanOut(card, description, category, sources);
     }
     remember([card.id]);
   }

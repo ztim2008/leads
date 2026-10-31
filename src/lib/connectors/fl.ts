@@ -93,6 +93,32 @@ export function parseFlDescription(html: string, id: string): string | null {
   return text || null;
 }
 
+/**
+ * Раздел проекта (выбирает заказчик): saity / landing и т.п.
+ * Берём только ссылки с меткой click_path_in_projects — в шапке страницы есть меню со всеми разделами.
+ */
+export function parseFlCategory(html: string): { category: string; subcategory: string | null } | null {
+  const re = /click_path_in_projects[^>]*?href="(?:https:\/\/www\.fl\.ru)?\/projects\/category\/([a-z0-9-]+)\/(?:([a-z0-9-]+)\/)?"/g;
+  const hits = [...html.matchAll(re)];
+  if (!hits.length) return null;
+  const category = hits[0][1];
+  const sub = hits.find((h) => h[1] === category && h[2]);
+  return { category, subcategory: sub?.[2] || null };
+}
+
+/** Фильтр источника по разделу FL. Раздел не распознан — пропускаем дальше к фильтру по словам. */
+export function flCategoryPasses(
+  cat: { category: string; subcategory: string | null } | null,
+  cfg: Record<string, unknown>,
+): boolean {
+  const allow = Array.isArray(cfg.flCategories) ? (cfg.flCategories as string[]) : [];
+  const deny = Array.isArray(cfg.flExcludeSubcategories) ? (cfg.flExcludeSubcategories as string[]) : [];
+  if (!cat) return true;
+  if (allow.length && !allow.includes(cat.category)) return false;
+  if (cat.subcategory && deny.includes(cat.subcategory)) return false;
+  return true;
+}
+
 export function isFlOrder(card: FlCard): boolean {
   return /^заказ/i.test(card.kind);
 }

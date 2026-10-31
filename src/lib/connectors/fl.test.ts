@@ -1,6 +1,14 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { isFlOrder, parseFlBudget, parseFlDescription, parseFlList, parseFlResponses } from "./fl";
+import {
+  flCategoryPasses,
+  isFlOrder,
+  parseFlBudget,
+  parseFlCategory,
+  parseFlDescription,
+  parseFlList,
+  parseFlResponses,
+} from "./fl";
 import { formatLeadTelegram } from "@/lib/telegram/notifications";
 
 const card = (id: string, title: string, price: string, kind: string, answers: string) => `
@@ -46,6 +54,28 @@ describe("FL.ru list parser", () => {
     const page = `<div id="projectp5527507" class="text-5 pb-20 fl-project-content__description-text "> Нужно сделать:<br/>Лендинг&nbsp;под Директ </div>`;
     assert.equal(parseFlDescription(page, "5527507"), "Нужно сделать:\nЛендинг под Директ");
     assert.equal(parseFlDescription("<div></div>", "1"), null);
+  });
+});
+
+describe("FL.ru category filter", () => {
+  const ga = (p: string) => `data-ga-event="{&quot;ea&quot;:&quot;click_path_in_projects&quot;}" data-ga-on="click" href="https://www.fl.ru/projects/category/${p}"`;
+  const page = `<nav><a href="/projects/category/saity/">Сайты</a></nav>
+    <a ${ga("programmirovanie/")} class="text-blue">Программирование</a>
+    <a ${ga("programmirovanie/parsing-dannyih/")} class="text-blue">Парсинг</a>`;
+  const cfg = { flCategories: ["saity"], flExcludeSubcategories: ["web-dizajner-razrabotka-sajtov"] };
+
+  it("reads category and subcategory", () => {
+    assert.deepEqual(parseFlCategory(page), { category: "programmirovanie", subcategory: "parsing-dannyih" });
+    assert.equal(parseFlCategory("<div></div>"), null);
+  });
+
+  it("allows only listed categories, minus excluded subcategories", () => {
+    assert.ok(!flCategoryPasses(parseFlCategory(page), cfg));
+    assert.ok(flCategoryPasses({ category: "saity", subcategory: "tilda" }, cfg));
+    assert.ok(flCategoryPasses({ category: "saity", subcategory: null }, cfg));
+    assert.ok(!flCategoryPasses({ category: "saity", subcategory: "web-dizajner-razrabotka-sajtov" }, cfg));
+    assert.ok(flCategoryPasses(null, cfg));
+    assert.ok(flCategoryPasses({ category: "games", subcategory: null }, {}));
   });
 });
 
