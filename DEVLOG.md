@@ -1697,3 +1697,20 @@ Partner buys VPS, downloads zip, fills config.json (Profi login/password + Teleg
 **Production:** build ✓, `pm2 restart leads-konversus leads-health`, `pm2 start --only leads-fl`, главная 200, тесты 101/101. Лента засеяна (30 карточек). Profi на хабе выключен, VPS пилота не трогали.
 
 **Дальше:** понаблюдать первые FL-заявки у пилота (нужен его аккаунт FL для откликов); при желании — Kwork/Freelance.ru по той же схеме.
+
+## Итоги дня · 31 октября 2026
+
+**Сделано:**
+- Проверка сбора Profi + YouDo у пилота за 3 дня: доставка в Telegram 100% (Profi 55/55, YouDo 33/33), ошибок, капч и срабатываний CB нет.
+- VPS пилота `93.188.186.13`: добавлена подкачка 2 ГБ, агенты не перезапускались.
+- Яндекс Исполнители: исследование — анонимная лента пустая, нужен вход, риск для профиля высокий. Отложено ([docs/YANDEX_USLUGI.md](docs/YANDEX_USLUGI.md)).
+- Обзор досок без риска профиля → выбран FL.ru. Запущен сбор на хабе одним процессом `leads-fl` на всех партнёров, маркер `🟦 FL.ru` в Telegram, сторож в `leads-health`. Пилот подключён ([docs/FL.md](docs/FL.md)).
+
+**Файлы:** `src/collectors/fl-poller.ts`, `src/lib/connectors/fl{,.test}.ts`, `src/agent-core/poll-steps.ts`, `src/agent-core/youdo-collector.ts`, `src/lib/telegram/notifications.ts`, `src/collectors/health-monitor.ts`, `ecosystem.config.cjs`, `package.json`, `docs/FL.md`, `docs/YANDEX_USLUGI.md`, `docs/PLAN_2026-08-10.md`, `AGENTS.md`.
+
+**Production:** build ✓, главная 200, тесты 101/101. PM2: `leads-konversus`, `leads-health`, `leads-radar`, `leads-fl` online, `pm2 save` выполнен. Profi на хабе выключен (`profiOnHub: false`). VPS пилота: `leads-agent-v2` (Profi) и `leads-agent-youdo` online, не трогали. Заявки идут.
+
+**Завтра:**
+- Первые FL-заявки у пилота: качество фильтров, есть ли у него аккаунт FL для откликов.
+- Отзыв пилота по YouDo-карточкам; редкие самозакрытия страницы YouDo — наблюдать.
+- По желанию: фильтры YouDo/FL в кабинете партнёра (Y.5), YouDo и FL в вечерней сводке, Kwork/Freelance.ru по схеме FL.
