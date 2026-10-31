@@ -1682,3 +1682,18 @@ Partner buys VPS, downloads zip, fills config.json (Profi login/password + Teleg
 - Нагрузка VPS `93.188.186.13` (2 vCPU, 2 ГБ): Profi-агент ~673 МБ PSS, YouDo ~551 МБ, свободно ~614 МБ, CPU 1–2%. **Добавлена подкачка 2 ГБ** (`/swapfile`, fstab, `vm.swappiness=10` в `/etc/sysctl.d/99-leads-swap.conf`), агенты не перезапускались.
 - Яндекс Исполнители: анонимно `/api/orders` всегда 0 заказов — лента по профилю исполнителя, нужен вход. Условия запрещают боты для автооткликов, бан за «подозрительную активность». План: сначала проверить скорость писем о новых заказах у партнёра. Канон: [docs/YANDEX_USLUGI.md](docs/YANDEX_USLUGI.md).
 - Не входит в YouDo-сводку: вечерний дайджест показывает только Profi.
+
+## FL.ru: сбор на хабе для всех партнёров · 31 октября 2026
+
+- Обзор досок без риска профиля: FL.ru, Kwork, Freelance.ru открыты без входа; Weblancer за Cloudflare, Workzilla — только со входом, Habr Freelance закрыт. Выбран FL.ru, сбор на хабе одним процессом.
+- `src/lib/connectors/fl.ts` — разбор ленты `fl.ru/projects/` (номер, заголовок, бюджет, тип, возраст, ответы) и полного текста со страницы проекта. Только «Заказ», вакансии/конкурсы мимо.
+- `src/collectors/fl-poller.ts` (PM2 `leads-fl`): обычный HTTP, пауза 1/3/6 мин ±20% (общий `src/agent-core/poll-steps.ts`), 07–23 МСК, первый запуск без рассылки, CircuitBreaker, `saveAndNotify` в каждый включённый `fl`-источник со своими фильтрами, `externalId = fl-<id>-<sourceId8>`, heartbeat в `source.config`.
+- Telegram: `🟦 FL.ru` в заголовке, «Открыть на FL.ru», «вставьте на FL.ru». Анимированный эмодзи в заголовке невозможен (Telegram анимирует только сообщение из одного эмодзи; кастомные — только для ботов с юзернеймом Fragment).
+- Сторож `leads-health` теперь смотрит `youdo` и `fl`.
+- Пилот: источник `8e603c89-7c73-443c-83a4-47c4a0b6220f`, фильтры с Profi, бюджет любой, без бюджета — да, 08–22. Пробный прогон по ленте: 5 из 20 заказов прошли фильтры.
+
+Файлы: `src/lib/connectors/fl{,.test}.ts`, `src/collectors/fl-poller.ts`, `src/agent-core/poll-steps.ts`, `src/agent-core/youdo-collector.ts`, `src/lib/telegram/notifications.ts`, `src/collectors/health-monitor.ts`, `ecosystem.config.cjs`, `package.json`, `docs/FL.md`, `docs/PLAN_2026-08-10.md`, `AGENTS.md`.
+
+**Production:** build ✓, `pm2 restart leads-konversus leads-health`, `pm2 start --only leads-fl`, главная 200, тесты 101/101. Лента засеяна (30 карточек). Profi на хабе выключен, VPS пилота не трогали.
+
+**Дальше:** понаблюдать первые FL-заявки у пилота (нужен его аккаунт FL для откликов); при желании — Kwork/Freelance.ru по той же схеме.

@@ -13,6 +13,9 @@ import path from "node:path";
 import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
 import { CircuitBreaker } from "./circuit-breaker";
 import { sleep } from "./human";
+import { pickPollDelayMs } from "./poll-steps";
+
+export { pickPollDelayMs };
 import { defaultAgentHome, readJsonFile, writeJsonFile } from "./paths";
 import type { CircuitBreakerSnapshot, CollectorCallbacks, NormalizedLead } from "./types";
 
@@ -20,10 +23,6 @@ const ORIGIN = "https://youdo.com";
 const BLOCKED_HOSTS = /api-maps\.yandex|maps\.yandex|front-maps|core-renderer-tiles|mc\.yandex|yandex\.ru\/adfox|adfox|sentry\.youdo|traces\.youdo|googletagmanager|google-analytics|vk\.com\/rtrg|top-fwz1|facebook/i;
 const SEEN_MAX = 3000;
 const PAGE_REFRESH_MS = 45 * 60_000;
-const MIN_POLL_SEC = 45;
-const DEFAULT_POLL_STEPS_SEC = [60, 180, 360];
-const POLL_JITTER = 0.2;
-
 export interface YouDoCollectorConfig {
   sourceId: string;
   categories?: string[];
@@ -69,14 +68,6 @@ export function parseYouDoBudget(desc?: string, amount?: number): number | undef
   if (!m) return undefined;
   const v = parseInt(m[1].replace(/\s/g, ""), 10);
   return Number.isFinite(v) && v > 0 ? v : undefined;
-}
-
-export function pickPollDelayMs(stepsSec?: number[], rnd: () => number = Math.random): number {
-  const steps = (stepsSec || []).filter((n) => Number.isFinite(n) && n > 0);
-  const pool = steps.length ? steps : DEFAULT_POLL_STEPS_SEC;
-  const base = pool[Math.floor(rnd() * pool.length)] ?? pool[0];
-  const jittered = base * (1 - POLL_JITTER + rnd() * 2 * POLL_JITTER);
-  return Math.round(Math.max(MIN_POLL_SEC, jittered) * 1000);
 }
 
 function mskHour(now = Date.now()): number {

@@ -225,27 +225,29 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, actual));
 }
 
-// src/agent-core/youdo-collector.ts
-var ORIGIN = "https://youdo.com";
-var BLOCKED_HOSTS = /api-maps\.yandex|maps\.yandex|front-maps|core-renderer-tiles|mc\.yandex|yandex\.ru\/adfox|adfox|sentry\.youdo|traces\.youdo|googletagmanager|google-analytics|vk\.com\/rtrg|top-fwz1|facebook/i;
-var SEEN_MAX = 3e3;
-var PAGE_REFRESH_MS = 45 * 6e4;
+// src/agent-core/poll-steps.ts
 var MIN_POLL_SEC = 45;
 var DEFAULT_POLL_STEPS_SEC = [60, 180, 360];
 var POLL_JITTER = 0.2;
-function parseYouDoBudget(desc, amount) {
-  if (amount && amount > 0) return amount;
-  const m = String(desc || "").replace(/\u00a0/g, " ").match(/(\d[\d\s]*)/);
-  if (!m) return void 0;
-  const v = parseInt(m[1].replace(/\s/g, ""), 10);
-  return Number.isFinite(v) && v > 0 ? v : void 0;
-}
 function pickPollDelayMs(stepsSec, rnd = Math.random) {
   const steps = (stepsSec || []).filter((n) => Number.isFinite(n) && n > 0);
   const pool = steps.length ? steps : DEFAULT_POLL_STEPS_SEC;
   const base = pool[Math.floor(rnd() * pool.length)] ?? pool[0];
   const jittered = base * (1 - POLL_JITTER + rnd() * 2 * POLL_JITTER);
   return Math.round(Math.max(MIN_POLL_SEC, jittered) * 1e3);
+}
+
+// src/agent-core/youdo-collector.ts
+var ORIGIN = "https://youdo.com";
+var BLOCKED_HOSTS = /api-maps\.yandex|maps\.yandex|front-maps|core-renderer-tiles|mc\.yandex|yandex\.ru\/adfox|adfox|sentry\.youdo|traces\.youdo|googletagmanager|google-analytics|vk\.com\/rtrg|top-fwz1|facebook/i;
+var SEEN_MAX = 3e3;
+var PAGE_REFRESH_MS = 45 * 6e4;
+function parseYouDoBudget(desc, amount) {
+  if (amount && amount > 0) return amount;
+  const m = String(desc || "").replace(/\u00a0/g, " ").match(/(\d[\d\s]*)/);
+  if (!m) return void 0;
+  const v = parseInt(m[1].replace(/\s/g, ""), 10);
+  return Number.isFinite(v) && v > 0 ? v : void 0;
 }
 function mskHour(now = Date.now()) {
   return new Date(now + 3 * 36e5).getUTCHours();

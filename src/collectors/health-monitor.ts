@@ -240,7 +240,7 @@ function mdSafe(s: string): string {
 
 async function watchYouDoAgents(admin: { token: string; chat: string }) {
   const sources = await db.source.findMany({
-    where: { platform: "youdo", enabled: true, workspace: { user: { role: "user" } } },
+    where: { platform: { in: ["youdo", "fl"] }, enabled: true, workspace: { user: { role: "user" } } },
     include: { workspace: { select: { name: true } } },
   });
   for (const s of sources) {
@@ -248,12 +248,14 @@ async function watchYouDoAgents(admin: { token: string; chat: string }) {
     const v = youdoWatchVerdict(cfg);
     if (v.kind === "unknown") continue;
     const who = mdSafe(s.workspace.name);
+    const isFl = s.platform === "fl";
+    const name = isFl ? "FL.ru-сборщик" : "YouDo-агент";
     const prev = cfg._watchAlert ? String(cfg._watchAlert) : null;
     const prevAt = cfg._watchAlertAt ? new Date(String(cfg._watchAlertAt)).getTime() : 0;
 
     if (v.kind === "ok") {
       if (!prev) continue;
-      const ok = await tg(admin.token, admin.chat, `✅ *YouDo-агент снова работает*\nПартнёр: ${who}`);
+      const ok = await tg(admin.token, admin.chat, `✅ *${name} снова работает*\nПартнёр: ${who}`);
       if (!ok) notificationFailures++;
       await patchSourceAgentMeta(s.id, { _watchAlert: null, _watchAlertAt: null });
       continue;
@@ -261,8 +263,20 @@ async function watchYouDoAgents(admin: { token: string; chat: string }) {
 
     if (prev === v.kind && Date.now() - prevAt < 2 * 3600_000) continue;
 
-    const lines =
-      v.kind === "offline"
+    const lines = isFl
+      ? v.kind === "offline"
+        ? [
+            `🔴 *FL.ru-сборщик молчит ${v.minutes} мин*`,
+            `Партнёр: ${who}`,
+            `Процесс leads-fl на хабе не пишет heartbeat. Проверка: pm2 logs leads-fl`,
+          ]
+        : [
+            `🟠 *FL.ru: лента не читается ${v.minutes} мин*`,
+            `Партнёр: ${who}`,
+            `CB: ${v.cb}${v.lastError ? ` · ${mdSafe(v.lastError.slice(0, 120))}` : ""}`,
+            `Вероятно, блок IP хаба или смена вёрстки. Сборщик сам на паузе.`,
+          ]
+      : v.kind === "offline"
         ? [
             `🔴 *YouDo-агент молчит ${v.minutes} мин*`,
             `Партнёр: ${who}`,

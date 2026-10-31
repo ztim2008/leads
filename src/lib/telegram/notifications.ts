@@ -141,9 +141,11 @@ type TgButton = {
 function buildKeyboard(lead: LeadNotification): TgButton[][] {
   const openLabel = /youdo/i.test(lead.platform)
     ? "Открыть на YouDo"
-    : lead.platform && !/profi/i.test(lead.platform)
-      ? "Открыть заказ"
-      : "Открыть на Profi";
+    : /^fl$/i.test(lead.platform)
+      ? "Открыть на FL.ru"
+      : lead.platform && !/profi/i.test(lead.platform)
+        ? "Открыть заказ"
+        : "Открыть на Profi";
   const rows: TgButton[][] = [[{ text: openLabel, url: lead.url }]];
 
   const copyRow: TgButton[] = [];
@@ -169,11 +171,13 @@ function resolveReplyTexts(lead: LeadNotification): Array<{ name: string; text: 
 
 function platformBadge(platform: string): string {
   if (/youdo/i.test(platform)) return "🟠 <b>YouDo</b>";
+  if (/^fl$/i.test(platform)) return "🟦 <b>FL.ru</b>";
   return "";
 }
 
 function platformName(platform: string): string {
   if (/youdo/i.test(platform)) return "YouDo";
+  if (/^fl$/i.test(platform)) return "FL.ru";
   if (/kwork/i.test(platform)) return "Kwork";
   return "Profi";
 }
